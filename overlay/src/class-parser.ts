@@ -1,9 +1,23 @@
+export type ValueType = 'scalar' | 'enum' | 'color';
+
 export interface ParsedClass {
   category: 'spacing' | 'sizing' | 'typography' | 'color' | 'borders' | 'effects' | 'layout' | 'flexbox';
+  valueType: ValueType;
   prefix: string;
   value: string;
   fullClass: string;
   themeKey: string | null;
+}
+
+/** Derives the value type from the themeKey.
+ * - 'colors' → color picker
+ * - any other non-null themeKey → ordered scalar scale (ScaleScrubber)
+ * - null → discrete enum keyword (no sub-editor yet)
+ */
+function deriveValueType(themeKey: string | null): ValueType {
+  if (themeKey === 'colors') return 'color';
+  if (themeKey !== null) return 'scalar';
+  return 'enum';
 }
 
 interface PrefixEntry {
@@ -176,24 +190,24 @@ function hasVariantPrefix(cls: string): boolean {
 
 function parseTextClass(value: string): ParsedClass | null {
   if (FONT_SIZE_TOKENS.has(value)) {
-    return { category: 'typography', prefix: 'text-', value, fullClass: `text-${value}`, themeKey: 'fontSize' };
+    return { category: 'typography', valueType: 'scalar', prefix: 'text-', value, fullClass: `text-${value}`, themeKey: 'fontSize' };
   }
   if (TEXT_ALIGN_KEYWORDS.has(value)) {
-    return { category: 'typography', prefix: 'text-', value, fullClass: `text-${value}`, themeKey: null };
+    return { category: 'typography', valueType: 'enum', prefix: 'text-', value, fullClass: `text-${value}`, themeKey: null };
   }
   // Otherwise treat as color
-  return { category: 'color', prefix: 'text-', value, fullClass: `text-${value}`, themeKey: 'colors' };
+  return { category: 'color', valueType: 'color', prefix: 'text-', value, fullClass: `text-${value}`, themeKey: 'colors' };
 }
 
 function parseBorderClass(value: string): ParsedClass | null {
   if (BORDER_WIDTH_VALUES.has(value)) {
-    return { category: 'borders', prefix: 'border-', value, fullClass: `border-${value}`, themeKey: 'borderWidth' };
+    return { category: 'borders', valueType: 'scalar', prefix: 'border-', value, fullClass: `border-${value}`, themeKey: 'borderWidth' };
   }
   if (BORDER_STYLE_KEYWORDS.has(value)) {
-    return { category: 'borders', prefix: 'border-', value, fullClass: `border-${value}`, themeKey: null };
+    return { category: 'borders', valueType: 'enum', prefix: 'border-', value, fullClass: `border-${value}`, themeKey: null };
   }
   // Otherwise treat as color
-  return { category: 'color', prefix: 'border-', value, fullClass: `border-${value}`, themeKey: 'colors' };
+  return { category: 'color', valueType: 'color', prefix: 'border-', value, fullClass: `border-${value}`, themeKey: 'colors' };
 }
 
 export function parseClasses(classString: string): ParsedClass[] {
@@ -209,6 +223,7 @@ export function parseClasses(classString: string): ParsedClass[] {
     if (exact) {
       results.push({
         category: exact.category,
+        valueType: deriveValueType(exact.themeKey),
         prefix: cls,
         value: '',
         fullClass: cls,
@@ -235,6 +250,7 @@ export function parseClasses(classString: string): ParsedClass[] {
           longerMatch = true;
           results.push({
             category: entry.category,
+            valueType: deriveValueType(entry.themeKey),
             prefix: entry.prefix,
             value: cls.slice(entry.prefix.length),
             fullClass: cls,
@@ -256,6 +272,7 @@ export function parseClasses(classString: string): ParsedClass[] {
       if (cls.startsWith(entry.prefix)) {
         results.push({
           category: entry.category,
+          valueType: deriveValueType(entry.themeKey),
           prefix: entry.prefix,
           value: cls.slice(entry.prefix.length),
           fullClass: cls,

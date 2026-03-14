@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Box Model Editor — Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Inter:wght@400;600;700&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS (from bitovi-dev-tools.html) ────────────────── */
+    :root {
+      --bg:           #FFFFFF;
+      --surface:      #F4F5F5;
+      --surface-hi:   #E6E9E9;
+      --border-solid: #DFE2E2;
+      --text:         #334041;
+      --text-mid:     #687879;
+      --text-low:     #687879;
+      --text-muted:   #A3ADAD;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.09);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.09);
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       150ms ease-in-out;
+
+      /* ─── Layer palette ─── */
+      /* margin:  orange (brand) */
+      --m-fill:   rgba(245, 83,  45,  0.10);
+      --m-bdr:    rgba(245, 83,  45,  0.45);
+      --m-accent: #C73D1A;
+
+      /* outline: violet */
+      --o-fill:   rgba(139, 79,  240, 0.10);
+      --o-bdr:    rgba(139, 79,  240, 0.45);
+      --o-accent: #6932C3;
+
+      /* border:  sky blue */
+      --b-fill:   rgba(56,  120, 245, 0.10);
+      --b-bdr:    rgba(56,  120, 245, 0.45);
+      --b-accent: #1950D2;
+
+      /* padding: teal (brand) */
+      --p-fill:   rgba(0,   132, 139, 0.12);
+      --p-bdr:    rgba(0,   132, 139, 0.50);
+      --p-accent: #005A5F;
+
+      /* Layer name muted variants (for the label text itself) */
+      --m-label:  rgba(185, 55,  20,  0.35);
+      --o-label:  rgba(105, 50, 195,  0.35);
+      --b-label:  rgba(25,  80, 210,  0.35);
+      --p-label:  rgba(0,   90,  95,  0.35);
+      --m-label-hover: rgba(185, 55,  20,  0.60);
+      --o-label-hover: rgba(105, 50, 195,  0.60);
+      --b-label-hover: rgba(25,  80, 210,  0.60);
+      --p-label-hover: rgba(0,   90,  95,  0.60);
+      --c-bdr:    #C8CECE;
+      --c-fill:   #FFFFFF;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #EAECED;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 32px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    /* ─── DEMO COLUMN ──────────────────────────────────────────── */
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family: var(--font-mono);
+      color: #8A9599;
+    }
+
+    /* ─── PANEL SHELL (simulates the sidebar iframe at 420px) ─── */
+    .panel {
+      width: 398px;
+      background: var(--bg);
+      border: 1px solid var(--border-solid);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    .panel-section-hd {
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border-solid);
+      background: var(--surface);
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-low);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .panel-section-hd::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .panel-body { padding: 12px; }
+
+    /* ─── BOX MODEL DIAGRAM ────────────────────────────────────── */
+    .bm { user-select: none; }
+
+    .bm-layer {
+      position: relative;
+      border-radius: 2px;
+    }
+
+    /* Ring sizing — color fills distinguish layers, no borders needed */
+    .bm-margin  { background: var(--m-fill); padding: 40px; }
+    .bm-outline { background: var(--o-fill); padding: 40px; }
+    .bm-border  { background: var(--b-fill); padding: 40px; }
+    .bm-padding { background: var(--p-fill); padding: 40px; }
+    .bm-content { background: var(--c-fill); border: 1px solid var(--c-bdr); height: 52px; border-radius: 2px; }
+
+    /* Layer name — always visible, top-left of its ring */
+    .bm-name {
+      position: absolute;
+      top: 6px; left: 9px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      line-height: 1;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .bm-margin  > .bm-name { color: var(--m-label); }
+    .bm-outline > .bm-name { color: var(--o-label); }
+    .bm-border  > .bm-name { color: var(--b-label); }
+    .bm-padding > .bm-name { color: var(--p-label); }
+
+    /* Slightly more visible when that layer is hovered */
+    .bm-margin:hover  > .bm-name { color: var(--m-label-hover); }
+    .bm-outline:hover > .bm-name { color: var(--o-label-hover); }
+    .bm-border:hover  > .bm-name { color: var(--b-label-hover); }
+    .bm-padding:hover > .bm-name { color: var(--p-label-hover); }
+    /* But suppress back to faint if a deeper layer is hovered */
+    .bm-layer:has(.bm-layer:hover) > .bm-name { color: var(--m-label); }
+    .bm-margin:has(.bm-layer:hover)  > .bm-name { color: var(--m-label); }
+    .bm-outline:has(.bm-layer:hover) > .bm-name { color: var(--o-label); }
+    .bm-border:has(.bm-layer:hover)  > .bm-name { color: var(--b-label); }
+    .bm-padding:has(.bm-layer:hover) > .bm-name { color: var(--p-label); }
+
+    /* Active classname — full weight, vivid, clearly dominant */
+    .bm-name .val {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: -0.2px;
+    }
+    .bm-margin  > .bm-name .val { color: var(--m-accent); }
+    .bm-outline > .bm-name .val { color: var(--o-accent); }
+    .bm-border  > .bm-name .val { color: var(--b-accent); }
+    .bm-padding > .bm-name .val { color: var(--p-accent); }
+
+    /* ─── SLOT GROUPS — flex wrappers shown/hidden per layer ──── */
+    .slot-group {
+      position: absolute;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--t-fast);
+    }
+
+    /* Show this layer's own groups on hover */
+    .bm-layer:hover > .slot-group {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Always show groups that have an active value — no hover needed */
+    .slot-group:has(.has-val) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Suppress if a deeper layer is hovered */
+    .bm-layer:has(.bm-layer:hover) > .slot-group {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* ─── Group positions ──────────────────────────────────────── */
+    .sg-top    { top: 5px;    left: 50%; transform: translateX(-50%); }
+    .sg-right  { top: 50%;   right: 7px; transform: translateY(-50%); }
+    .sg-bottom { bottom: 5px; left: 50%; transform: translateX(-50%); }
+    .sg-left   { top: 50%;    left: 7px; transform: translateY(-50%); flex-direction: column; }
+    /* Corner meta-properties */
+    .sg-tr { top: 5px;    right: 7px;  }
+    .sg-bl { bottom: 5px; left: 7px;   }
+    .sg-br { bottom: 5px; right: 7px;  }
+
+    /* ─── Slot items — individual clickable chips ─────────────── */
+    .slot-item {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      padding: 2px 5px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      line-height: 1;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+    }
+
+    .slot-item:hover {
+      color: var(--teal);
+      background: var(--teal-dim);
+      border-color: rgba(0, 132, 139, 0.30);
+    }
+
+    /* ─── Scrubbing state ──────────────────────────────────────── */
+    .slot-item.is-scrubbing {
+      color: var(--teal) !important;
+      background: var(--bg) !important;
+      border-color: var(--teal) !important;
+      box-shadow: 0 1px 5px rgba(0, 132, 139, 0.18);
+      cursor: ew-resize;
+      padding: 3px 8px;
+    }
+
+    .slot-item.is-scrubbing .pfx { color: var(--text-mid); }
+    .slot-item.is-scrubbing .val { font-weight: 700; }
+    .slot-item.is-scrubbing .arrow { opacity: 0.45; font-size: 8px; margin-left: 2px; }
+
+    /* Force a group visible (used in scrubbing demo state) */
+    .slot-group.is-active {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    /* Slot with an active value — text-style like .bm-name .val, not a button */
+    .slot-item.has-val {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: -0.2px;
+      background: none;
+      border-color: transparent;
+      padding: 0 2px;
+    }
+    .bm-margin  .slot-item.has-val { color: var(--m-accent); }
+    .bm-outline .slot-item.has-val { color: var(--o-accent); }
+    .bm-border  .slot-item.has-val { color: var(--b-accent); }
+    .bm-padding .slot-item.has-val { color: var(--p-accent); }
+    .slot-item.has-val:hover {
+      color: var(--teal);
+      background: var(--teal-dim);
+      border-color: rgba(0, 132, 139, 0.30);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 1 — No matching classes
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">no matching classes — hover to explore</div>
+    <div class="panel">
+      <div class="panel-section-hd">Box Model</div>
+      <div class="panel-body">
+        <div class="bm">
+
+          <div class="bm-layer bm-margin">
+            <span class="bm-name">margin</span>
+            <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+            <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+            <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+            <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+            <div class="bm-layer bm-outline">
+              <span class="bm-name">outline</span>
+              <div class="slot-group sg-br"><span class="slot-item">offset</span></div>
+
+              <div class="bm-layer bm-border">
+                <span class="bm-name">border</span>
+                <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+                <div class="slot-group sg-tr"><span class="slot-item">color</span></div>
+                <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+                <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+                <div class="slot-group sg-bl"><span class="slot-item">style</span></div>
+                <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+                <div class="bm-layer bm-padding">
+                  <span class="bm-name">padding</span>
+                  <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+                  <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+                  <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+                  <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+                  <div class="bm-layer bm-content"></div>
+                </div><!-- /padding -->
+
+              </div><!-- /border -->
+            </div><!-- /outline -->
+          </div><!-- /margin -->
+
+        </div><!-- /bm -->
+      </div><!-- /panel-body -->
+    </div><!-- /panel -->
+  </div><!-- /col -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 2 — Has p-2 (hover to reveal slots)
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">has p-2 — hover any layer to edit</div>
+    <div class="panel">
+      <div class="panel-section-hd">Box Model</div>
+      <div class="panel-body">
+        <div class="bm">
+
+          <div class="bm-layer bm-margin">
+            <span class="bm-name">margin</span>
+            <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+            <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+            <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+            <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+            <div class="bm-layer bm-outline">
+              <span class="bm-name">outline</span>
+              <div class="slot-group sg-br"><span class="slot-item">offset</span></div>
+
+              <div class="bm-layer bm-border">
+                <span class="bm-name">border</span>
+                <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+                <div class="slot-group sg-tr"><span class="slot-item">color</span></div>
+                <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+                <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+                <div class="slot-group sg-bl"><span class="slot-item">style</span></div>
+                <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+                <div class="bm-layer bm-padding">
+                  <span class="bm-name"><span class="val">p-2</span></span>
+                  <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+                  <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+                  <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+                  <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+                  <div class="bm-layer bm-content"></div>
+                </div><!-- /padding -->
+
+              </div><!-- /border -->
+            </div><!-- /outline -->
+          </div><!-- /margin -->
+
+        </div><!-- /bm -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 3 — User clicked "y" in padding → scrubber
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">clicked "y" in padding → inline scrubber</div>
+    <div class="panel">
+      <div class="panel-section-hd">Box Model</div>
+      <div class="panel-body">
+        <div class="bm">
+
+          <div class="bm-layer bm-margin">
+            <span class="bm-name">margin</span>
+
+            <div class="bm-layer bm-outline">
+              <span class="bm-name">outline</span>
+
+              <div class="bm-layer bm-border">
+                <span class="bm-name">border</span>
+
+                <div class="bm-layer bm-padding">
+                  <span class="bm-name"><span class="val">p-2</span></span>
+
+                  <!-- top group: y has value, t remains idle -->
+                  <div class="slot-group sg-top is-active">
+                    <span class="slot-item has-val">py-4</span>
+                    <span class="slot-item">t</span>
+                  </div>
+                  <div class="slot-group sg-right is-active"><span class="slot-item">r</span></div>
+                  <div class="slot-group sg-bottom is-active"><span class="slot-item">b</span></div>
+                  <div class="slot-group sg-left is-active"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+                  <div class="bm-layer bm-content"></div>
+                </div><!-- /padding -->
+
+              </div><!-- /border -->
+            </div><!-- /outline -->
+          </div><!-- /margin -->
+
+        </div><!-- /bm -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 4 — pt-10 pr-20 pb-30 pl-40 (individual sides)
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">has pt-10 pr-20 pb-30 pl-40 — hover to edit</div>
+    <div class="panel">
+      <div class="panel-section-hd">Box Model</div>
+      <div class="panel-body">
+        <div class="bm">
+
+          <div class="bm-layer bm-margin">
+            <span class="bm-name">margin</span>
+            <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+            <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+            <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+            <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+            <div class="bm-layer bm-outline">
+              <span class="bm-name">outline</span>
+              <div class="slot-group sg-br"><span class="slot-item">offset</span></div>
+
+              <div class="bm-layer bm-border">
+                <span class="bm-name">border</span>
+                <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item">t</span></div>
+                <div class="slot-group sg-tr"><span class="slot-item">color</span></div>
+                <div class="slot-group sg-right"><span class="slot-item">r</span></div>
+                <div class="slot-group sg-bottom"><span class="slot-item">b</span></div>
+                <div class="slot-group sg-bl"><span class="slot-item">style</span></div>
+                <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item">l</span></div>
+
+                <div class="bm-layer bm-padding">
+                  <span class="bm-name">padding</span>
+                  <!-- top: y has no value, t has t-10 -->
+                  <div class="slot-group sg-top"><span class="slot-item">y</span><span class="slot-item has-val">t-10</span></div>
+                  <!-- right: r-20 -->
+                  <div class="slot-group sg-right"><span class="slot-item has-val">r-20</span></div>
+                  <!-- bottom: b-30 -->
+                  <div class="slot-group sg-bottom"><span class="slot-item has-val">b-30</span></div>
+                  <!-- left: x has no value, l has l-40 -->
+                  <div class="slot-group sg-left"><span class="slot-item">x</span><span class="slot-item has-val">l-40</span></div>
+
+                  <div class="bm-layer bm-content"></div>
+                </div><!-- /padding -->
+
+              </div><!-- /border -->
+            </div><!-- /outline -->
+          </div><!-- /margin -->
+
+        </div><!-- /bm -->
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

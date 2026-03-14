@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Watch: Overlay",
+      "type": "shell",
+      "command": "npx esbuild overlay/src/index.ts --bundle --format=iife --outfile=overlay/dist/overlay.js --platform=browser --watch",
+      "options": { "cwd": "${workspaceFolder}" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "esbuild",
+        "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
+        "background": { "activeOnStart": true, "beginsPattern": "\\[watch\\]", "endsPattern": "\\[watch\\] build finished" }
+      },
+      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "silent" }
+    },
+    {
+      "label": "Watch: Panel",
+      "type": "shell",
+      "command": "npx vite build --watch",
+      "options": { "cwd": "${workspaceFolder}/panel" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
+        "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "built in" }
+      },
+      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "silent" }
+    },
+    {
+      "label": "Server (port 3333)",
+      "type": "shell",
+      "command": "node --import tsx ../server/index.ts",
+      "options": { "cwd": "${workspaceFolder}/test-app" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "tsx",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": ".", "endsPattern": "Listening on" }
+      },
+      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Test App (port 5173)",
+      "type": "shell",
+      "command": "npx vite",
+      "options": { "cwd": "${workspaceFolder}/test-app" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite-test-app",
+        "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
+        "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "ready in" }
+      },
+      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Dev: All",
+      "dependsOn": ["Watch: Overlay", "Watch: Panel", "Server (port 3333)", "Test App (port 5173)"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    }
+  ]
+}

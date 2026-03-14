@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ParsedClass } from '../../overlay/src/class-parser';
 import { ColorGrid } from './components/ColorGrid';
-import { ScaleRow } from './components/ScaleRow';
+import { ScaleScrubber } from './components/ScaleScrubber';
 import { ContainerSwitcher } from './components/ContainerSwitcher';
+import { getScaleValues } from './components/getScaleValues';
+import { BoxModel } from './components/BoxModel';
+import { boxModelLayersFromClasses } from './components/BoxModel/layerUtils';
+import type { LayerName, LayerState, SlotKey } from './components/BoxModel/types';
 import { sendTo } from './ws';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -38,6 +42,35 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
   const [lockedOld, setLockedOld] = useState<string | null>(null);
   const [lockedNew, setLockedNew] = useState<string | null>(null);
   const [lockedProperty, setLockedProperty] = useState<string | null>(null);
+  // Local overrides for BoxModel slots committed this session (key: "layer-slotKey" → fullClass)
+  const [boxModelOverrides, setBoxModelOverrides] = useState<Map<string, string>>(new Map());
+
+  // Reset overrides when a new element is selected
+  const parsedClassesRef = useRef(parsedClasses);
+  useEffect(() => {
+    if (parsedClassesRef.current !== parsedClasses) {
+      parsedClassesRef.current = parsedClasses;
+      setBoxModelOverrides(new Map());
+    }
+  });
+
+  function applyBoxModelOverrides(layers: LayerState[]): LayerState[] {
+    if (boxModelOverrides.size === 0) return layers;
+    return layers.map(layer => {
+      const shorthandOverride = boxModelOverrides.get(`${layer.layer}-shorthand`);
+      const updatedSlots = layer.slots.map(slot => {
+        const override = boxModelOverrides.get(`${layer.layer}-${slot.key}`);
+        return override !== undefined ? { ...slot, value: override } : slot;
+      });
+      const newShorthandValue = shorthandOverride ?? layer.shorthandValue;
+      let classState = layer.classState;
+      if (shorthandOverride !== undefined) {
+        const hasSlotValues = updatedSlots.some(s => s.value != null);
+        classState = hasSlotValues ? 'mixed' : 'shorthand';
+      }
+      return { ...layer, shorthandValue: newShorthandValue, classState, slots: updatedSlots };
+    });
+  }
 
   const groups = groupByCategory(parsedClasses);
 
@@ -92,6 +125,17 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
     setSelectedClass(cls);
   }
 
+  // For scalar scrubbers: preview uses the scrubber's own oldClass, not selectedClass
+  function handleScrubberPreview(cls: ParsedClass, newClass: string) {
+    if (lockedOld !== null && lockedOld !== cls.fullClass) return;
+    sendTo('overlay', { type: 'CLASS_PREVIEW', oldClass: cls.fullClass, newClass });
+  }
+
+  function handleScrubberRevert(cls: ParsedClass) {
+    if (lockedOld !== null && lockedOld !== cls.fullClass) return;
+    sendTo('overlay', { type: 'CLASS_REVERT' });
+  }
+
   return (
     <div className="p-3">
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -99,6 +143,45 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
           {componentName} <span className="font-[family-name:var(--font-ui)] font-normal text-bv-text-mid">— {instanceCount} instance{instanceCount !== 1 ? 's' : ''} on this page</span>
         </div>
         <ContainerSwitcher />
+      </div>
+
+      {/* ── Box Model ─────────────────────────────────────────── */}
+      <div className="mt-3 mb-1 flex items-center gap-1.5">
+        <span className="w-[5px] h-[5px] rounded-full bg-bv-teal opacity-50 shrink-0" />
+        <span className="text-[9px] font-semibold uppercase tracking-[1px] text-bv-text-mid">Box Model</span>
+      </div>
+      <div className="mb-4">
+        <BoxModel
+          layers={applyBoxModelOverrides(boxModelLayersFromClasses(parsedClasses, tailwindConfig))}
+          onEditStart={() => sendTo('overlay', { type: 'CLEAR_HIGHLIGHTS' })}
+          onSlotHover={(layer: LayerName, slotKey: SlotKey | 'shorthand', value: string | null) => {
+            if (value === null) {
+              sendTo('overlay', { type: 'CLASS_REVERT' });
+            } else {
+              const overrideKey = `${layer}-${slotKey}`;
+              const baseLayer = boxModelLayersFromClasses(parsedClasses, tailwindConfig).find(l => l.layer === layer);
+              const currentClass = slotKey === 'shorthand'
+                ? (boxModelOverrides.get(overrideKey) ?? baseLayer?.shorthandValue)
+                : (boxModelOverrides.get(overrideKey) ?? baseLayer?.slots.find(s => s.key === slotKey)?.value);
+              sendTo('overlay', { type: 'CLASS_PREVIEW', oldClass: currentClass ?? '', newClass: value });
+            }
+          }}
+          onSlotChange={(layer: LayerName, slotKey: SlotKey | 'shorthand', value: string) => {
+            const overrideKey = `${layer}-${slotKey}`;
+            const baseLayer = boxModelLayersFromClasses(parsedClasses, tailwindConfig).find(l => l.layer === layer);
+            const currentClass = slotKey === 'shorthand'
+              ? (boxModelOverrides.get(overrideKey) ?? baseLayer?.shorthandValue)
+              : (boxModelOverrides.get(overrideKey) ?? baseLayer?.slots.find(s => s.key === slotKey)?.value);
+            sendTo('overlay', {
+              type: 'CLASS_COMMIT',
+              oldClass: currentClass ?? '',
+              newClass: value,
+              property: layer,
+            });
+            // Record locally so the slot updates immediately without waiting for re-selection
+            setBoxModelOverrides(prev => new Map(prev).set(overrideKey, value));
+          }}
+        />
       </div>
 
       {Array.from(groups).map(([category, classes]) => (
@@ -110,24 +193,45 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
             </span>
           </div>
           <div className="flex flex-wrap gap-1 mb-2">
-            {classes.map((cls) => (
-              <div
-                key={cls.fullClass}
-                className={`px-2 py-0.5 rounded cursor-pointer text-[11px] font-mono border transition-colors ${
-                  selectedClass?.fullClass === cls.fullClass
-                    ? 'border-bv-orange bg-bv-orange/9 text-bv-orange'
-                    : 'bg-bv-surface text-bv-text-mid border-transparent hover:border-bv-teal hover:text-bv-teal'
-                }`}
-                onClick={() => handleChipClick(cls)}
-              >
-                {cls.fullClass}
-              </div>
-            ))}
+            {classes.map((cls) => {
+              if (cls.valueType === 'scalar') {
+                const scaleValues = getScaleValues(cls.prefix, cls.themeKey, tailwindConfig);
+                if (scaleValues.length > 0) {
+                  return (
+                    <ScaleScrubber
+                      key={cls.fullClass}
+                      values={scaleValues}
+                      currentValue={cls.fullClass}
+                      lockedValue={lockedOld === cls.fullClass ? lockedNew : null}
+                      locked={lockedOld !== null && lockedOld !== cls.fullClass}
+                      onStart={() => sendTo('overlay', { type: 'CLEAR_HIGHLIGHTS' })}
+                      onHover={(newClass) => handleScrubberPreview(cls, newClass)}
+                      onLeave={() => handleScrubberRevert(cls)}
+                      onClick={(newClass) => handleLock(cls, newClass)}
+                    />
+                  );
+                }
+              }
+              // Non-scalar (color handled separately below, enum = plain chip)
+              return (
+                <div
+                  key={cls.fullClass}
+                  className={`px-2 py-0.5 rounded cursor-pointer text-[11px] font-mono border transition-colors ${
+                    selectedClass?.fullClass === cls.fullClass
+                      ? 'border-bv-orange bg-bv-orange/9 text-bv-orange'
+                      : 'bg-bv-surface text-bv-text-mid border-transparent hover:border-bv-teal hover:text-bv-teal'
+                  }`}
+                  onClick={() => handleChipClick(cls)}
+                >
+                  {cls.fullClass}
+                </div>
+              );
+            })}
           </div>
 
           {selectedClass && classes.some(c => c.fullClass === selectedClass.fullClass) && (
             <>
-              {selectedClass.themeKey === 'colors' ? (
+              {selectedClass.valueType === 'color' ? (
                 <ColorGrid
                   prefix={selectedClass.prefix}
                   currentValue={selectedClass.value}
@@ -138,19 +242,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
                   onLeave={handleRevert}
                   onClick={(fullClass) => handleLock(selectedClass, fullClass)}
                 />
-              ) : (
-                <ScaleRow
-                  prefix={selectedClass.prefix}
-                  themeKey={selectedClass.themeKey}
-                  currentClass={selectedClass.fullClass}
-                  tailwindConfig={tailwindConfig}
-                  locked={lockedOld !== null}
-                  lockedValue={lockedNew}
-                  onHover={(fullClass) => handlePreview(selectedClass.fullClass, fullClass)}
-                  onLeave={handleRevert}
-                  onClick={(fullClass) => handleLock(selectedClass, fullClass)}
-                />
-              )}
+              ) : null}
 
               {lockedOld !== null && (
                 <div className="flex gap-2 mt-2">

@@ -56,7 +56,7 @@ export async function applyPreview(
 
   // Apply class swap to all equivalent nodes
   for (const node of elements) {
-    node.classList.remove(oldClass);
+    if (oldClass) node.classList.remove(oldClass);
     node.classList.add(newClass);
   }
 }

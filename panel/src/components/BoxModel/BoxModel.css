@@ -1,0 +1,345 @@
+/* ─── Box Model Editor Styles ──────────────────────────────
+   Mirrors specs/005-box-model/box-model-hover-grow.html
+   ────────────────────────────────────────────────────────── */
+
+/* ─── Tokens ──────────────────────────────────────────────── */
+.bm-root {
+  --ring-rest: 26px;
+  --ring-hover: 44px;
+  --t-fast: 150ms ease-in-out;
+  --t-grow: 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Layer fills */
+  --m-fill: rgba(245, 83, 45, 0.10);
+  --o-fill: rgba(139, 79, 240, 0.10);
+  --b-fill: rgba(56, 120, 245, 0.10);
+  --p-fill: rgba(0, 132, 139, 0.12);
+
+  /* Layer accents */
+  --m-accent: #C73D1A;
+  --o-accent: #6932C3;
+  --b-accent: #1950D2;
+  --p-accent: #005A5F;
+
+  /* Layer labels */
+  --m-label: rgba(185, 55, 20, 0.35);
+  --o-label: rgba(105, 50, 195, 0.35);
+  --b-label: rgba(25, 80, 210, 0.35);
+  --p-label: rgba(0, 90, 95, 0.35);
+  --m-label-hover: rgba(185, 55, 20, 0.60);
+  --o-label-hover: rgba(105, 50, 195, 0.60);
+  --b-label-hover: rgba(25, 80, 210, 0.60);
+  --p-label-hover: rgba(0, 90, 95, 0.60);
+
+  /* Content box */
+  --c-fill: #FFFFFF;
+  --c-bdr: #C8CECE;
+
+  /* Interactive */
+  --teal: #00848B;
+  --teal-dim: rgba(0, 132, 139, 0.09);
+  --text-mid: #687879;
+
+  user-select: none;
+}
+
+/* ─── Ring layers ─────────────────────────────────────────── */
+.bm-layer {
+  position: relative;
+  border-radius: 2px;
+  transition: padding var(--t-grow);
+}
+
+.bm-margin  { background: var(--m-fill); padding: var(--ring-rest); }
+.bm-outline { background: var(--o-fill); padding: var(--ring-rest); }
+.bm-border  { background: var(--b-fill); padding: var(--ring-rest); }
+.bm-padding { background: var(--p-fill); padding: var(--ring-rest); }
+
+.bm-content {
+  background: var(--c-fill);
+  border: 1px solid var(--c-bdr);
+  height: 52px;
+  border-radius: 2px;
+}
+
+/* Hovered ring always grows — frozen only gates interactive color effects */
+.bm-layer.bm-hovered {
+  padding: var(--ring-hover);
+}
+
+/* ─── Layer name label ────────────────────────────────────── */
+.bm-name {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  height: var(--ring-rest);
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: height var(--t-grow);
+}
+
+.bm-layer.bm-hovered > .bm-name {
+  height: var(--ring-hover);
+}
+
+/* When bm-name contains a MiniScrubber, float above slot groups but pass through events outside the chip */
+.bm-name-scrubber {
+  pointer-events: none;   /* Don't block clicks to slot group items below */
+  z-index: 2;             /* Stack above slot groups so chip is reachable */
+}
+
+/* The inner MiniScrubber chip IS clickable */
+.bm-name-scrubber .bm-slot {
+  pointer-events: auto;
+}
+
+/* Shorthand scrubber chip inside the label — inherits layer color, no bg at rest */
+.bm-margin  > .bm-name-scrubber .bm-slot { color: var(--m-label); }
+.bm-outline > .bm-name-scrubber .bm-slot { color: var(--o-label); }
+.bm-border  > .bm-name-scrubber .bm-slot { color: var(--b-label); }
+.bm-padding > .bm-name-scrubber .bm-slot { color: var(--p-label); }
+
+.bm-margin.bm-hovered  > .bm-name-scrubber .bm-slot { color: var(--m-label-hover); }
+.bm-outline.bm-hovered > .bm-name-scrubber .bm-slot { color: var(--o-label-hover); }
+.bm-border.bm-hovered  > .bm-name-scrubber .bm-slot { color: var(--b-label-hover); }
+.bm-padding.bm-hovered > .bm-name-scrubber .bm-slot { color: var(--p-label-hover); }
+
+/* When the shorthand slot has a value, use the accent color and bold */
+.bm-margin  > .bm-name-scrubber .bm-slot.bm-has-val { color: var(--m-accent); }
+.bm-outline > .bm-name-scrubber .bm-slot.bm-has-val { color: var(--o-accent); }
+.bm-border  > .bm-name-scrubber .bm-slot.bm-has-val { color: var(--b-accent); }
+.bm-padding > .bm-name-scrubber .bm-slot.bm-has-val { color: var(--p-accent); }
+
+/* Default label colors */
+.bm-margin  > .bm-name { color: var(--m-label); }
+.bm-outline > .bm-name { color: var(--o-label); }
+.bm-border  > .bm-name { color: var(--b-label); }
+.bm-padding > .bm-name { color: var(--p-label); }
+
+/* Label brightens on ring hover */
+.bm-margin.bm-hovered  > .bm-name { color: var(--m-label-hover); }
+.bm-outline.bm-hovered > .bm-name { color: var(--o-label-hover); }
+.bm-border.bm-hovered  > .bm-name { color: var(--b-label-hover); }
+.bm-padding.bm-hovered > .bm-name { color: var(--p-label-hover); }
+
+/* Value label (shorthand) styling */
+.bm-name .bm-val {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: -0.2px;
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+}
+
+.bm-margin  > .bm-name .bm-val { color: var(--m-accent); }
+.bm-outline > .bm-name .bm-val { color: var(--o-accent); }
+.bm-border  > .bm-name .bm-val { color: var(--b-accent); }
+.bm-padding > .bm-name .bm-val { color: var(--p-accent); }
+
+/* Shorthand label teal hover (Rule 9) */
+.bm-root:not(.bm-frozen) .bm-name .bm-val:hover {
+  color: var(--teal);
+  background: var(--teal-dim);
+  border-color: rgba(0, 132, 139, 0.30);
+}
+
+/* ─── Slot groups ─────────────────────────────────────────── */
+.bm-slot-group {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-fast);
+}
+
+/* Show slots when ring is hovered — always, even when frozen (required for dropdown click-through) */
+.bm-layer.bm-hovered > .bm-slot-group {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Always show slot groups that contain has-val items */
+.bm-slot-group.bm-has-values {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Hide slot groups when a child ring is hovered (isolation) — 
+   handled via React: non-hovered rings won't have .bm-hovered */
+
+/* Slot group with an open dropdown floats above all siblings */
+.bm-slot-group.bm-sg-active {
+  z-index: 100;
+}
+
+/* ─── Group positions ─────────────────────────────────────── */
+.bm-sg-top {
+  top: 0; left: 0; right: 0;
+  height: var(--ring-rest);
+  justify-content: center;
+  align-items: center;
+  transition: opacity var(--t-fast), height var(--t-grow);
+}
+
+.bm-sg-bottom {
+  bottom: 0; left: 0; right: 0;
+  height: var(--ring-rest);
+  justify-content: center;
+  align-items: center;
+  transition: opacity var(--t-fast), height var(--t-grow);
+}
+
+.bm-sg-right {
+  top: 0; bottom: 0; right: 0;
+  width: var(--ring-rest);
+  justify-content: center;
+  align-items: center;
+  transition: opacity var(--t-fast), width var(--t-grow);
+}
+
+.bm-sg-left {
+  top: 0; bottom: 0; left: 0;
+  width: var(--ring-rest);
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: opacity var(--t-fast), width var(--t-grow);
+}
+
+.bm-sg-tr {
+  top: 0; right: 7px;
+  height: var(--ring-rest);
+  transition: opacity var(--t-fast), height var(--t-grow);
+}
+.bm-sg-bl {
+  bottom: 0; left: 7px;
+  height: var(--ring-rest);
+  transition: opacity var(--t-fast), height var(--t-grow);
+}
+.bm-sg-br {
+  bottom: 0; right: 7px;
+  height: var(--ring-rest);
+  transition: opacity var(--t-fast), height var(--t-grow);
+}
+
+/* Grow corner slot groups when ring is hovered */
+.bm-layer.bm-hovered > .bm-sg-tr,
+.bm-layer.bm-hovered > .bm-sg-bl,
+.bm-layer.bm-hovered > .bm-sg-br {
+  height: var(--ring-hover);
+}
+
+/* Grow slot group dimensions when ring is hovered */
+.bm-layer.bm-hovered > .bm-sg-top,
+.bm-layer.bm-hovered > .bm-sg-bottom {
+  height: var(--ring-hover);
+}
+
+.bm-layer.bm-hovered > .bm-sg-left,
+.bm-layer.bm-hovered > .bm-sg-right {
+  width: var(--ring-hover);
+}
+
+/* ─── Slot items ──────────────────────────────────────────── */
+.bm-slot {
+  font-size: 11px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  color: var(--text-mid);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast), padding var(--t-grow);
+}
+
+/* Teal hover on any slot (Rules 10, 11) */
+.bm-root:not(.bm-frozen) .bm-slot:hover {
+  color: var(--teal);
+  background: var(--teal-dim);
+  border-color: rgba(0, 132, 139, 0.30);
+}
+
+/* Slot with active value — accent-colored, compact at rest */
+.bm-slot.bm-has-val {
+  font-weight: 700;
+  background: none;
+  border-color: transparent;
+  padding: 0;
+}
+
+.bm-margin  .bm-slot.bm-has-val { color: var(--m-accent); }
+.bm-outline .bm-slot.bm-has-val { color: var(--o-accent); }
+.bm-border  .bm-slot.bm-has-val { color: var(--b-accent); }
+.bm-padding .bm-slot.bm-has-val { color: var(--p-accent); }
+
+/* Grow has-val chips when ring is hovered (Rule 8) */
+.bm-layer.bm-hovered > .bm-slot-group > .bm-slot.bm-has-val {
+  padding: 2px 5px;
+}
+
+/* Has-val teal hover (Rule 11) */
+.bm-root:not(.bm-frozen) .bm-slot.bm-has-val:hover {
+  color: var(--teal);
+  background: var(--teal-dim);
+  border-color: rgba(0, 132, 139, 0.30);
+}
+
+/* ─── MiniScrubber: scrubbing state ──────────────────────── */
+.bm-slot.bm-scrubbing {
+  color: var(--teal) !important;
+  background: var(--teal-dim) !important;
+  border-color: var(--teal) !important;
+}
+
+/* ─── MiniScrubber: dropdown ─────────────────────────────── */
+.bm-mini-dropdown {
+  position: absolute;
+  z-index: 50;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #E2E5E5;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-width: 5rem;
+  padding: 2px 0;
+}
+
+.bm-mini-dropdown-item {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  cursor: pointer;
+  color: var(--text-mid);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.bm-mini-dropdown-item:hover {
+  background: var(--teal-dim);
+  color: var(--teal);
+}
+
+.bm-mini-dropdown-item.bm-active {
+  background: var(--teal-dim);
+  color: var(--teal);
+  font-weight: 700;
+}

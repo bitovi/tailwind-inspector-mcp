@@ -1,0 +1,155 @@
+# Tailwind Inspector MCP — Copilot Instructions
+
+## Project Overview
+
+A browser overlay + inspector panel + MCP server for visually editing Tailwind CSS classes on a running React app. The user clicks elements in the page, and the panel lets them scrub/select new Tailwind values which are queued as changes for an AI agent to apply.
+
+**Stack:** TypeScript, React 18, Vite 5, Tailwind v4 (CSS-only `@theme`), Express + WebSocket, MCP SDK, Vitest, Storybook 8, esbuild.
+
+## Key Design Tokens (Bitovi brand)
+
+Used throughout panel UI — do not substitute generic colors:
+
+```
+bv-teal:      #00848B
+bv-orange:    #F5532D
+bv-surface:   panel background
+bv-surface-hi: elevated surface
+bv-bg:        page background
+bv-border:    border color
+bv-text:      primary text
+bv-text-mid:  secondary text
+bv-muted:     muted/disabled text
+```
+
+## Code Conventions
+
+- **TypeScript everywhere** — no plain JS files in `overlay/`, `panel/`, or `server/`
+- **No `@/` path alias** — use relative imports (`../../overlay/src/class-parser`)
+- **No `cn()` utility** — use template literals for conditional classes
+- **No default exports for components** — use named exports
+- **React function components only** — no class components
+
+## Running Everything
+
+### Preferred: VS Code Tasks (auto-rebuild on save)
+
+Use the VS Code task runner to start the full dev environment with watch mode:
+
+- **⌘⇧B** (Run Build Task) → runs **"Dev: All"** which starts all 4 processes in parallel:
+  - **Watch: Overlay** — esbuild `--watch`, rebuilds `overlay/dist/overlay.js` on every save
+  - **Watch: Panel** — `vite build --watch`, rebuilds `panel/dist/` on every save
+  - **Server (port 3333)** — Express + WebSocket server, started from `test-app/`
+  - **Test App (port 5173)** — Vite dev server for the test app
+
+Individual tasks can also be run via **Terminal → Run Task**.
+
+### ⚠️ Server Must Run from `test-app/` Directory
+
+The server uses `createRequire(cwd)` to load the **target project's** `tailwindcss` package. If started from the root, it will 500 on `/tailwind-config` because `tailwindcss` isn't in root `node_modules`. The VS Code task handles this automatically.
+
+```bash
+# If running manually (not via VS Code tasks):
+# 1. Build once first
+npm run build
+
+# 2. Start the server from test-app/ (CRITICAL)
+cd test-app && node --import tsx ../server/index.ts
+# → Serves panel at http://localhost:3333/panel/
+# → Serves overlay.js at http://localhost:3333/overlay.js
+
+# 3. Start the test app
+cd test-app && npx vite
+# → http://localhost:5173 (page to inspect)
+
+# 4. Storybook (optional, from panel/)
+cd panel && npm run storybook
+# → http://localhost:6006
+```
+
+## Running Tests
+
+```bash
+# All panel tests (from panel/ or root)
+cd panel && npm test
+# or from root:
+npm test
+
+# Watch mode
+cd panel && npm run test:watch
+
+# Run specific test file
+cd panel && npm test -- ScaleScrubber
+```
+
+## Package Structure
+
+```
+/                        ← root package (server + build scripts)
+  server/index.ts        ← Express + WebSocket + MCP server (port 3333)
+  server/tailwind.ts     ← Tailwind v4 compiler (uses target project's tailwindcss)
+  server/queue.ts        ← Change queue for MCP tools
+  overlay/src/           ← Browser overlay (esbuild IIFE bundle)
+    class-parser.ts      ← Parses Tailwind classes → ParsedClass (shared with panel)
+    index.ts             ← Shadow DOM, toggle button, click handler
+    picker.ts            ← Old picker UI (being replaced by panel)
+    ws.ts                ← WebSocket client
+  panel/                 ← React inspector panel (separate package)
+    src/App.tsx          ← Root component
+    src/Picker.tsx       ← Main inspector UI (property chips, scrubbers)
+    src/ws.ts            ← WebSocket client + message bus
+    src/components/      ← Modlet-style components
+  test-app/              ← Sample React app used for testing/demo
+    e2e/                 ← Playwright E2E tests
+```
+
+## Component Architecture
+
+Panel components follow the **modlet pattern** — self-contained folders:
+
+```
+panel/src/components/MyComponent/
+  index.ts              ← re-exports
+  MyComponent.tsx       ← implementation
+  MyComponent.test.tsx  ← Vitest + @testing-library/react tests
+  MyComponent.stories.tsx ← Storybook stories
+  types.ts              ← (optional) shared types
+```
+
+See `.github/skills/create-react-modlet/SKILL.md` for full guidance.
+
+## Data Flow
+
+1. User visits `http://localhost:5173` with the overlay script injected
+2. Overlay registers as `'overlay'` over WebSocket to `ws://localhost:3333`
+3. Panel at `http://localhost:3333/panel/` registers as `'panel'` over WebSocket
+4. User clicks element → overlay sends `ELEMENT_SELECTED` message → panel renders chips
+5. User scrubs/selects value → panel sends `CLASS_CHANGE` message → overlay previews live
+6. User clicks "Queue Change" → server stores change in queue
+7. AI agent calls MCP `get_changes` tool → reads queue, applies to source files
+
+## `ParsedClass` Type (overlay/src/class-parser.ts)
+
+```ts
+interface ParsedClass {
+  category: string;
+  valueType: 'scalar' | 'enum' | 'color';  // drives which UI control renders
+  prefix: string;    // e.g. "px", "text", "bg"
+  value: string;     // e.g. "4", "lg", "blue-500"
+  fullClass: string; // e.g. "px-4"
+  themeKey: string | null; // e.g. "spacing", "colors", null
+}
+```
+
+`valueType` determines the Picker UI:
+- `scalar` → `ScaleScrubber` (drag-to-scrub + dropdown)
+- `color` → click to expand `ColorGrid`
+- `enum` → plain static chip
+
+## Common Pitfalls
+
+- **Server cwd**: Always start server from `test-app/` — not from the root
+- **Port conflicts**: Server=3333, test-app=5173, Storybook=6006, panel dev=5174
+- **`class-parser.ts` is shared**: Both overlay and panel import it — changes affect both
+- **No `tailwind.config.js`**: Tailwind v4 uses `@theme {}` in `panel/src/index.css` only
+- **`scrollIntoView` in tests**: jsdom doesn't implement it — use optional chaining `el.scrollIntoView?.()`

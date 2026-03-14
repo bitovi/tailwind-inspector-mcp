@@ -4,7 +4,7 @@
 
 import express from "express";
 import cors from "cors";
-import { createServer } from "http";
+import { createServer, request as makeRequest } from "http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -65,14 +65,38 @@ app.post("/css", express.json(), async (req, res) => {
 });
 
 // --- Serve Panel app ---
-const panelDist = path.join(packageRoot, "panel", "dist");
-app.use("/panel", express.static(panelDist));
-// SPA fallback: serve index.html for any /panel/* route not matched by static files
-app.get("/panel/*", (_req, res) => {
-  res.sendFile(path.join(panelDist, "index.html"), (err) => {
-    if (err && !res.headersSent) res.status(404).end();
+if (process.env.PANEL_DEV) {
+  const panelDevPort = Number(process.env.PANEL_DEV_PORT) || 5174;
+  console.error(`[server] Panel dev mode: proxying /panel → http://localhost:${panelDevPort}`);
+  app.use("/panel", (req, res) => {
+    const proxyReq = makeRequest(
+      {
+        hostname: "localhost",
+        port: panelDevPort,
+        path: "/panel" + req.url,
+        method: req.method,
+        headers: { ...req.headers, host: `localhost:${panelDevPort}` },
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode!, proxyRes.headers);
+        proxyRes.pipe(res, { end: true });
+      }
+    );
+    proxyReq.on("error", () => {
+      if (!res.headersSent) res.status(502).send("Panel dev server not running on port " + panelDevPort);
+    });
+    req.pipe(proxyReq, { end: true });
   });
-});
+} else {
+  const panelDist = path.join(packageRoot, "panel", "dist");
+  app.use("/panel", express.static(panelDist));
+  // SPA fallback: serve index.html for any /panel/* route not matched by static files
+  app.get("/panel/*", (_req, res) => {
+    res.sendFile(path.join(panelDist, "index.html"), (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  });
+}
 
 // --- HTTP + WebSocket ---
 const httpServer = createServer(app);

@@ -26,6 +26,9 @@ playwright-report/
 .vite/
 *.tsbuildinfo
 
+# Storybook
+panel/storybook-static/
+
 # Lock conflict artifacts
 *.yarn-integrity
 yarn-error.log
