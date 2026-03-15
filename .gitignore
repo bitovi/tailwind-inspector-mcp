@@ -22,6 +22,7 @@ coverage/
 test-results/
 playwright-report/
 temp/
+.playwright-mcp/
 
 # Build caches
 .vite/
