@@ -14,6 +14,7 @@ export interface Patch {
   property: string;          // prefix of the change
   timestamp: string;         // ISO 8601
   // Populated at stage time by the overlay (has DOM access):
+  pageUrl?: string;          // URL of the inspected page
   component?: { name: string };
   target?: { tag: string; classes: string; innerText: string };
   context?: string;

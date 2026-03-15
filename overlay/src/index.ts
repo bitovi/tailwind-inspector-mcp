@@ -313,6 +313,7 @@ function init(): void {
           newClass: msg.newClass,
           property: msg.property,
           timestamp: new Date().toISOString(),
+          pageUrl: window.location.href,
           component: { name: currentBoundary.componentName },
           target: {
             tag: currentTargetEl.tagName.toLowerCase(),
