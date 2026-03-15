@@ -22,6 +22,10 @@ Use this skill when:
 - Playwright MCP tools available
 - Failed test has generated artifacts in `test-results/`
 
+## Screenshot Output
+
+Playwright MCP is configured to save screenshots to the workspace-level `temp/` directory (set via `--output-dir` in `.vscode/mcp.json`). Screenshots taken during live debugging with MCP tools will appear there. The `temp/` folder is gitignored.
+
 ## Debugging Workflow
 
 ### Step 1: Run the Specific Failed Test
@@ -43,10 +47,17 @@ Read the terminal output carefully and extract:
 
 ### Step 3: Load the Screenshot
 
-Use the `read_media_file` tool to load the screenshot from the test results:
+Test-run failure screenshots land in:
 ```
 test-results/<test-name>/test-failed-1.png
 ```
+
+Screenshots taken manually during MCP exploration land in:
+```
+temp/
+```
+
+Use the `read_media_file` tool (or the Playwright MCP screenshot tool) to view either.
 
 ### Step 4: Read the Error Context
 
@@ -87,6 +98,16 @@ If the issue isn't clear from the screenshot and error context, use Playwright M
 3. Get HTML: `playwright_get_visible_html`
 4. Click elements: `playwright_click`
 5. Inspect what happens: `playwright_get_visible_text`
+
+#### Common Starting Workflow
+
+The most common Playwright MCP exploration starts with the test-app and involves opening the inspector panel:
+
+1. **Navigate to the test app**: `http://localhost:5173`
+2. **Click the toggle button** (⊕) — this opens the sidebar/panel container with the inspector iframe
+3. **Click the "Primary" button** on the page — this sends `ELEMENT_SELECTED` to the panel and populates the inspector with the Button component's properties (Box Model, Typography, Backgrounds, etc.)
+
+From here you can interact with the panel iframe (scrubbers, dropdowns, color chips, footer buttons) to inspect or reproduce the issue. The panel lives inside an iframe at `/panel/` — remember that Playwright MCP will show iframe elements with `f*` prefixed refs (e.g. `f1e5`).
 
 ### Step 8: Fix the Issue
 

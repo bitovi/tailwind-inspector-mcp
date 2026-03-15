@@ -282,12 +282,12 @@ function init(): void {
 
   // Handle messages from Panel via WS
   onMessage((msg: any) => {
-    if (msg.type === 'CLASS_PREVIEW' && currentEquivalentNodes.length > 0) {
+    if (msg.type === 'PATCH_PREVIEW' && currentEquivalentNodes.length > 0) {
       applyPreview(currentEquivalentNodes, msg.oldClass, msg.newClass, SERVER_ORIGIN);
-    } else if (msg.type === 'CLASS_REVERT') {
+    } else if (msg.type === 'PATCH_REVERT') {
       revertPreview();
-    } else if (msg.type === 'CLASS_COMMIT' && currentTargetEl && currentBoundary) {
-      // Build context and send CHANGE to server
+    } else if (msg.type === 'PATCH_STAGE' && currentTargetEl && currentBoundary) {
+      // Build context and send PATCH_STAGED to server
       const state = getPreviewState();
       const originalClassMap = new Map<HTMLElement, string>();
       if (state) {
@@ -304,22 +304,26 @@ function init(): void {
       const context = buildContext(currentTargetEl, msg.oldClass, msg.newClass, originalClassMap);
 
       send({
-        type: 'CHANGE',
-        component: { name: currentBoundary.componentName },
-        target: {
-          tag: currentTargetEl.tagName.toLowerCase(),
-          classes: originalClassString,
-          innerText: (currentTargetEl.innerText || '').trim().slice(0, 60),
-        },
-        change: {
+        type: 'PATCH_STAGED',
+        patch: {
+          id: msg.id,
+          elementKey: currentBoundary.componentName,
+          status: 'staged',
+          originalClass: msg.oldClass,
+          newClass: msg.newClass,
           property: msg.property,
-          old: msg.oldClass,
-          new: msg.newClass,
+          timestamp: new Date().toISOString(),
+          component: { name: currentBoundary.componentName },
+          target: {
+            tag: currentTargetEl.tagName.toLowerCase(),
+            classes: originalClassString,
+            innerText: (currentTargetEl.innerText || '').trim().slice(0, 60),
+          },
+          context,
         },
-        context,
       });
 
-      showToast('Change queued — say "apply my changes" to your agent');
+      showToast('Change staged');
     } else if (msg.type === 'CLEAR_HIGHLIGHTS') {
       clearHighlights();
     } else if (msg.type === 'SWITCH_CONTAINER') {

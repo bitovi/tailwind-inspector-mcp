@@ -77,9 +77,9 @@ test.describe('BoxModel panel integration', () => {
     await panel.locator('.bm-mini-dropdown-item', { hasText: /^p-4$/ }).first().click();
     await page.waitForTimeout(500);
 
-    // CLASS_COMMIT should be sent with oldClass='' and newClass='p-4'
-    const commit = wsMessages.find(m => m.type === 'CLASS_COMMIT' && m.newClass === 'p-4');
-    expect(commit, 'CLASS_COMMIT with newClass="p-4" should be sent').toBeTruthy();
+    // PATCH_STAGE should be sent with newClass='p-4'
+    const stage = wsMessages.find(m => m.type === 'PATCH_STAGE' && m.newClass === 'p-4');
+    expect(stage, 'PATCH_STAGE with newClass="p-4" should be sent').toBeTruthy();
   });
 
   test('BoxModel shorthand label shows current value and allows changing it', async ({ page }) => {
@@ -90,7 +90,7 @@ test.describe('BoxModel panel integration', () => {
     await expect(paddingLabel).toHaveText('padding', { timeout: 5000 });
   });
 
-  test('BoxModel slot change sends CLASS_COMMIT via WebSocket', async ({ page }) => {
+  test('BoxModel slot change sends PATCH_STAGE via WebSocket', async ({ page }) => {
     const wsMessages: any[] = [];
     page.on('websocket', (ws) => {
       ws.on('framesent', (frame) => {
@@ -109,48 +109,30 @@ test.describe('BoxModel panel integration', () => {
     await panel.locator('.bm-mini-dropdown-item', { hasText: /^px-8$/ }).click();
     await page.waitForTimeout(500);
 
-    // A CLASS_COMMIT message should have been sent
-    const commit = wsMessages.find(m => m.type === 'CLASS_COMMIT' && m.oldClass === 'px-4' && m.newClass === 'px-8');
-    expect(commit).toBeTruthy();
+    // A PATCH_STAGE message should have been sent
+    const stage = wsMessages.find(m => m.type === 'PATCH_STAGE' && m.oldClass === 'px-4' && m.newClass === 'px-8');
+    expect(stage).toBeTruthy();
   });
 
   test('BoxModel clears highlights when editing starts', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(1500);
+    const panel = await openPanelForPrimaryButton(page);
 
-    // Activate inspect mode
-    await page.evaluate(() => {
-      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-      const btn = host.shadowRoot!.querySelector('.toggle-btn') as HTMLButtonElement;
-      btn.click();
-    });
-
-    // Wait for panel iframe to appear and connect before selecting element
-    await page.waitForSelector('iframe[src*="panel"]', { timeout: 5000 });
-    await page.waitForTimeout(800);
-
-    // Click Primary button to select it — this creates highlights
-    await page.locator('button:has-text("Primary")').first().click();
-    await page.waitForTimeout(800);
-
-    // Verify highlights are present
-    const highlightsBefore = await page.evaluate(() => {
-      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-      return host.shadowRoot!.querySelectorAll('.highlight-overlay').length;
-    });
-    expect(highlightsBefore).toBeGreaterThan(0);
-
-    const panel = page.frameLocator('iframe[src*="panel"]');
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+        return host.shadowRoot!.querySelectorAll('.highlight-overlay').length;
+      });
+    }).toBeGreaterThan(0);
 
     // Opening a BoxModel slot dropdown should send CLEAR_HIGHLIGHTS
     await panel.locator('[data-layer="padding"] .bm-slot', { hasText: 'x-4' }).click();
-    await page.waitForTimeout(500);
 
-    const highlightsAfter = await page.evaluate(() => {
-      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-      return host.shadowRoot!.querySelectorAll('.highlight-overlay').length;
-    });
-    expect(highlightsAfter).toBe(0);
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+        return host.shadowRoot!.querySelectorAll('.highlight-overlay').length;
+      });
+    }).toBe(0);
   });
 
   test('BoxModel can add a new class to an empty slot', async ({ page }) => {
@@ -179,8 +161,8 @@ test.describe('BoxModel panel integration', () => {
     await panel.locator('.bm-mini-dropdown-item', { hasText: /^pl-4$/ }).first().click();
     await page.waitForTimeout(500);
 
-    // CLASS_COMMIT should be sent with oldClass '' (empty — new class) and newClass 'pl-4'
-    const commit = wsMessages.find(m => m.type === 'CLASS_COMMIT' && m.oldClass === '' && m.newClass === 'pl-4');
-    expect(commit, 'CLASS_COMMIT with oldClass="" and newClass="pl-4" should be sent').toBeTruthy();
+    // PATCH_STAGE should be sent with oldClass '' (empty — new class) and newClass 'pl-4'
+    const stage = wsMessages.find(m => m.type === 'PATCH_STAGE' && m.oldClass === '' && m.newClass === 'pl-4');
+    expect(stage, 'PATCH_STAGE with oldClass="" and newClass="pl-4" should be sent').toBeTruthy();
   });
 });

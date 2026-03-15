@@ -21,6 +21,7 @@ Thumbs.db
 coverage/
 test-results/
 playwright-report/
+temp/
 
 # Build caches
 .vite/

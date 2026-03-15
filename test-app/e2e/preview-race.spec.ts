@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Verifies that hovering over scale chips and then leaving does NOT leave
  * a stale preview class on the page elements.
  *
- * Root cause: applyPreview does an async fetch, so CLASS_REVERT (synchronous)
+ * Root cause: applyPreview does an async fetch, so PATCH_REVERT (synchronous)
  * could run and restore the DOM while the fetch is still in flight — then the
  * fetch resolves and re-applies the class with no way to clean up.
  * Fixed via a generation counter that invalidates stale in-flight previews.
@@ -24,11 +24,6 @@ test('hovering then leaving scale chips reverts classes on the page', async ({ p
     btn.click();
   });
 
-  // Click the Primary button to select it
-  await page.locator('button:has-text("Primary")').first().click();
-  await page.waitForTimeout(1500);
-
-  // Get the panel iframe
   let frame: import('@playwright/test').Frame | null = null;
   for (let i = 0; i < 20; i++) {
     frame = page.frames().find(f => f.url().includes('/panel')) || null;
@@ -37,30 +32,23 @@ test('hovering then leaving scale chips reverts classes on the page', async ({ p
   }
   expect(frame).toBeTruthy();
 
-  // Wait for class chips to appear, then click the spacing chip to show scale row
-  await frame!.waitForSelector('div[style*="cursor: pointer"]', { timeout: 5000 });
-  const chips = await frame!.$$('div[style*="cursor: pointer"]');
-  let px4Chip: import('@playwright/test').ElementHandle | null = null;
-  for (const chip of chips) {
-    const text = await chip.textContent();
-    if (text?.trim() === 'px-4') {
-      px4Chip = chip;
-      break;
-    }
-  }
-  expect(px4Chip).toBeTruthy();
-  await px4Chip!.click();
+  await frame!.waitForFunction(
+    () => !document.body.textContent?.includes('Waiting for connection'),
+    { timeout: 10000 },
+  );
 
-  // Wait for scale row to render
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(300);
 
-  // Hover over several scale chips rapidly, then leave — simulating the race condition scenario
-  const scaleChips = await frame!.$$('div[style*="cursor: pointer"]');
+  // Click the Primary button to select it
+  await page.locator('button:has-text("Primary")').first().click();
+  const scrubber = frame!.locator('.cursor-ew-resize').filter({ hasText: 'text-sm' }).first();
+  await scrubber.waitFor({ timeout: 8000 });
+  await scrubber.click();
+  await page.waitForTimeout(300);
 
-  // Rapidly hover over a run of chips and then move away
-  for (let i = 0; i < Math.min(scaleChips.length, 6); i++) {
-    await scaleChips[i].hover();
-    // No wait — move immediately to the next one
+  const optionTexts = ['text-xs', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl'];
+  for (const optionText of optionTexts) {
+    await frame!.getByText(optionText, { exact: true }).hover();
   }
 
   // Move the mouse out of the panel entirely

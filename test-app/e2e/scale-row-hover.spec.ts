@@ -25,14 +25,15 @@ async function getPanelFrame(page: Page): Promise<Frame> {
 /** Count chips that visually appear highlighted (checks computed/animated colour). */
 async function getVisuallyHighlightedChipCount(frame: Frame): Promise<number> {
   return frame.evaluate(() => {
-    const PREVIEW_COLOR = 'rgb(166, 227, 161)';
+    const ACTIVE_COLOR = 'rgb(0, 132, 139)';
     return Array.from(document.querySelectorAll('div'))
-      .filter(el => window.getComputedStyle(el as HTMLElement).color === PREVIEW_COLOR)
+      .filter(el => (el as HTMLElement).className.includes('cursor-pointer'))
+      .filter(el => window.getComputedStyle(el as HTMLElement).color === ACTIVE_COLOR)
       .length;
   });
 }
 
-/** Common setup: activate inspect, click Primary button, open scale row. */
+/** Common setup: activate inspect, click Primary button, open the text-size scrubber dropdown. */
 async function setupScaleRow(page: Page): Promise<{ frame: Frame; iframeBox: { x: number; y: number; width: number; height: number } }> {
   await page.goto('/');
   await page.waitForTimeout(2000);
@@ -43,48 +44,48 @@ async function setupScaleRow(page: Page): Promise<{ frame: Frame; iframeBox: { x
     btn.click();
   });
 
-  await page.locator('button:has-text("Primary")').first().click();
-  await page.waitForTimeout(1500);
-
   const frame = await getPanelFrame(page);
-  await frame.waitForSelector('div[style*="cursor: pointer"]', { timeout: 5000 });
+  await frame.waitForFunction(
+    () => !document.body.textContent?.includes('Waiting for connection'),
+    { timeout: 10000 },
+  );
 
-  const chips = await frame.$$('div[style*="cursor: pointer"]');
-  for (const chip of chips) {
-    if ((await chip.textContent())?.trim() === 'px-4') {
-      await chip.click();
-      break;
-    }
-  }
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(300);
+
+  await page.locator('button:has-text("Primary")').first().click();
+
+  const scrubber = frame.locator('.cursor-ew-resize').filter({ hasText: 'text-sm' }).first();
+  await scrubber.waitFor({ timeout: 8000 });
+  await scrubber.click();
+  await page.waitForTimeout(300);
 
   const iframeBox = await getIframePageBox(page);
   return { frame, iframeBox };
 }
 
-test('no chips stay highlighted after the mouse sweeps across the scale row and leaves', async ({ page }) => {
+test('only the active scrubber option stays highlighted after sweeping the dropdown and leaving', async ({ page }) => {
   const { frame, iframeBox } = await setupScaleRow(page);
 
-  const startChipBox = await frame.getByText('px-1', { exact: true }).boundingBox();
+  const startChipBox = await frame.getByText('text-xs', { exact: true }).boundingBox();
   expect(startChipBox).toBeTruthy();
 
   const startX = iframeBox.x + startChipBox!.x + startChipBox!.width / 2;
   const startY = iframeBox.y + startChipBox!.y + startChipBox!.height / 2;
 
   await page.mouse.move(startX, startY);
-  await page.mouse.move(startX + 400, startY, { steps: 30 });
+  await page.mouse.move(startX, startY + 220, { steps: 20 });
 
   // Move the mouse outside the panel entirely
   await page.mouse.move(200, 400, { steps: 10 });
   await page.waitForTimeout(300);
 
-  expect(await getVisuallyHighlightedChipCount(frame)).toBe(0);
+  expect(await getVisuallyHighlightedChipCount(frame)).toBe(1);
 });
 
-test('at most one chip appears visually highlighted (computed color) during mouse sweep', async ({ page }) => {
+test('at most one scrubber option appears visually highlighted during mouse sweep', async ({ page }) => {
   const { frame, iframeBox } = await setupScaleRow(page);
 
-  const startChipBox = await frame.getByText('px-1', { exact: true }).boundingBox();
+  const startChipBox = await frame.getByText('text-xs', { exact: true }).boundingBox();
   expect(startChipBox).toBeTruthy();
 
   const startX = iframeBox.x + startChipBox!.x + startChipBox!.width / 2;
@@ -96,13 +97,13 @@ test('at most one chip appears visually highlighted (computed color) during mous
   let maxHighlighted = 0;
   for (let i = 0; i <= totalSteps; i++) {
     await page.mouse.move(startX + (i / totalSteps) * 400, startY);
-    // Wait for one rAF so any CSS transition animation frame can run
     const count = await frame.evaluate(() => {
       return new Promise<number>((resolve) => {
         requestAnimationFrame(() => {
-          const PREVIEW_COLOR = 'rgb(166, 227, 161)';
+          const ACTIVE_COLOR = 'rgb(0, 132, 139)';
           const n = Array.from(document.querySelectorAll('div'))
-            .filter(el => window.getComputedStyle(el as HTMLElement).color === PREVIEW_COLOR)
+            .filter(el => (el as HTMLElement).className.includes('cursor-pointer'))
+            .filter(el => window.getComputedStyle(el as HTMLElement).color === ACTIVE_COLOR)
             .length;
           resolve(n);
         });
@@ -114,17 +115,16 @@ test('at most one chip appears visually highlighted (computed color) during mous
   expect(maxHighlighted).toBeLessThanOrEqual(1);
 });
 
-test('no chips stay highlighted when mouse exits the iframe to the main page', async ({ page }) => {
+test('only the active scrubber option stays highlighted when mouse exits the iframe', async ({ page }) => {
   const { frame, iframeBox } = await setupScaleRow(page);
 
-  const startChipBox = await frame.getByText('px-1', { exact: true }).boundingBox();
+  const startChipBox = await frame.getByText('text-xs', { exact: true }).boundingBox();
   expect(startChipBox).toBeTruthy();
 
   const chipX = iframeBox.x + startChipBox!.x + startChipBox!.width / 2;
   const chipY = iframeBox.y + startChipBox!.y + startChipBox!.height / 2;
 
-  // Hover the chip via frame — Playwright correctly dispatches mouseenter inside the iframe
-  await frame.getByText('px-1', { exact: true }).hover();
+  await frame.getByText('text-xs', { exact: true }).hover();
   await page.waitForTimeout(100);
   expect(await getVisuallyHighlightedChipCount(frame)).toBe(1);
 
@@ -135,5 +135,5 @@ test('no chips stay highlighted when mouse exits the iframe to the main page', a
   await page.mouse.move(200, 400, { steps: 5 });
   await page.waitForTimeout(300);
 
-  expect(await getVisuallyHighlightedChipCount(frame)).toBe(0);
+  expect(await getVisuallyHighlightedChipCount(frame)).toBe(1);
 });

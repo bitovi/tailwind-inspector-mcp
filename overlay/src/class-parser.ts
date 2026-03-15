@@ -68,8 +68,8 @@ const PREFIX_MAP: PrefixEntry[] = [
   { prefix: 'decoration-', category: 'color', themeKey: 'colors' },
   // Typography
   { prefix: 'font-', category: 'typography', themeKey: 'fontWeight' },
-  { prefix: 'leading-', category: 'typography', themeKey: null },
-  { prefix: 'tracking-', category: 'typography', themeKey: null },
+  { prefix: 'leading-', category: 'typography', themeKey: 'lineHeight' },
+  { prefix: 'tracking-', category: 'typography', themeKey: 'letterSpacing' },
   // Borders
   { prefix: 'rounded-tl-', category: 'borders', themeKey: 'borderRadius' },
   { prefix: 'rounded-tr-', category: 'borders', themeKey: 'borderRadius' },

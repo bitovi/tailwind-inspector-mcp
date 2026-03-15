@@ -59,7 +59,6 @@ async function selectElementAndWaitForPanel(page: Page, locator: import('@playwr
 
 /** Find the ScaleScrubber chip (cursor-ew-resize) whose trimmed text matches the given class. */
 async function findScrubberChip(frame: Frame, className: string) {
-  // ScaleScrubber chip has Tailwind class cursor-ew-resize; text includes chevrons so match loosely
   const locator = frame.locator('.cursor-ew-resize').filter({ hasText: className });
   try {
     await locator.first().waitFor({ timeout: 5000 });
@@ -82,11 +81,10 @@ test.describe('ScaleScrubber clears highlights on interaction', () => {
     const highlightsBefore = await getHighlightCount(page);
     expect(highlightsBefore, 'Highlights should appear after clicking an element').toBeGreaterThan(0);
 
-    const chip = await findScrubberChip(frame, 'px-4');
-    expect(chip, 'px-4 ScaleScrubber chip should be present in the panel').not.toBeNull();
+    const chip = await findScrubberChip(frame, 'text-sm');
+    expect(chip, 'text-sm ScaleScrubber chip should be present in the panel').not.toBeNull();
 
-    // Trigger pointer-down → fires onStart → sends CLEAR_HIGHLIGHTS to overlay
-    await chip!.dispatchEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true });
+    await chip!.click();
     await page.waitForTimeout(500);
 
     const highlightsAfter = await getHighlightCount(page);
@@ -104,16 +102,14 @@ test.describe('ScaleScrubber clears highlights on interaction', () => {
 
     expect(await getHighlightCount(page)).toBeGreaterThan(0);
 
-    const chip = await findScrubberChip(frame, 'px-4');
+    const chip = await findScrubberChip(frame, 'text-sm');
     expect(chip).not.toBeNull();
 
-    // Click (pointer-down + pointer-up without drag) to open the dropdown
-    await chip!.dispatchEvent('pointerdown', { clientX: 0, clientY: 0, button: 0, bubbles: true });
-    await chip!.dispatchEvent('pointerup', { clientX: 0, clientY: 0, button: 0, bubbles: true });
+    await chip!.click();
     await page.waitForTimeout(500);
 
     // Hover over a dropdown option to trigger a preview
-    const option = frame.getByText('px-8', { exact: true });
+    const option = frame.getByText('text-base', { exact: true });
     await option.hover();
     await page.waitForTimeout(300);
 

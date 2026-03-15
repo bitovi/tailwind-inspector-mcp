@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add / Remove UX Options — Prototype Comparison</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Inter:wght@400;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #FFFFFF;
+      --surface:      #F4F5F5;
+      --surface-hi:   #E6E9E9;
+      --border:       #DFE2E2;
+      --text:         #334041;
+      --text-mid:     #687879;
+      --muted:        #A3ADAD;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.09);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.09);
+      --teal-dark:    #00464A;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       150ms ease-in-out;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #EAECED;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 32px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col { display: flex; flex-direction: column; gap: 8px; }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family: var(--font-mono);
+      color: #8A9599;
+      max-width: 398px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 398px;
+      line-height: 1.5;
+      margin-bottom: 4px;
+    }
+
+    .panel {
+      width: 398px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    .panel-body { padding: 12px; }
+
+    .section-hd {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+
+    .section-hd:first-child { margin-top: 0; }
+
+    .section-hd .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .section-hd .label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-mid);
+      flex: 1;
+    }
+
+    .section-hd .add-btn {
+      width: 18px; height: 18px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--t-fast);
+    }
+
+    .section-hd .add-btn:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .chip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
+      cursor: ew-resize;
+      user-select: none;
+      transition: all var(--t-fast);
+      background: var(--surface);
+      color: var(--text-mid);
+    }
+
+    .chip:hover {
+      border-color: var(--teal);
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .chip.is-active {
+      border-color: var(--orange);
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    .chip.is-scrubbing {
+      border-color: var(--teal);
+      background: var(--bg);
+      color: var(--teal);
+      box-shadow: 0 1px 5px rgba(0, 132, 139, 0.18);
+    }
+
+    .chip .remove {
+      display: none;
+      font-size: 9px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-left: 2px;
+    }
+
+    .chip:hover .remove { display: inline; }
+    .chip .remove:hover { color: var(--orange); }
+
+    .chip .arrow {
+      font-size: 8px;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .chip:hover .arrow { opacity: 0.5; }
+
+    /* ─── Ghost chip ─────────────────────────────────── */
+    .chip.ghost {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 400;
+    }
+
+    .chip.ghost:hover {
+      border-color: var(--teal);
+      border-style: solid;
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    /* ─── Color swatch ───────────────────────────────── */
+    .color-swatch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px 2px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
+      cursor: pointer;
+      user-select: none;
+      transition: all var(--t-fast);
+      background: var(--surface);
+      color: var(--text-mid);
+    }
+
+    .color-swatch .swatch-box {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+
+    .color-swatch:hover {
+      border-color: var(--teal);
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .color-swatch.is-active {
+      border-color: var(--orange);
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    .color-swatch .remove {
+      display: none;
+      font-size: 9px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-left: 2px;
+    }
+
+    .color-swatch:hover .remove { display: inline; }
+
+    /* ─── "+" dropdown menu ──────────────────────────── */
+    .add-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .add-dropdown-menu {
+      position: absolute;
+      z-index: 50;
+      top: calc(100% + 2px);
+      right: 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      min-width: 180px;
+      padding: 4px 0;
+    }
+
+    .add-dropdown-item {
+      padding: 5px 10px;
+      font-size: 11px;
+      font-family: var(--font-ui);
+      color: var(--text-mid);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--t-fast);
+    }
+
+    .add-dropdown-item:hover {
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .add-dropdown-item .prefix-hint {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .add-dropdown-item:hover .prefix-hint {
+      color: var(--teal);
+      opacity: 0.6;
+    }
+
+    /* ─── Type-to-search input ───────────────────────── */
+    .search-input {
+      width: 100%;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color var(--t-fast);
+    }
+
+    .search-input:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 2px var(--teal-dim);
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .search-results {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      margin-top: 2px;
+      padding: 2px 0;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .search-result-item {
+      padding: 4px 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: all var(--t-fast);
+    }
+
+    .search-result-item:hover {
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .search-result-item .match {
+      color: var(--teal);
+      font-weight: 600;
+    }
+
+    /* ─── Dividers ───────────────────────────────────── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 4px 0 8px 0;
+    }
+
+    .mini-bm {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px;
+      background: var(--surface);
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .option-tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .option-tag.a { background: #3B82F6; }
+    .option-tag.b { background: #8B5CF6; }
+    .option-tag.c { background: #EC4899; }
+    .option-tag.d { background: #F59E0B; }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════
+       OPTION A — "+" button per section → prefix dropdown
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="option-tag a">Option A</div>
+    <div class="col-label">"+" button per section → dropdown of available prefixes</div>
+    <div class="col-description">
+      Click the [+] in the section header → a dropdown lists the properties you can add.
+      Pick one → a blank scrubber/color picker appears. Two-step but very discoverable.
+    </div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing]</div>
+
+        <!-- Typography — has text-lg, font-bold. "+" dropdown open -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Typography</span>
+          <div class="add-dropdown">
+            <button class="add-btn" style="border-color: var(--teal); color: var(--teal); background: var(--teal-dim);">+</button>
+            <div class="add-dropdown-menu">
+              <div class="add-dropdown-item">
+                Text color <span class="prefix-hint">text-{color}</span>
+              </div>
+              <div class="add-dropdown-item" style="background: var(--teal-dim); color: var(--teal);">
+                Text align <span class="prefix-hint" style="color: var(--teal); opacity: 0.6;">text-{align}</span>
+              </div>
+              <div class="add-dropdown-item">
+                Line height <span class="prefix-hint">leading-*</span>
+              </div>
+              <div class="add-dropdown-item">
+                Letter spacing <span class="prefix-hint">tracking-*</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>text-lg</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>font-bold</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Backgrounds — empty, just header + add button -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+          <button class="add-btn">+</button>
+        </div>
+        <div style="font-size: 10px; color: var(--muted); font-style: italic; margin-bottom: 8px;">No background classes — click + to add</div>
+
+        <hr class="section-divider">
+
+        <!-- Sizing — has w-64 -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Sizing</span>
+          <button class="add-btn">+</button>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>w-64</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       OPTION B — Inline type-to-search per section
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="option-tag b">Option B</div>
+    <div class="col-label">Inline type-to-search per section</div>
+    <div class="col-description">
+      Each section has a compact search input. Type a class name → autocomplete filters 
+      matching Tailwind classes. Fast for power users who know the class names.
+    </div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing]</div>
+
+        <!-- Typography — search input with "leading" typed -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Typography</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span>text-lg</span>
+            <span class="remove">×</span>
+          </div>
+          <div class="chip is-active">
+            <span>font-bold</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <!-- Search input with autocomplete results -->
+        <div style="position: relative; margin-bottom: 8px;">
+          <input type="text" class="search-input" value="leading" placeholder="Add class..." style="border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal-dim);">
+          <div class="search-results">
+            <div class="search-result-item"><span class="match">leading</span>-none</div>
+            <div class="search-result-item"><span class="match">leading</span>-tight</div>
+            <div class="search-result-item"><span class="match">leading</span>-snug</div>
+            <div class="search-result-item" style="background: var(--teal-dim); color: var(--teal);"><span class="match">leading</span>-normal</div>
+            <div class="search-result-item"><span class="match">leading</span>-relaxed</div>
+            <div class="search-result-item"><span class="match">leading</span>-loose</div>
+          </div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Backgrounds — empty, just search bar -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <input type="text" class="search-input" placeholder="Add background class..." readonly>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Sizing — has w-64 + search -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Sizing</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span>w-64</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <input type="text" class="search-input" placeholder="Add sizing class..." readonly>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       OPTION C — Ghost slots for all available prefixes
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="option-tag c">Option C</div>
+    <div class="col-label">Ghost slots — all available prefixes always visible</div>
+    <div class="col-description">
+      Every possible property appears as a faded dashed chip. Active classes are highlighted.
+      Nothing hidden — full visibility of what's possible. Can get long for big categories.
+    </div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing]</div>
+
+        <!-- Typography — text-lg + font-bold active, rest are ghosts -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Typography</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>text-lg</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>font-bold</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+          <div class="chip ghost">text-color</div>
+          <div class="chip ghost">text-align</div>
+          <div class="chip ghost">leading</div>
+          <div class="chip ghost">tracking</div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Backgrounds — all ghost -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip ghost">
+            <span style="width: 10px; height: 10px; border-radius: 2px; border: 1px dashed var(--muted); display: inline-block; margin-right: 2px;"></span>
+            bg-color
+          </div>
+          <div class="chip ghost">bg-opacity</div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Sizing — w-64 active, rest ghost -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Sizing</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>w-64</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+          <div class="chip ghost">h</div>
+          <div class="chip ghost">min-w</div>
+          <div class="chip ghost">max-w</div>
+          <div class="chip ghost">min-h</div>
+          <div class="chip ghost">max-h</div>
+          <div class="chip ghost">size</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       OPTION D — Hybrid: active inline + ghost "add" row below
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="option-tag d">Option D</div>
+    <div class="col-label">Hybrid — active classes inline, ghost "add" row below</div>
+    <div class="col-description">
+      Active classes render prominently in the main row. Below, a lighter "available" row
+      shows grayed-out property names. Click to promote. Best of both: focused yet discoverable.
+    </div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing]</div>
+
+        <!-- Typography — active row + add row -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Typography</span>
+        </div>
+
+        <!-- Active classes -->
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>text-lg</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>font-bold</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <!-- Available (ghost) row — visually subordinate -->
+        <div class="chip-row" style="opacity: 0.6;">
+          <span style="font-size: 9px; color: var(--muted); margin-right: 2px; line-height: 20px;">add:</span>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">text-color</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">text-align</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">leading</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">tracking</div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Backgrounds — no active, only add row -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+        </div>
+
+        <div class="chip-row" style="opacity: 0.6;">
+          <span style="font-size: 9px; color: var(--muted); margin-right: 2px; line-height: 20px;">add:</span>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">
+            <span style="width: 8px; height: 8px; border-radius: 2px; border: 1px dashed var(--muted); display: inline-block; margin-right: 1px;"></span>
+            bg-color
+          </div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">bg-opacity</div>
+        </div>
+
+        <hr class="section-divider">
+
+        <!-- Sizing — w-64 active + add row -->
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Sizing</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span>w-64</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <div class="chip-row" style="opacity: 0.6;">
+          <span style="font-size: 9px; color: var(--muted); margin-right: 2px; line-height: 20px;">add:</span>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">h</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">min-w</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">max-w</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">min-h</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">max-h</div>
+          <div class="chip ghost" style="font-size: 10px; padding: 1px 6px;">size</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       REMOVAL — × button detail
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">Removal — × button appears on hover</div>
+    <div class="col-description">
+      Hover any active chip to reveal the × button at the right edge.
+      Clicking × removes the class from the element instantly.
+    </div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="section-hd" style="margin-top: 0;">
+          <span class="dot"></span>
+          <span class="label">Typography</span>
+        </div>
+
+        <div class="chip-row">
+          <!-- Normal state -->
+          <div class="chip is-active" style="position: relative;">
+            <span>text-lg</span>
+          </div>
+
+          <!-- Hovered state — × visible -->
+          <div class="chip is-active" style="position: relative; border-color: var(--teal); background: var(--teal-dim); color: var(--teal);">
+            <span>font-bold</span>
+            <span class="remove" style="display: inline;">×</span>
+          </div>
+
+          <!-- × hovered — turns orange -->
+          <div class="chip is-active" style="position: relative; border-color: var(--teal); background: var(--teal-dim); color: var(--teal);">
+            <span>leading-relaxed</span>
+            <span class="remove" style="display: inline; color: var(--orange); font-weight: 700;">×</span>
+          </div>
+        </div>
+
+        <div class="chip-row">
+          <!-- Color swatch removal -->
+          <div class="color-swatch is-active" style="border-color: var(--teal); background: var(--teal-dim); color: var(--teal);">
+            <span class="swatch-box" style="background: #EF4444;"></span>
+            <span>text-red-500</span>
+            <span class="remove" style="display: inline;">×</span>
+          </div>
+        </div>
+
+        <div style="font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.6;">
+          <strong>States shown left to right:</strong><br>
+          1. Normal — × is hidden<br>
+          2. Chip hovered — × appears in muted color<br>
+          3. × itself hovered — turns orange to signal destructive action
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

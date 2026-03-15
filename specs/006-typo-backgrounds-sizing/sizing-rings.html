@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sizing Rings — Hover-Grow Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Inter:wght@400;600;700&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS ─────────────────────────────────────────────── */
+    :root {
+      --bg:           #FFFFFF;
+      --surface:      #F4F5F5;
+      --surface-hi:   #E6E9E9;
+      --border-solid: #DFE2E2;
+      --border:       #DFE2E2;
+      --text:         #334041;
+      --text-mid:     #687879;
+      --text-muted:   #A3ADAD;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.09);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.09);
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       150ms ease-in-out;
+      --t-grow:       200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+      /* ─── Sizing ring palette ─────────────────────────────── */
+
+      /* max ring — warm orange/amber */
+      --max-fill:        rgba(245, 150,  30, 0.10);
+      --max-bdr:         rgba(245, 150,  30, 0.45);
+      --max-accent:      #B86A00;
+      --max-label:       rgba(168,  95,   0, 0.35);
+      --max-label-hover: rgba(168,  95,   0, 0.65);
+
+      /* size ring — blue */
+      --sz-fill:        rgba(56, 120, 245, 0.10);
+      --sz-bdr:         rgba(56, 120, 245, 0.45);
+      --sz-accent:      #1950D2;
+      --sz-label:       rgba(25,  80, 210, 0.35);
+      --sz-label-hover: rgba(25,  80, 210, 0.65);
+
+      /* min ring — teal */
+      --min-fill:        rgba(0, 132, 139, 0.12);
+      --min-bdr:         rgba(0, 132, 139, 0.50);
+      --min-accent:      #005A5F;
+      --min-label:       rgba(0,  90,  95, 0.35);
+      --min-label-hover: rgba(0,  90,  95, 0.65);
+
+      /* content box */
+      --c-bdr:  #C8CECE;
+      --c-fill: #FFFFFF;
+
+      /* Ring sizes — wider than box model to fit content nicely */
+      --ring-rest:  28px;
+      --ring-hover: 48px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #EAECED;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 32px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family: var(--font-mono);
+      color: #8A9599;
+    }
+
+    /* ─── PANEL SHELL ─────────────────────────────────────────── */
+    .panel {
+      width: 398px;
+      background: var(--bg);
+      border: 1px solid var(--border-solid);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    .panel-section-hd {
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border-solid);
+      background: var(--surface);
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-mid);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .panel-section-hd::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .panel-body { padding: 12px; }
+
+    /* ─── SIZING RINGS ────────────────────────────────────────── */
+    .sz { user-select: none; }
+
+    .sz-layer {
+      position: relative;
+      border-radius: 2px;
+      transition: padding var(--t-grow);
+    }
+
+    /* Default ring sizes */
+    .sz-max  { background: var(--max-fill); padding: var(--ring-rest); }
+    .sz-size { background: var(--sz-fill);  padding: var(--ring-rest); }
+    .sz-min  { background: var(--min-fill); padding: var(--ring-rest); }
+    .sz-content {
+      background: var(--c-fill);
+      border: 1px solid var(--c-bdr);
+      height: 52px;
+      border-radius: 2px;
+    }
+
+    /* Direct hover: ring grows */
+    .sz-max:hover  { padding: var(--ring-hover); }
+    .sz-size:hover { padding: var(--ring-hover); }
+    .sz-min:hover  { padding: var(--ring-hover); }
+
+    /* Child hovered: revert to rest (only one ring active at a time) */
+    .sz-max:has(.sz-layer:hover)  { padding: var(--ring-rest); }
+    .sz-size:has(.sz-layer:hover) { padding: var(--ring-rest); }
+    .sz-min:has(.sz-layer:hover)  { padding: var(--ring-rest); }
+
+    /* ─── Layer name label (top-left) ────────────────────────── */
+    .sz-name {
+      position: absolute;
+      top: 6px; left: 9px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      line-height: 1;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .sz-max  > .sz-name { color: var(--max-label); }
+    .sz-size > .sz-name { color: var(--sz-label);  }
+    .sz-min  > .sz-name { color: var(--min-label); }
+
+    .sz-max:hover  > .sz-name { color: var(--max-label-hover); }
+    .sz-size:hover > .sz-name { color: var(--sz-label-hover);  }
+    .sz-min:hover  > .sz-name { color: var(--min-label-hover); }
+
+    /* Suppress when child hovered */
+    .sz-max:has(.sz-layer:hover)  > .sz-name { color: var(--max-label); }
+    .sz-size:has(.sz-layer:hover) > .sz-name { color: var(--sz-label);  }
+    .sz-min:has(.sz-layer:hover)  > .sz-name { color: var(--min-label); }
+
+    /* Value in label — bold accent */
+    .sz-name .val { font-weight: 700; font-size: 11px; letter-spacing: -0.2px; }
+    .sz-max  > .sz-name .val { color: var(--max-accent); }
+    .sz-size > .sz-name .val { color: var(--sz-accent);  }
+    .sz-min  > .sz-name .val { color: var(--min-accent); }
+
+    /* ─── SLOT GROUPS ─────────────────────────────────────────── */
+    .slot-group {
+      position: absolute;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--t-fast);
+    }
+
+    /* Show on direct hover */
+    .sz-layer:hover > .slot-group {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Always show when there's a value */
+    .slot-group:has(.has-val) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Hide when a child ring is hovered */
+    .sz-layer:has(.sz-layer:hover) > .slot-group {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* ─── Slot group positions ────────────────────────────────── */
+
+    /* Top: height */
+    .sg-top {
+      top: 0; left: 0; right: 0;
+      height: var(--ring-rest);
+      justify-content: center;
+      align-items: center;
+      transition: opacity var(--t-fast), height var(--t-grow);
+    }
+
+    /* Bottom: block-size */
+    .sg-bottom {
+      bottom: 0; left: 0; right: 0;
+      height: var(--ring-rest);
+      justify-content: center;
+      align-items: center;
+      transition: opacity var(--t-fast), height var(--t-grow);
+    }
+
+    .sz-layer:hover > .sg-top,
+    .sz-layer:hover > .sg-bottom { height: var(--ring-hover); }
+    .sz-layer:has(.sz-layer:hover) > .sg-top,
+    .sz-layer:has(.sz-layer:hover) > .sg-bottom { height: var(--ring-rest); }
+
+    /* Right: inline-size */
+    .sg-right {
+      top: 0; bottom: 0; right: 0;
+      width: var(--ring-rest);
+      justify-content: center;
+      align-items: center;
+      transition: opacity var(--t-fast), width var(--t-grow);
+    }
+
+    /* Left: width */
+    .sg-left {
+      top: 0; bottom: 0; left: 0;
+      width: var(--ring-rest);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity var(--t-fast), width var(--t-grow);
+    }
+
+    .sz-layer:hover > .sg-left,
+    .sz-layer:hover > .sg-right { width: var(--ring-hover); }
+    .sz-layer:has(.sz-layer:hover) > .sg-left,
+    .sz-layer:has(.sz-layer:hover) > .sg-right { width: var(--ring-rest); }
+
+    /* ─── Slot items ──────────────────────────────────────────── */
+    .slot-item {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      padding: 2px 5px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+      line-height: 1;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+    }
+
+    .slot-item:hover {
+      color: var(--teal);
+      background: var(--teal-dim);
+      border-color: rgba(0, 132, 139, 0.30);
+    }
+
+    /* Scrubbing state */
+    .slot-item.is-scrubbing {
+      color: var(--teal) !important;
+      background: var(--bg) !important;
+      border-color: var(--teal) !important;
+      box-shadow: 0 1px 5px rgba(0, 132, 139, 0.18);
+      cursor: ew-resize;
+      padding: 3px 8px;
+    }
+    .slot-item.is-scrubbing .pfx { color: var(--text-mid); }
+    .slot-item.is-scrubbing .val { font-weight: 700; }
+    .slot-item.is-scrubbing .arrow { opacity: 0.45; font-size: 8px; margin-left: 2px; }
+
+    .slot-group.is-active {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+
+    /* has-val: compact display, colored per ring */
+    .slot-item.has-val {
+      font-weight: 700;
+      background: none;
+      border-color: transparent;
+      padding: 0;
+      transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast), padding var(--t-grow);
+    }
+
+    .sz-max  .slot-item.has-val { color: var(--max-accent); }
+    .sz-size .slot-item.has-val { color: var(--sz-accent);  }
+    .sz-min  .slot-item.has-val { color: var(--min-accent); }
+
+    /* Grow padding on has-val when ring is hovered */
+    .sz-layer:hover > .slot-group > .slot-item.has-val { padding: 2px 5px; }
+    .sz-layer:has(.sz-layer:hover) > .slot-group > .slot-item.has-val { padding: 0; }
+
+    .slot-item.has-val:hover {
+      color: var(--teal);
+      background: var(--teal-dim);
+      border-color: rgba(0, 132, 139, 0.30);
+    }
+
+    /* ─── Logical label hint (smaller, inside the slot item) ──── */
+    .slot-item .logical {
+      font-size: 9px;
+      opacity: 0.55;
+      margin-left: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 1 — No sizing classes (hover to explore)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">no sizing classes — hover to explore (rings grow)</div>
+    <div class="panel">
+      <div class="panel-section-hd">Sizing</div>
+      <div class="panel-body">
+        <div class="sz">
+
+          <!-- max ring -->
+          <div class="sz-layer sz-max">
+            <span class="sz-name">max</span>
+            <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+            <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+            <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+            <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+            <!-- size ring -->
+            <div class="sz-layer sz-size">
+              <span class="sz-name">size</span>
+              <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+              <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+              <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+              <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+              <!-- min ring -->
+              <div class="sz-layer sz-min">
+                <span class="sz-name">min</span>
+                <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+                <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+                <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+                <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+                <div class="sz-content"></div>
+              </div><!-- /min -->
+
+            </div><!-- /size -->
+          </div><!-- /max -->
+
+        </div><!-- /sz -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 2 — Has w-64 h-32
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">has w-64 h-32 — values shown in size ring</div>
+    <div class="panel">
+      <div class="panel-section-hd">Sizing</div>
+      <div class="panel-body">
+        <div class="sz">
+
+          <div class="sz-layer sz-max">
+            <span class="sz-name">max</span>
+            <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+            <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+            <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+            <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+            <div class="sz-layer sz-size">
+              <span class="sz-name"><span class="val">w-64</span></span>
+              <div class="slot-group sg-top">
+                <span class="slot-item has-val">h-32</span>
+              </div>
+              <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+              <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+              <div class="slot-group sg-left">
+                <span class="slot-item has-val">w-64</span>
+              </div>
+
+              <div class="sz-layer sz-min">
+                <span class="sz-name">min</span>
+                <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+                <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+                <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+                <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+                <div class="sz-content"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 3 — Has w-full h-screen max-w-md max-h-96
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">w-full h-screen max-w-md max-h-96 — multiple rings with values</div>
+    <div class="panel">
+      <div class="panel-section-hd">Sizing</div>
+      <div class="panel-body">
+        <div class="sz">
+
+          <!-- max ring — has max-w-md and max-h-96 -->
+          <div class="sz-layer sz-max">
+            <span class="sz-name"><span class="val">max-w-md</span></span>
+            <div class="slot-group sg-top">
+              <span class="slot-item has-val">h-96</span>
+            </div>
+            <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+            <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+            <div class="slot-group sg-left">
+              <span class="slot-item has-val">w-md</span>
+            </div>
+
+            <!-- size ring — has w-full and h-screen -->
+            <div class="sz-layer sz-size">
+              <span class="sz-name"><span class="val">w-full</span></span>
+              <div class="slot-group sg-top">
+                <span class="slot-item has-val">h-screen</span>
+              </div>
+              <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+              <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+              <div class="slot-group sg-left">
+                <span class="slot-item has-val">w-full</span>
+              </div>
+
+              <!-- min ring — empty -->
+              <div class="sz-layer sz-min">
+                <span class="sz-name">min</span>
+                <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+                <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+                <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+                <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+                <div class="sz-content"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 4 — Scrubbing max-w-md (max ring slot active)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">scrubbing max-w — max ring pinned, frozen while editing</div>
+    <div class="panel">
+      <div class="panel-section-hd">Sizing</div>
+      <div class="panel-body">
+        <div class="sz">
+
+          <!-- max ring — left slot scrubbing -->
+          <div class="sz-layer sz-max" style="padding: var(--ring-hover);">
+            <span class="sz-name"><span class="val">max-w-md</span></span>
+
+            <!-- top slot — pinned visible since we're in editing mode -->
+            <div class="slot-group sg-top is-active">
+              <span class="slot-item has-val" style="padding: 2px 5px;">h-96</span>
+            </div>
+            <div class="slot-group sg-right is-active">
+              <span class="slot-item">inline</span>
+            </div>
+            <div class="slot-group sg-bottom is-active">
+              <span class="slot-item">block</span>
+            </div>
+            <!-- left slot: actively scrubbing -->
+            <div class="slot-group sg-left is-active">
+              <span class="slot-item is-scrubbing">
+                <span class="arrow">◂</span>
+                <span class="pfx">max-w-</span><span class="val">lg</span>
+                <span class="arrow">▸</span>
+              </span>
+            </div>
+
+            <!-- size + min rings frozen (no hover-grow, slots hidden) -->
+            <div class="sz-layer sz-size" style="pointer-events: none;">
+              <span class="sz-name"><span class="val">w-full</span></span>
+              <div class="sz-layer sz-min" style="pointer-events: none;">
+                <span class="sz-name">min</span>
+                <div class="sz-content"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 5 — size-12 shorthand set (w + h via shorthand)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">size-12 — shorthand sets both w and h simultaneously</div>
+    <div class="panel">
+      <div class="panel-section-hd">Sizing</div>
+      <div class="panel-body">
+        <div class="sz">
+
+          <div class="sz-layer sz-max">
+            <span class="sz-name">max</span>
+            <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+            <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+            <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+            <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+            <div class="sz-layer sz-size">
+              <!-- size-12 shorthand: label shows shorthand, slots reflect it -->
+              <span class="sz-name"><span class="val">size-12</span></span>
+              <div class="slot-group sg-top">
+                <!-- h derived from size-12 -->
+                <span class="slot-item has-val" title="set by size-12">h-12</span>
+              </div>
+              <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+              <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+              <div class="slot-group sg-left">
+                <!-- w derived from size-12 -->
+                <span class="slot-item has-val" title="set by size-12">w-12</span>
+              </div>
+
+              <div class="sz-layer sz-min">
+                <span class="sz-name">min</span>
+                <div class="slot-group sg-top">    <span class="slot-item">h</span></div>
+                <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+                <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+                <div class="slot-group sg-left">   <span class="slot-item">w</span></div>
+
+                <div class="sz-content"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       STATE 6 — All rings populated (min, size, max all set)
+  ═══════════════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">all rings — min-w-0 w-64 max-w-md, min-h-0 h-32 max-h-96</div>
+    <div class="panel">
+      <div class="panel-section-hd">Sizing</div>
+      <div class="panel-body">
+        <div class="sz">
+
+          <!-- max ring -->
+          <div class="sz-layer sz-max">
+            <span class="sz-name"><span class="val">max-w-md</span></span>
+            <div class="slot-group sg-top">
+              <span class="slot-item has-val">h-96</span>
+            </div>
+            <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+            <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+            <div class="slot-group sg-left">
+              <span class="slot-item has-val">w-md</span>
+            </div>
+
+            <!-- size ring -->
+            <div class="sz-layer sz-size">
+              <span class="sz-name"><span class="val">w-64</span></span>
+              <div class="slot-group sg-top">
+                <span class="slot-item has-val">h-32</span>
+              </div>
+              <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+              <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+              <div class="slot-group sg-left">
+                <span class="slot-item has-val">w-64</span>
+              </div>
+
+              <!-- min ring -->
+              <div class="sz-layer sz-min">
+                <span class="sz-name"><span class="val">min-w-0</span></span>
+                <div class="slot-group sg-top">
+                  <span class="slot-item has-val">h-0</span>
+                </div>
+                <div class="slot-group sg-right">  <span class="slot-item">inline</span></div>
+                <div class="slot-group sg-bottom"> <span class="slot-item">block</span></div>
+                <div class="slot-group sg-left">
+                  <span class="slot-item has-val">w-0</span>
+                </div>
+
+                <div class="sz-content"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

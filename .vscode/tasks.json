@@ -30,7 +30,7 @@
     {
       "label": "Server (port 3333)",
       "type": "shell",
-      "command": "node --import tsx ../server/index.ts",
+      "command": "npx tsx watch ../server/index.ts",
       "options": { "cwd": "${workspaceFolder}/test-app" },
       "isBackground": true,
       "problemMatcher": {
@@ -50,6 +50,19 @@
         "owner": "vite-test-app",
         "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
         "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "ready in" }
+      },
+      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Storybook (port 6006)",
+      "type": "shell",
+      "command": "npm run storybook",
+      "options": { "cwd": "${workspaceFolder}/panel" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "storybook",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": "storybook", "endsPattern": "Local:" }
       },
       "presentation": { "group": "dev", "panel": "dedicated", "reveal": "always" }
     },

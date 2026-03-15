@@ -7,6 +7,8 @@ export interface ScaleScrubberProps {
   lockedValue: string | null;
   /** True when any property is locked — disables all interactions */
   locked: boolean;
+  /** When true, renders with dashed border and muted text (placeholder state) */
+  ghost?: boolean;
   onStart?: () => void;
   onHover: (value: string) => void;
   onLeave: () => void;

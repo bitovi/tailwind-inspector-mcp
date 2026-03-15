@@ -44,19 +44,27 @@ test.describe('Clear highlights on class chip click', () => {
     return frame!;
   }
 
+  async function waitForPanelReady(frame: import('@playwright/test').Frame) {
+    await frame.waitForFunction(
+      () => !document.body.textContent?.includes('Waiting for connection'),
+      { timeout: 10000 },
+    );
+  }
+
   test('highlights appear after clicking element in inspect mode', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
     await activateInspectMode(page);
 
+    const frame = await getPanelFrame(page);
+    await waitForPanelReady(frame);
+    await page.waitForTimeout(300);
+
     // Click on a Button element
     await page.locator('button:has-text("Primary")').first().click();
-    await page.waitForTimeout(1000);
 
-    // Verify highlights are present
-    const count = await getHighlightCount(page);
-    expect(count).toBeGreaterThan(0);
+    await expect.poll(() => getHighlightCount(page)).toBeGreaterThan(0);
   });
 
   test('highlights disappear when clicking a class chip in the panel', async ({ page }) => {
@@ -65,39 +73,25 @@ test.describe('Clear highlights on class chip click', () => {
 
     await activateInspectMode(page);
 
+    const frame = await getPanelFrame(page);
+    await waitForPanelReady(frame);
+    await page.waitForTimeout(300);
+
     // Click on a Button element to trigger element selection + highlights
     await page.locator('button:has-text("Primary")').first().click();
-    await page.waitForTimeout(1500);
 
-    // Verify highlights appeared
-    const highlightsBefore = await getHighlightCount(page);
-    expect(highlightsBefore).toBeGreaterThan(0);
+    await expect.poll(() => getHighlightCount(page)).toBeGreaterThan(0);
 
     // Get the panel iframe and click a class chip (e.g. "px-4")
-    const frame = await getPanelFrame(page);
-
-    // Wait for the picker to render with class chips
-    await frame.waitForSelector('div[style*="cursor: pointer"]', { timeout: 5000 });
-
-    // Find and click the px-4 chip
-    const chips = await frame.$$('div[style*="cursor: pointer"]');
-    let chipClicked = false;
-    for (const chip of chips) {
-      const text = await chip.textContent();
-      if (text?.trim() === 'px-4') {
-        await chip.click();
-        chipClicked = true;
-        break;
-      }
-    }
-    expect(chipClicked).toBe(true);
+    const chip = frame.locator('div.cursor-pointer').first();
+    await chip.waitFor({ timeout: 5000 });
+    await chip.click();
 
     // Wait for the CLEAR_HIGHLIGHTS message to be processed
     await page.waitForTimeout(500);
 
     // Verify highlights are gone
-    const highlightsAfter = await getHighlightCount(page);
-    expect(highlightsAfter).toBe(0);
+    await expect.poll(() => getHighlightCount(page)).toBe(0);
   });
 
   test('CLEAR_HIGHLIGHTS message is sent via WebSocket when chip clicked', async ({ page }) => {
@@ -116,22 +110,17 @@ test.describe('Clear highlights on class chip click', () => {
 
     await activateInspectMode(page);
 
+    const frame = await getPanelFrame(page);
+    await waitForPanelReady(frame);
+    await page.waitForTimeout(300);
+
     // Click on a Button element
     await page.locator('button:has-text("Primary")').first().click();
-    await page.waitForTimeout(1500);
 
     // Get the panel iframe and click a class chip
-    const frame = await getPanelFrame(page);
-    await frame.waitForSelector('div[style*="cursor: pointer"]', { timeout: 5000 });
-
-    const chips = await frame.$$('div[style*="cursor: pointer"]');
-    for (const chip of chips) {
-      const text = await chip.textContent();
-      if (text?.trim() === 'px-4') {
-        await chip.click();
-        break;
-      }
-    }
+    const chip = frame.locator('div.cursor-pointer').first();
+    await chip.waitFor({ timeout: 5000 });
+    await chip.click();
 
     await page.waitForTimeout(500);
 

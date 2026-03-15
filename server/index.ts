@@ -13,7 +13,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { addChange, getChanges, markApplied, clearAll } from "./queue.js";
+import { addPatch, commitPatches, getByStatus, getCounts, getPatchUpdate, markImplemented, clearAll } from "./queue.js";
 import { resolveTailwindConfig, generateCssForClasses } from "./tailwind.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -114,6 +114,10 @@ function broadcastTo(role: string, data: object, exclude?: WebSocket): void {
   }
 }
 
+function broadcastPatchUpdate(): void {
+  broadcastTo("panel", { type: "PATCH_UPDATE", ...getPatchUpdate() });
+}
+
 wss.on("connection", (ws: WebSocket) => {
   console.error("[ws] Client connected");
 
@@ -126,6 +130,9 @@ wss.on("connection", (ws: WebSocket) => {
         if (role === "overlay" || role === "panel") {
           clientRoles.set(ws, role);
           console.error(`[ws] Client registered as: ${role}`);
+          if (role === "panel") {
+            ws.send(JSON.stringify({ type: "PATCH_UPDATE", ...getPatchUpdate() }));
+          }
         }
         return;
       }
@@ -137,14 +144,14 @@ wss.on("connection", (ws: WebSocket) => {
       }
 
       // Server-handled messages (no "to" field)
-      if (msg.type === "CHANGE") {
-        const entry = addChange({
-          component: msg.component,
-          target: msg.target,
-          change: msg.change,
-          context: msg.context,
-        });
-        console.error(`[ws] Change queued: #${entry.id}`);
+      if (msg.type === "PATCH_STAGED") {
+        const patch = addPatch(msg.patch);
+        console.error(`[ws] Patch staged: #${patch.id}`);
+        broadcastPatchUpdate();
+      } else if (msg.type === "PATCH_COMMIT") {
+        const moved = commitPatches(msg.ids);
+        console.error(`[ws] Patches committed: ${moved}`);
+        broadcastPatchUpdate();
       } else if (msg.type === "PING") {
         ws.send(JSON.stringify({ type: "PONG" }));
       }
@@ -171,31 +178,41 @@ const mcp = new McpServer(
 
 mcp.tool(
   "get_pending_changes",
-  "Returns all queued visual changes not yet applied to source code",
+  "Returns all committed patches waiting for the agent to apply to source code",
   async () => ({
-    content: [{ type: "text" as const, text: JSON.stringify(getChanges(), null, 2) }],
+    content: [{ type: "text" as const, text: JSON.stringify(getByStatus('committed'), null, 2) }],
   }),
 );
 
 mcp.tool(
   "mark_changes_applied",
-  "Marks changes as applied and removes them from the queue",
-  { ids: z.array(z.number()) },
+  "Marks committed patches as implemented",
+  { ids: z.array(z.string()) },
   async ({ ids }) => {
-    const applied = markApplied(ids);
+    const moved = markImplemented(ids);
+    broadcastPatchUpdate();
     return {
-      content: [{ type: "text" as const, text: JSON.stringify({ applied }) }],
+      content: [{ type: "text" as const, text: JSON.stringify({ moved }) }],
     };
   },
 );
 
 mcp.tool(
+  "get_implemented_changes",
+  "Returns all patches that have been marked as implemented by the agent",
+  async () => ({
+    content: [{ type: "text" as const, text: JSON.stringify(getByStatus('implemented'), null, 2) }],
+  }),
+);
+
+mcp.tool(
   "clear_pending_changes",
-  "Discards all pending changes from the queue",
+  "Discards all patches regardless of status",
   async () => {
-    const cleared = clearAll();
+    const counts = clearAll();
+    broadcastPatchUpdate();
     return {
-      content: [{ type: "text" as const, text: JSON.stringify({ cleared }) }],
+      content: [{ type: "text" as const, text: JSON.stringify(counts) }],
     };
   },
 );

@@ -8,7 +8,9 @@
 				"--browser",
 				"chromium",
 				"--no-sandbox",
-				"--caps=vision"
+				"--caps=vision",
+				"--output-dir",
+				"${workspaceFolder}/temp"
 			],
 			"type": "stdio"
 		}

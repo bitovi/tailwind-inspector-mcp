@@ -1,47 +1,102 @@
-// In-memory change queue
+// In-memory patch queue using the PATCH protocol
 
-export interface ChangePayload {
-  id: number;
-  timestamp: string;
-  component: { name: string };
-  target: { tag: string; classes: string; innerText: string };
-  change: { property: string; old: string; new: string };
-  context: string;
-}
+import type { Patch, PatchStatus, PatchSummary } from '../shared/types.js';
 
-let nextId = 1;
-const pending: ChangePayload[] = [];
-
-export function addChange(
-  change: Omit<ChangePayload, "id" | "timestamp">,
-): ChangePayload {
-  const entry: ChangePayload = {
-    id: nextId++,
-    timestamp: new Date().toISOString(),
-    ...change,
+function toSummary(p: Patch): PatchSummary {
+  return {
+    id: p.id,
+    elementKey: p.elementKey,
+    status: p.status,
+    originalClass: p.originalClass,
+    newClass: p.newClass,
+    property: p.property,
+    timestamp: p.timestamp,
+    component: p.component,
+    errorMessage: p.errorMessage,
   };
-  pending.push(entry);
-  return entry;
 }
 
-export function getChanges(): ChangePayload[] {
-  return pending.slice();
+// All patches, keyed by status
+const patches: Patch[] = [];
+
+export function addPatch(patch: Patch): Patch {
+  // Dedup: if a staged patch exists for the same elementKey+property, replace it
+  const existingIdx = patches.findIndex(
+    p => p.elementKey === patch.elementKey && p.property === patch.property && p.status === 'staged'
+  );
+  if (existingIdx !== -1) {
+    patches.splice(existingIdx, 1);
+  }
+  patches.push(patch);
+  return patch;
 }
 
-export function markApplied(ids: number[]): number {
+export function commitPatches(ids: string[]): number {
   const idSet = new Set(ids);
-  let removed = 0;
-  for (let i = pending.length - 1; i >= 0; i--) {
-    if (idSet.has(pending[i].id)) {
-      pending.splice(i, 1);
-      removed++;
+  let moved = 0;
+  for (const p of patches) {
+    if (idSet.has(p.id) && p.status === 'staged') {
+      p.status = 'committed';
+      moved++;
     }
   }
-  return removed;
+  return moved;
 }
 
-export function clearAll(): number {
-  const count = pending.length;
-  pending.length = 0;
-  return count;
+export function getByStatus(status: PatchStatus): Patch[] {
+  return patches.filter(p => p.status === status);
+}
+
+export function getCounts(): { staged: number; committed: number; implementing: number; implemented: number } {
+  const counts = { staged: 0, committed: 0, implementing: 0, implemented: 0 };
+  for (const p of patches) {
+    if (p.status in counts) {
+      counts[p.status as keyof typeof counts]++;
+    }
+  }
+  return counts;
+}
+
+/** Build the full PATCH_UPDATE payload (counts + summary arrays) */
+export function getPatchUpdate() {
+  const counts = getCounts();
+  return {
+    ...counts,
+    patches: {
+      staged: patches.filter(p => p.status === 'staged').map(toSummary),
+      committed: patches.filter(p => p.status === 'committed').map(toSummary),
+      implementing: patches.filter(p => p.status === 'implementing').map(toSummary),
+      implemented: patches.filter(p => p.status === 'implemented').map(toSummary),
+    },
+  };
+}
+
+export function markImplementing(ids: string[]): number {
+  const idSet = new Set(ids);
+  let moved = 0;
+  for (const p of patches) {
+    if (idSet.has(p.id) && p.status === 'committed') {
+      p.status = 'implementing';
+      moved++;
+    }
+  }
+  return moved;
+}
+
+export function markImplemented(ids: string[]): number {
+  const idSet = new Set(ids);
+  let moved = 0;
+  for (const p of patches) {
+    if (idSet.has(p.id) && (p.status === 'committed' || p.status === 'implementing')) {
+      p.status = 'implemented';
+      moved++;
+    }
+  }
+  return moved;
+}
+
+export function clearAll(): { staged: number; committed: number; implementing: number; implemented: number } {
+  const counts = getCounts();
+  patches.length = 0;
+  return counts;
 }

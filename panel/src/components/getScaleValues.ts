@@ -23,5 +23,11 @@ export function getScaleValues(prefix: string, themeKey: string | null, config: 
   if (themeKey === 'borderRadius') {
     return ['rounded-none', 'rounded-sm', 'rounded', 'rounded-md', 'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-3xl', 'rounded-full'];
   }
+  if (themeKey === 'lineHeight') {
+    return ['leading-none', 'leading-tight', 'leading-snug', 'leading-normal', 'leading-relaxed', 'leading-loose', 'leading-3', 'leading-4', 'leading-5', 'leading-6', 'leading-7', 'leading-8', 'leading-9', 'leading-10'];
+  }
+  if (themeKey === 'letterSpacing') {
+    return ['tracking-tighter', 'tracking-tight', 'tracking-normal', 'tracking-wide', 'tracking-wider', 'tracking-widest'];
+  }
   return [];
 }

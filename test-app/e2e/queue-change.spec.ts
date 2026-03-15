@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Verifies that committing a class change sends correct data through WS.
- * The picker UI now lives in the Panel iframe, so this test verifies
- * the ELEMENT_SELECTED and CLASS_COMMIT WS flow.
+ * Verifies that selecting an element sends correct data through WS.
+ * The picker UI lives in the Panel iframe; this test verifies
+ * the ELEMENT_SELECTED WS flow.
  */
 test('element selection sends correct class data via WS', async ({ page }) => {
   const wsMessages: any[] = [];
@@ -11,7 +11,7 @@ test('element selection sends correct class data via WS', async ({ page }) => {
     ws.on('framesent', (frame) => {
       try {
         const data = JSON.parse(frame.payload as string);
-        if (data.type === 'ELEMENT_SELECTED' || data.type === 'CHANGE') {
+        if (data.type === 'ELEMENT_SELECTED' || data.type === 'PATCH_STAGED') {
           wsMessages.push(data);
         }
       } catch { /* ignore non-JSON frames */ }

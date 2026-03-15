@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Backgrounds Section — Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&family=Inter:wght@400;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #FFFFFF;
+      --surface:      #F4F5F5;
+      --surface-hi:   #E6E9E9;
+      --border:       #DFE2E2;
+      --text:         #334041;
+      --text-mid:     #687879;
+      --muted:        #A3ADAD;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.09);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.09);
+      --teal-dark:    #00464A;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       150ms ease-in-out;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #EAECED;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 32px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col { display: flex; flex-direction: column; gap: 8px; }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family: var(--font-mono);
+      color: #8A9599;
+      max-width: 398px;
+    }
+
+    .panel {
+      width: 398px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    .panel-body { padding: 12px; }
+
+    .section-hd {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+
+    .section-hd:first-child { margin-top: 0; }
+
+    .section-hd .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .section-hd .label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-mid);
+      flex: 1;
+    }
+
+    .section-hd .add-btn {
+      width: 18px; height: 18px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--t-fast);
+    }
+
+    .section-hd .add-btn:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .chip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
+      cursor: ew-resize;
+      user-select: none;
+      transition: all var(--t-fast);
+      background: var(--surface);
+      color: var(--text-mid);
+    }
+
+    .chip:hover {
+      border-color: var(--teal);
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .chip.is-active {
+      border-color: var(--orange);
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    .chip.is-scrubbing {
+      border-color: var(--teal);
+      background: var(--bg);
+      color: var(--teal);
+      box-shadow: 0 1px 5px rgba(0, 132, 139, 0.18);
+    }
+
+    .chip.is-scrubbing .pfx { color: var(--text-mid); }
+    .chip.is-scrubbing .val { font-weight: 700; }
+
+    .chip .remove {
+      display: none;
+      font-size: 9px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-left: 2px;
+    }
+
+    .chip:hover .remove,
+    .color-swatch:hover .remove { display: inline; }
+    .chip .remove:hover,
+    .color-swatch .remove:hover { color: var(--orange); }
+
+    .chip .arrow {
+      font-size: 8px;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .chip:hover .arrow,
+    .chip.is-scrubbing .arrow { opacity: 0.5; }
+
+    .chip.ghost {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 400;
+    }
+
+    .chip.ghost:hover {
+      border-color: var(--teal);
+      border-style: solid;
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    .color-swatch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 8px 2px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
+      cursor: pointer;
+      user-select: none;
+      transition: all var(--t-fast);
+      background: var(--surface);
+      color: var(--text-mid);
+    }
+
+    .color-swatch .swatch-box {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+
+    .color-swatch:hover {
+      border-color: var(--teal);
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .color-swatch.is-active {
+      border-color: var(--orange);
+      background: var(--orange-dim);
+      color: var(--orange);
+    }
+
+    .color-swatch .remove {
+      display: none;
+      font-size: 9px;
+      color: var(--muted);
+      cursor: pointer;
+      margin-left: 2px;
+    }
+
+    .color-grid {
+      padding: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
+    .color-grid-row {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      margin-bottom: 3px;
+    }
+
+    .color-grid-row:last-child { margin-bottom: 0; }
+
+    .color-grid-hue-label {
+      width: 48px;
+      text-align: right;
+      padding-right: 6px;
+      font-size: 10px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .color-cell {
+      width: 20px; height: 20px;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color var(--t-fast), transform var(--t-fast);
+    }
+
+    .color-cell:hover {
+      border-color: var(--text);
+      transform: scale(1.15);
+      z-index: 5;
+      position: relative;
+    }
+
+    .color-cell.is-current {
+      outline: 2px solid var(--orange);
+      outline-offset: 2px;
+    }
+
+    .dropdown {
+      position: absolute;
+      z-index: 50;
+      top: calc(100% + 2px);
+      left: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      min-width: 80px;
+      padding: 2px 0;
+    }
+
+    .dropdown-item {
+      padding: 3px 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: all var(--t-fast);
+    }
+
+    .dropdown-item:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .dropdown-item.is-current {
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+
+    .queue-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .btn-queue {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: none;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--teal);
+      color: #fff;
+    }
+
+    .btn-discard {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-mid);
+    }
+
+    .mini-bm {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px;
+      background: var(--surface);
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .note {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* ─── Opacity slider visual ──────────────────────── */
+    .opacity-track {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .opacity-bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(to right, transparent, var(--text));
+      position: relative;
+    }
+
+    .opacity-handle {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--teal);
+      background: var(--bg);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .opacity-val {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      min-width: 22px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 1 — Element has bg-blue-500 and bg-opacity-75
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">Element has: bg-blue-500 bg-opacity-75</div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing box model above]</div>
+
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+          <button class="add-btn">+</button>
+        </div>
+
+        <!-- bg-color swatch -->
+        <div class="chip-row">
+          <div class="color-swatch is-active">
+            <span class="swatch-box" style="background: #3B82F6;"></span>
+            <span>bg-blue-500</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <!-- bg-opacity scrubber -->
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span class="arrow">◂</span>
+            <span class="pfx">bg-opacity-</span><span class="val">75</span>
+            <span class="arrow">▸</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 2 — Color grid expanded, changing bg color
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">Picking bg color — grid expanded, hovering green-600</div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing box model above]</div>
+
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+          <button class="add-btn">+</button>
+        </div>
+
+        <!-- bg-color swatch — clicked, grid shown -->
+        <div class="chip-row">
+          <div class="color-swatch is-active">
+            <span class="swatch-box" style="background: #3B82F6;"></span>
+            <span>bg-blue-500</span>
+          </div>
+        </div>
+
+        <!-- ColorGrid for bg -->
+        <div class="color-grid">
+          <div class="color-grid-row">
+            <span class="color-grid-hue-label"></span>
+            <div class="color-cell" style="background: #000;" title="black"></div>
+            <div class="color-cell" style="background: #fff; border: 2px solid #ddd;" title="white"></div>
+            <div class="color-cell" style="background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 8px 8px;" title="transparent"></div>
+          </div>
+          <div class="color-grid-row">
+            <span class="color-grid-hue-label">red</span>
+            <div class="color-cell" style="background: #FEE2E2;"></div>
+            <div class="color-cell" style="background: #FECACA;"></div>
+            <div class="color-cell" style="background: #FCA5A5;"></div>
+            <div class="color-cell" style="background: #F87171;"></div>
+            <div class="color-cell" style="background: #EF4444;"></div>
+            <div class="color-cell" style="background: #DC2626;"></div>
+            <div class="color-cell" style="background: #B91C1C;"></div>
+            <div class="color-cell" style="background: #991B1B;"></div>
+            <div class="color-cell" style="background: #7F1D1D;"></div>
+          </div>
+          <div class="color-grid-row">
+            <span class="color-grid-hue-label">blue</span>
+            <div class="color-cell" style="background: #DBEAFE;"></div>
+            <div class="color-cell" style="background: #BFDBFE;"></div>
+            <div class="color-cell" style="background: #93C5FD;"></div>
+            <div class="color-cell" style="background: #60A5FA;"></div>
+            <div class="color-cell is-current" style="background: #3B82F6;"></div>
+            <div class="color-cell" style="background: #2563EB;"></div>
+            <div class="color-cell" style="background: #1D4ED8;"></div>
+            <div class="color-cell" style="background: #1E3A8A;"></div>
+            <div class="color-cell" style="background: #1E3A5F;"></div>
+          </div>
+          <div class="color-grid-row">
+            <span class="color-grid-hue-label">green</span>
+            <div class="color-cell" style="background: #DCFCE7;"></div>
+            <div class="color-cell" style="background: #BBF7D0;"></div>
+            <div class="color-cell" style="background: #86EFAC;"></div>
+            <div class="color-cell" style="background: #4ADE80;"></div>
+            <div class="color-cell" style="background: #22C55E;"></div>
+            <div class="color-cell" style="background: #16A34A; border-color: var(--text); transform: scale(1.15); position: relative; z-index: 5;" title="hovering"></div>
+            <div class="color-cell" style="background: #15803D;"></div>
+            <div class="color-cell" style="background: #166534;"></div>
+            <div class="color-cell" style="background: #14532D;"></div>
+          </div>
+          <div class="color-grid-row">
+            <span class="color-grid-hue-label">yellow</span>
+            <div class="color-cell" style="background: #FEF9C3;"></div>
+            <div class="color-cell" style="background: #FEF08A;"></div>
+            <div class="color-cell" style="background: #FDE047;"></div>
+            <div class="color-cell" style="background: #FACC15;"></div>
+            <div class="color-cell" style="background: #EAB308;"></div>
+            <div class="color-cell" style="background: #CA8A04;"></div>
+            <div class="color-cell" style="background: #A16207;"></div>
+            <div class="color-cell" style="background: #854D0E;"></div>
+            <div class="color-cell" style="background: #713F12;"></div>
+          </div>
+          <div class="note">... more hues</div>
+        </div>
+
+        <!-- bg-opacity stays visible below grid -->
+        <div class="chip-row">
+          <div class="chip is-active">
+            <span>bg-opacity-75</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 3 — Scrubbing bg-opacity
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">Scrubbing bg-opacity — dragging from 75 → 50</div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing box model above]</div>
+
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+        </div>
+
+        <div class="chip-row">
+          <div class="color-swatch is-active" style="opacity: 0.5; pointer-events: none;">
+            <span class="swatch-box" style="background: #3B82F6;"></span>
+            <span>bg-blue-500</span>
+          </div>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip is-scrubbing" style="position: relative;">
+            <span class="arrow" style="opacity: 0.5;">◂</span>
+            <span class="pfx">bg-opacity-</span><span class="val" style="font-weight: 700;">50</span>
+            <span class="arrow" style="opacity: 0.5;">▸</span>
+
+            <div class="dropdown">
+              <div class="dropdown-item">bg-opacity-0</div>
+              <div class="dropdown-item">bg-opacity-5</div>
+              <div class="dropdown-item">bg-opacity-10</div>
+              <div class="dropdown-item">bg-opacity-20</div>
+              <div class="dropdown-item">bg-opacity-25</div>
+              <div class="dropdown-item">bg-opacity-30</div>
+              <div class="dropdown-item">bg-opacity-40</div>
+              <div class="dropdown-item" style="background: var(--teal-dim); color: var(--teal); font-weight: 600;">bg-opacity-50 ←</div>
+              <div class="dropdown-item">bg-opacity-60</div>
+              <div class="dropdown-item">bg-opacity-70</div>
+              <div class="dropdown-item is-current">bg-opacity-75</div>
+              <div class="dropdown-item">bg-opacity-80</div>
+              <div class="dropdown-item">bg-opacity-90</div>
+              <div class="dropdown-item">bg-opacity-95</div>
+              <div class="dropdown-item">bg-opacity-100</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 4 — Empty backgrounds section
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">Empty — no bg classes. Ghost slots for addable properties.</div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing box model above]</div>
+
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+          <button class="add-btn">+</button>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip ghost">
+            <span class="swatch-box" style="width: 10px; height: 10px; border-radius: 2px; border: 1px dashed var(--muted); display: inline-block; margin-right: 2px;"></span>
+            bg-color
+          </div>
+          <div class="chip ghost">bg-opacity</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       STATE 5 — Only bg-color set, no opacity
+  ══════════════════════════════════════════════════════ -->
+  <div class="col">
+    <div class="col-label">Partial — only bg-red-500, opacity ghost visible</div>
+    <div class="panel">
+      <div class="panel-body">
+        <div class="mini-bm">[Borders &amp; Spacing box model above]</div>
+
+        <div class="section-hd">
+          <span class="dot"></span>
+          <span class="label">Backgrounds</span>
+          <button class="add-btn">+</button>
+        </div>
+
+        <div class="chip-row">
+          <div class="color-swatch is-active">
+            <span class="swatch-box" style="background: #EF4444;"></span>
+            <span>bg-red-500</span>
+            <span class="remove">×</span>
+          </div>
+        </div>
+
+        <div class="chip-row">
+          <div class="chip ghost">bg-opacity</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

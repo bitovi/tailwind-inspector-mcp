@@ -11,6 +11,7 @@ export function ScaleScrubber({
   currentValue,
   lockedValue,
   locked,
+  ghost,
   onStart,
   onHover,
   onLeave,
@@ -102,11 +103,13 @@ export function ScaleScrubber({
   const chipStyle = isScrubbing
     ? 'border-bv-teal bg-bv-teal/9 text-bv-teal'
     : isThisLocked
-    ? 'border-bv-orange bg-bv-orange/9 text-bv-orange hover:border-bv-orange-hover'
+    ? 'border-bv-border bg-bv-surface-hi text-bv-text hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
     : open
     ? 'border-bv-border bg-bv-surface-hi text-bv-text'
     : foreignLocked
     ? 'bg-bv-surface text-bv-text-mid border-transparent'
+    : ghost
+    ? 'border-dashed border-bv-border text-bv-muted bg-transparent hover:border-bv-teal hover:text-bv-teal'
     : 'bg-bv-surface text-bv-text-mid border-transparent hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal';
 
   return (
