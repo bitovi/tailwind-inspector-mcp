@@ -2,169 +2,30 @@
 
 // MCP Server entrypoint
 
-import express from "express";
-import cors from "cors";
-import { createServer, request as makeRequest } from "http";
-import { WebSocketServer, type WebSocket } from "ws";
+import { createServer } from "http";
 import { fileURLToPath } from "url";
 import path from "path";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
 
-import { addPatch, commitPatches, getByStatus, getCounts, getPatchUpdate, markImplemented, clearAll } from "./queue.js";
-import { resolveTailwindConfig, generateCssForClasses } from "./tailwind.js";
+import { getByStatus, getCounts, getNextCommitted, markImplementing, markImplemented, clearAll, onCommitted } from "./queue.js";
+import { createApp } from "./app.js";
+import { setupWebSocket } from "./websocket.js";
+import { registerMcpTools } from "./mcp-tools.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Package root: 2 levels up from dist/server/, 1 level up from server/
 const packageRoot = __dirname.includes(`${path.sep}dist${path.sep}`)
   ? path.resolve(__dirname, "..", "..")
   : path.resolve(__dirname, "..");
 
 const port = Number(process.env.PORT) || 3333;
 
-// --- Express ---
-const app = express();
-app.use(cors());
-
-app.get("/overlay.js", (_req, res) => {
-  const overlayPath = path.join(packageRoot, "overlay", "dist", "overlay.js");
-  res.sendFile(overlayPath, (err) => {
-    if (err) {
-      console.error("[http] Failed to serve overlay.js:", err);
-      if (!res.headersSent) res.status(404).end();
-    }
-  });
-});
-
-app.get("/tailwind-config", async (_req, res) => {
-  try {
-    const config = await resolveTailwindConfig();
-    res.json(config);
-  } catch (err) {
-    console.error("[http] Failed to resolve tailwind config:", err);
-    res.status(500).json({ error: "Failed to resolve Tailwind config" });
-  }
-});
-
-app.post("/css", express.json(), async (req, res) => {
-  const { classes } = req.body as { classes?: unknown };
-  if (!Array.isArray(classes) || classes.some((c) => typeof c !== "string")) {
-    res.status(400).json({ error: "classes must be an array of strings" });
-    return;
-  }
-  try {
-    const css = await generateCssForClasses(classes as string[]);
-    res.json({ css });
-  } catch (err) {
-    console.error("[http] Failed to generate CSS:", err);
-    res.status(500).json({ error: "Failed to generate CSS" });
-  }
-});
-
-// --- Serve Panel app ---
-if (process.env.PANEL_DEV) {
-  const panelDevPort = Number(process.env.PANEL_DEV_PORT) || 5174;
-  console.error(`[server] Panel dev mode: proxying /panel → http://localhost:${panelDevPort}`);
-  app.use("/panel", (req, res) => {
-    const proxyReq = makeRequest(
-      {
-        hostname: "localhost",
-        port: panelDevPort,
-        path: "/panel" + req.url,
-        method: req.method,
-        headers: { ...req.headers, host: `localhost:${panelDevPort}` },
-      },
-      (proxyRes) => {
-        res.writeHead(proxyRes.statusCode!, proxyRes.headers);
-        proxyRes.pipe(res, { end: true });
-      }
-    );
-    proxyReq.on("error", () => {
-      if (!res.headersSent) res.status(502).send("Panel dev server not running on port " + panelDevPort);
-    });
-    req.pipe(proxyReq, { end: true });
-  });
-} else {
-  const panelDist = path.join(packageRoot, "panel", "dist");
-  app.use("/panel", express.static(panelDist));
-  // SPA fallback: serve index.html for any /panel/* route not matched by static files
-  app.get("/panel/*", (_req, res) => {
-    res.sendFile(path.join(panelDist, "index.html"), (err) => {
-      if (err && !res.headersSent) res.status(404).end();
-    });
-  });
-}
-
 // --- HTTP + WebSocket ---
+const app = createApp(packageRoot);
 const httpServer = createServer(app);
-const wss = new WebSocketServer({ server: httpServer });
-
-// Role registry: track which WS clients are overlay vs panel
-const clientRoles = new Map<WebSocket, string>();
-
-function broadcastTo(role: string, data: object, exclude?: WebSocket): void {
-  const payload = JSON.stringify(data);
-  for (const [client, clientRole] of clientRoles) {
-    if (clientRole === role && client !== exclude && client.readyState === 1) {
-      client.send(payload);
-    }
-  }
-}
-
-function broadcastPatchUpdate(): void {
-  broadcastTo("panel", { type: "PATCH_UPDATE", ...getPatchUpdate() });
-}
-
-wss.on("connection", (ws: WebSocket) => {
-  console.error("[ws] Client connected");
-
-  ws.on("message", (raw) => {
-    try {
-      const msg = JSON.parse(String(raw));
-
-      if (msg.type === "REGISTER") {
-        const role = msg.role;
-        if (role === "overlay" || role === "panel") {
-          clientRoles.set(ws, role);
-          console.error(`[ws] Client registered as: ${role}`);
-          if (role === "panel") {
-            ws.send(JSON.stringify({ type: "PATCH_UPDATE", ...getPatchUpdate() }));
-          }
-        }
-        return;
-      }
-
-      // Route messages with a "to" field to all clients of that role
-      if (msg.to) {
-        broadcastTo(msg.to, msg, ws);
-        return;
-      }
-
-      // Server-handled messages (no "to" field)
-      if (msg.type === "PATCH_STAGED") {
-        const patch = addPatch(msg.patch);
-        console.error(`[ws] Patch staged: #${patch.id}`);
-        broadcastPatchUpdate();
-      } else if (msg.type === "PATCH_COMMIT") {
-        const moved = commitPatches(msg.ids);
-        console.error(`[ws] Patches committed: ${moved}`);
-        broadcastPatchUpdate();
-      } else if (msg.type === "PING") {
-        ws.send(JSON.stringify({ type: "PONG" }));
-      }
-    } catch (err) {
-      console.error("[ws] Bad message:", err);
-    }
-  });
-
-  ws.on("close", () => {
-    clientRoles.delete(ws);
-    console.error("[ws] Client disconnected");
-  });
-});
+const { broadcastPatchUpdate } = setupWebSocket(httpServer);
 
 httpServer.listen(port, () => {
   console.error(`[server] HTTP + WS listening on http://localhost:${port}`);
@@ -176,47 +37,18 @@ const mcp = new McpServer(
   { capabilities: { tools: {} } },
 );
 
-mcp.tool(
-  "get_pending_changes",
-  "Returns all committed patches waiting for the agent to apply to source code",
-  async () => ({
-    content: [{ type: "text" as const, text: JSON.stringify(getByStatus('committed'), null, 2) }],
-  }),
-);
-
-mcp.tool(
-  "mark_changes_applied",
-  "Marks committed patches as implemented",
-  { ids: z.array(z.string()) },
-  async ({ ids }) => {
-    const moved = markImplemented(ids);
-    broadcastPatchUpdate();
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify({ moved }) }],
-    };
-  },
-);
-
-mcp.tool(
-  "get_implemented_changes",
-  "Returns all patches that have been marked as implemented by the agent",
-  async () => ({
-    content: [{ type: "text" as const, text: JSON.stringify(getByStatus('implemented'), null, 2) }],
-  }),
-);
-
-mcp.tool(
-  "clear_pending_changes",
-  "Discards all patches regardless of status",
-  async () => {
-    const counts = clearAll();
-    broadcastPatchUpdate();
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(counts) }],
-    };
-  },
-);
+registerMcpTools(mcp, {
+  broadcastPatchUpdate,
+  getNextCommitted,
+  onCommitted,
+  markImplementing,
+  markImplemented,
+  getByStatus,
+  getCounts,
+  clearAll,
+});
 
 const transport = new StdioServerTransport();
 await mcp.connect(transport);
 console.error("[mcp] MCP server connected via stdio");
+

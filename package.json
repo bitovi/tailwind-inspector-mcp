@@ -9,7 +9,11 @@
     "build": "npm run build:overlay && npm run build:panel",
     "build:overlay": "esbuild overlay/src/index.ts --bundle --format=iife --outfile=overlay/dist/overlay.js --platform=browser",
     "build:panel": "cd panel && npx vite build",
-    "test": "cd panel && npm test",
+    "test": "npm run test:panel && npm run test:server",
+    "test:panel": "cd panel && npm test",
+    "test:server": "vitest run server/tests",
+    "test:e2e": "cd test-app && npm run test:e2e",
+    "test:all": "npm run test && npm run test:e2e",
     "typecheck": "tsc --noEmit",
     "dev": "npm run build && node --import tsx server/index.ts"
   },
@@ -27,6 +31,7 @@
     "@types/express": "^5.0.0",
     "@types/ws": "^8.5.0",
     "esbuild": "^0.24.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.0"
   }
 }

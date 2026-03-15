@@ -118,15 +118,21 @@ panel/src/components/MyComponent/
 
 See `.github/skills/create-react-modlet/SKILL.md` for full guidance.
 
+## Naming: "change" vs "patch"
+
+- **"change"** is the user-facing / MCP tool name: `get_next_change`, `mark_change_implemented`, `list_changes`, `discard_all_changes`
+- **"patch"** is the internal code name used in types, functions, WS messages: `Patch`, `PatchStatus`, `PATCH_UPDATE`, `addPatch`, `commitPatches`, etc.
+- MCP tool names follow the `verb_subject` snake_case convention (matches GitHub MCP, Filesystem MCP)
+
 ## Data Flow
 
 1. User visits `http://localhost:5173` with the overlay script injected
 2. Overlay registers as `'overlay'` over WebSocket to `ws://localhost:3333`
 3. Panel at `http://localhost:3333/panel/` registers as `'panel'` over WebSocket
 4. User clicks element → overlay sends `ELEMENT_SELECTED` message → panel renders chips
-5. User scrubs/selects value → panel sends `CLASS_CHANGE` message → overlay previews live
-6. User clicks "Queue Change" → server stores change in queue
-7. AI agent calls MCP `get_changes` tool → reads queue, applies to source files
+5. User scrubs/selects value → panel sends `PATCH_PREVIEW` message → overlay previews live
+6. User clicks "Queue Change" → patch is staged → user commits → server stores committed patch
+7. AI agent calls MCP `get_next_change` → waits for committed patch → transitions to `implementing` → returns patch + embedded prompt for subagent implementation
 
 ## `ParsedClass` Type (overlay/src/class-parser.ts)
 

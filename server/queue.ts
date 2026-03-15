@@ -1,6 +1,9 @@
 // In-memory patch queue using the PATCH protocol
 
+import { EventEmitter } from 'node:events';
 import type { Patch, PatchStatus, PatchSummary } from '../shared/types.js';
+
+const emitter = new EventEmitter();
 
 function toSummary(p: Patch): PatchSummary {
   return {
@@ -40,6 +43,7 @@ export function commitPatches(ids: string[]): number {
       moved++;
     }
   }
+  if (moved > 0) emitter.emit('committed');
   return moved;
 }
 
@@ -99,4 +103,15 @@ export function clearAll(): { staged: number; committed: number; implementing: n
   const counts = getCounts();
   patches.length = 0;
   return counts;
+}
+
+/** Returns the oldest committed patch (by insertion order), or null. */
+export function getNextCommitted(): Patch | null {
+  return patches.find(p => p.status === 'committed') ?? null;
+}
+
+/** Subscribe to commit events. Returns an unsubscribe function. */
+export function onCommitted(listener: () => void): () => void {
+  emitter.on('committed', listener);
+  return () => { emitter.off('committed', listener); };
 }
