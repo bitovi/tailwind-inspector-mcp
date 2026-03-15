@@ -1,0 +1,17 @@
+// Shared interface for Tailwind version adapters.
+// Both v3 and v4 adapters implement this contract so the rest of
+// the server code is version-agnostic.
+
+export interface TailwindThemeSubset {
+  spacing: Record<string, string>;
+  colors: Record<string, unknown>;
+  fontSize: Record<string, unknown>;
+  fontWeight: Record<string, unknown>;
+  borderRadius: Record<string, string>;
+}
+
+export interface TailwindAdapter {
+  readonly version: 3 | 4;
+  resolveTailwindConfig(): Promise<TailwindThemeSubset>;
+  generateCssForClasses(classes: string[]): Promise<string>;
+}

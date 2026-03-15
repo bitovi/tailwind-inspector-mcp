@@ -6,7 +6,7 @@ import { request as makeRequest } from "http";
 import path from "path";
 
 import { getByStatus, getPatchUpdate } from "./queue.js";
-import { resolveTailwindConfig, generateCssForClasses } from "./tailwind.js";
+import { resolveTailwindConfig, generateCssForClasses, getTailwindVersion } from "./tailwind.js";
 import type { PatchStatus } from "../shared/types.js";
 
 const VALID_STATUSES = new Set<string>(['staged', 'committed', 'implementing', 'implemented']);
@@ -23,6 +23,16 @@ export function createApp(packageRoot: string): express.Express {
         if (!res.headersSent) res.status(404).end();
       }
     });
+  });
+
+  app.get("/api/info", async (_req, res) => {
+    try {
+      const tailwindVersion = await getTailwindVersion();
+      res.json({ tailwindVersion });
+    } catch (err) {
+      console.error("[http] Failed to detect tailwind version:", err);
+      res.status(500).json({ error: "Failed to detect Tailwind version" });
+    }
   });
 
   app.get("/tailwind-config", async (_req, res) => {

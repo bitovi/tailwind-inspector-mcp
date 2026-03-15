@@ -73,6 +73,39 @@
       "group": { "kind": "build", "isDefault": true },
       "presentation": { "reveal": "always" },
       "problemMatcher": []
+    },
+    {
+      "label": "Server v3 (port 3334)",
+      "type": "shell",
+      "command": "PORT=3334 npx tsx watch ../server/index.ts",
+      "options": { "cwd": "${workspaceFolder}/test-app-v3" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "tsx-v3",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": ".", "endsPattern": "Listening on" }
+      },
+      "presentation": { "group": "dev-v3", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Test App v3 (port 5175)",
+      "type": "shell",
+      "command": "npx vite --port 5175",
+      "options": { "cwd": "${workspaceFolder}/test-app-v3" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite-test-app-v3",
+        "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
+        "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "ready in" }
+      },
+      "presentation": { "group": "dev-v3", "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Dev: All v3",
+      "dependsOn": ["Watch: Overlay", "Watch: Panel", "Server v3 (port 3334)", "Test App v3 (port 5175)"],
+      "dependsOrder": "parallel",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
     }
   ]
 }

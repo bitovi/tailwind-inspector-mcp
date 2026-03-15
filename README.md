@@ -65,7 +65,7 @@ For Vite projects, you can conditionally inject it only in development:
 
 ### 3. Configure your MCP agent
 
-Add the tool to your MCP configuration. For **GitHub Copilot** (`.vscode/mcp.json`):
+**GitHub Copilot** — add to `.vscode/mcp.json` in your project:
 
 ```json
 {
@@ -80,7 +80,26 @@ Add the tool to your MCP configuration. For **GitHub Copilot** (`.vscode/mcp.jso
 }
 ```
 
-For **Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+**Claude Code** — add to `.mcp.json` in your project root, or use the CLI:
+
+```bash
+claude mcp add tailwind-inspector-mcp npx @bitovi/tailwind-inspector-mcp
+```
+
+Or manually in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "tailwind-inspector-mcp": {
+      "command": "npx",
+      "args": ["@bitovi/tailwind-inspector-mcp"]
+    }
+  }
+}
+```
+
+**Claude Desktop** — add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
