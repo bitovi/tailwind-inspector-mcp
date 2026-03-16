@@ -38,6 +38,12 @@ const draftPatches: Patch[] = [];
 const commits: Commit[] = [];
 
 export function addPatch(patch: Patch): Patch {
+  // Dedup by ID first — if an identical PATCH_STAGED arrives twice (e.g. from
+  // two overlays connected to the same server) just ignore the duplicate.
+  if (draftPatches.some(p => p.id === patch.id)) {
+    return patch;
+  }
+
   if (patch.kind === 'class-change') {
     // Dedup: if a staged patch exists for the same elementKey+property, replace it
     const existingIdx = draftPatches.findIndex(
@@ -252,12 +258,13 @@ export function getPatchUpdate() {
 }
 
 export function discardDraftPatch(id: string): boolean {
-  const idx = draftPatches.findIndex(p => p.id === id);
-  if (idx !== -1) {
-    draftPatches.splice(idx, 1);
-    return true;
-  }
-  return false;
+  // Remove ALL patches with this ID (guards against any duplicates that
+  // slipped through addPatch before the ID-dedup was in place).
+  const before = draftPatches.length;
+  const remaining = draftPatches.filter(p => p.id !== id);
+  draftPatches.length = 0;
+  draftPatches.push(...remaining);
+  return remaining.length < before;
 }
 
 export function clearAll(): { staged: number; committed: number; implementing: number; implemented: number } {

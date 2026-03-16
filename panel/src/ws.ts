@@ -11,6 +11,7 @@ function getWsUrl(): string {
 }
 
 export function connect(): void {
+  if (socket) return; // already connected or connecting
   const url = getWsUrl();
   socket = new WebSocket(url);
 
@@ -53,16 +54,19 @@ export function sendTo(role: string, data: object): void {
   send({ ...data, to: role });
 }
 
-export function onMessage(handler: MessageHandler): void {
+export function onMessage(handler: MessageHandler): () => void {
   handlers.push(handler);
+  return () => { const i = handlers.indexOf(handler); if (i !== -1) handlers.splice(i, 1); };
 }
 
-export function onConnect(handler: () => void): void {
+export function onConnect(handler: () => void): () => void {
   connectHandlers.push(handler);
+  return () => { const i = connectHandlers.indexOf(handler); if (i !== -1) connectHandlers.splice(i, 1); };
 }
 
-export function onDisconnect(handler: () => void): void {
+export function onDisconnect(handler: () => void): () => void {
   disconnectHandlers.push(handler);
+  return () => { const i = disconnectHandlers.indexOf(handler); if (i !== -1) disconnectHandlers.splice(i, 1); };
 }
 
 export function isConnected(): boolean {

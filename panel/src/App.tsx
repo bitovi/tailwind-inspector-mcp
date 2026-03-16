@@ -44,7 +44,7 @@ function InspectorApp() {
   const patchManager = usePatchManager();
 
   useEffect(() => {
-    onConnect(() => {
+    const offConnect = onConnect(() => {
       setWsConnected(true);
       // Sync stored container preference to the overlay on every (re)connect,
       // since the overlay and panel run on different origins (different localStorage).
@@ -55,9 +55,9 @@ function InspectorApp() {
         }
       } catch { /* ignore */ }
     });
-    onDisconnect(() => setWsConnected(false));
+    const offDisconnect = onDisconnect(() => setWsConnected(false));
 
-    onMessage((msg) => {
+    const offMessage = onMessage((msg) => {
       if (msg.type === 'ELEMENT_SELECTED') {
         setElementData({
           componentName: msg.componentName,
@@ -90,13 +90,18 @@ function InspectorApp() {
 
     connect();
     setWsConnected(isConnected());
+    return () => { offConnect(); offDisconnect(); offMessage(); };
   }, []);
 
   const { draft, committed, implementing, implemented, partial, error } = patchManager.counts;
 
-  // Merge local draft patches and server draft for display
-  const draftPatches = patchManager.patches.length > 0
-    ? patchManager.patches.filter(p => p.status === 'staged').map(p => ({
+  // Merge server draft + local patches for display.
+  // Server draft is the source of truth for IDs; local patches carry richer detail.
+  // Any server-only draft (e.g. from a second overlay) is also shown.
+  const localById = new Map(
+    patchManager.patches
+      .filter(p => p.status === 'staged')
+      .map(p => [p.id, {
         id: p.id,
         kind: p.kind ?? ('class-change' as const),
         elementKey: p.elementKey,
@@ -108,8 +113,17 @@ function InspectorApp() {
         component: p.component,
         message: p.message,
         image: p.image,
-      }))
-    : patchManager.queueState.draft;
+      }])
+  );
+  const serverIds = new Set(patchManager.queueState.draft.map(p => p.id));
+  const draftPatches = [
+    // All server drafts (use local version if available for richer data)
+    ...patchManager.queueState.draft.map(p => localById.get(p.id) ?? p),
+    // Any local patches not yet acknowledged by the server
+    ...patchManager.patches
+      .filter(p => p.status === 'staged' && !serverIds.has(p.id))
+      .map(p => localById.get(p.id)!),
+  ];
 
   const committedCommits = patchManager.queueState.commits.filter(c => c.status === 'committed');
   const implementingCommits = patchManager.queueState.commits.filter(c => c.status === 'implementing');
