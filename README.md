@@ -1,4 +1,4 @@
-# @bitovi/tailwind-inspector-mcp
+# @bitovi/vybit
 
 A browser overlay + inspector panel + MCP server for visually editing Tailwind CSS classes on a running React app. Click any element on the page, scrub values, preview changes live, then let an AI agent apply them to your source code.
 
@@ -19,13 +19,13 @@ A browser overlay + inspector panel + MCP server for visually editing Tailwind C
 ## Installation
 
 ```bash
-npm install -D @bitovi/tailwind-inspector-mcp
+npm install -D @bitovi/vybit
 ```
 
 Or use it directly with `npx` (no install required):
 
 ```bash
-npx @bitovi/tailwind-inspector-mcp
+npx @bitovi/vybit
 ```
 
 ## Setup
@@ -35,7 +35,7 @@ npx @bitovi/tailwind-inspector-mcp
 From your project directory:
 
 ```bash
-npx @bitovi/tailwind-inspector-mcp
+npx @bitovi/vybit
 ```
 
 This starts the server at `http://localhost:3333`. The inspector panel is at `http://localhost:3333/panel/`.
@@ -70,10 +70,10 @@ For Vite projects, you can conditionally inject it only in development:
 ```json
 {
   "servers": {
-    "tailwind-inspector-mcp": {
+    "vybit": {
       "type": "stdio",
       "command": "npx",
-      "args": ["@bitovi/tailwind-inspector-mcp"],
+      "args": ["@bitovi/vybit"],
       "cwd": "${workspaceFolder}"
     }
   }
@@ -83,7 +83,7 @@ For Vite projects, you can conditionally inject it only in development:
 **Claude Code** — add to `.mcp.json` in your project root, or use the CLI:
 
 ```bash
-claude mcp add tailwind-inspector-mcp npx @bitovi/tailwind-inspector-mcp
+claude mcp add vybit npx @bitovi/vybit
 ```
 
 Or manually in `.mcp.json`:
@@ -91,9 +91,9 @@ Or manually in `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "tailwind-inspector-mcp": {
+    "vybit": {
       "command": "npx",
-      "args": ["@bitovi/tailwind-inspector-mcp"]
+      "args": ["@bitovi/vybit"]
     }
   }
 }
@@ -104,9 +104,9 @@ Or manually in `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "tailwind-inspector-mcp": {
+    "vybit": {
       "command": "npx",
-      "args": ["@bitovi/tailwind-inspector-mcp"],
+      "args": ["@bitovi/vybit"],
       "cwd": "/path/to/your/project"
     }
   }
@@ -140,12 +140,12 @@ Or manually in `.mcp.json`:
 Use the `PORT` environment variable to change the server port (default: `3333`):
 
 ```bash
-PORT=4000 npx @bitovi/tailwind-inspector-mcp
+PORT=4000 npx @bitovi/vybit
 ```
 
 ## Contributing
 
-Issues and PRs welcome at [github.com/bitovi/tailwind-inspector-mcp](https://github.com/bitovi/tailwind-inspector-mcp).
+Issues and PRs welcome at [github.com/bitovi/vybit](https://github.com/bitovi/vybit).
 
 ## License
 

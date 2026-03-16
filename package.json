@@ -1,18 +1,18 @@
 {
-  "name": "@bitovi/tailwind-inspector-mcp",
+  "name": "@bitovi/vybit",
   "version": "0.4.3",
   "description": "Browser overlay + inspector panel + MCP server for visually editing Tailwind CSS classes on a running React app",
   "keywords": ["tailwind", "mcp", "inspector", "react", "devtools", "tailwindcss"],
   "author": "Bitovi",
   "license": "MIT",
-  "homepage": "https://github.com/bitovi/tailwind-inspector-mcp#readme",
+  "homepage": "https://github.com/bitovi/vybit#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bitovi/tailwind-inspector-mcp.git"
+    "url": "https://github.com/bitovi/vybit.git"
   },
   "type": "module",
   "bin": {
-    "tailwind-inspector-mcp": "./loader.mjs"
+    "vybit": "./loader.mjs"
   },
   "files": [
     "loader.mjs",
