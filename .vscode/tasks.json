@@ -12,7 +12,7 @@
         "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
         "background": { "activeOnStart": true, "beginsPattern": "\\[watch\\]", "endsPattern": "\\[watch\\] build finished" }
       },
-      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "silent" }
+      "presentation": { "panel": "dedicated", "reveal": "silent" }
     },
     {
       "label": "Watch: Panel",
@@ -25,7 +25,7 @@
         "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
         "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "built in" }
       },
-      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "silent" }
+      "presentation": { "panel": "dedicated", "reveal": "silent" }
     },
     {
       "label": "Server (port 3333)",
@@ -38,7 +38,7 @@
         "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
         "background": { "activeOnStart": true, "beginsPattern": ".", "endsPattern": "Listening on" }
       },
-      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "always" }
+      "presentation": { "panel": "dedicated", "reveal": "always" }
     },
     {
       "label": "Test App (port 5173)",
@@ -51,7 +51,7 @@
         "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
         "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "ready in" }
       },
-      "presentation": { "group": "dev", "panel": "dedicated", "reveal": "always" }
+      "presentation": { "panel": "dedicated", "reveal": "always" }
     },
     {
       "label": "Storybook (port 6006)",
@@ -85,7 +85,7 @@
         "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
         "background": { "activeOnStart": true, "beginsPattern": ".", "endsPattern": "Listening on" }
       },
-      "presentation": { "group": "dev-v3", "panel": "dedicated", "reveal": "always" }
+      "presentation": { "panel": "dedicated", "reveal": "always" }
     },
     {
       "label": "Test App v3 (port 5175)",
@@ -98,13 +98,21 @@
         "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
         "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "ready in" }
       },
-      "presentation": { "group": "dev-v3", "panel": "dedicated", "reveal": "always" }
+      "presentation": { "panel": "dedicated", "reveal": "always" }
     },
     {
       "label": "Dev: All v3",
       "dependsOn": ["Watch: Overlay", "Watch: Panel", "Server v3 (port 3334)", "Test App v3 (port 5175)"],
       "dependsOrder": "parallel",
       "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mock MCP Client",
+      "type": "shell",
+      "command": "npx tsx mock-mcp-client.ts",
+      "options": { "cwd": "${workspaceFolder}/test-app" },
+      "presentation": { "panel": "dedicated", "reveal": "always", "focus": true },
       "problemMatcher": []
     }
   ]

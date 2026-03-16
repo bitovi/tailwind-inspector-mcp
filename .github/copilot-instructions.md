@@ -32,17 +32,19 @@ bv-muted:     muted/disabled text
 
 ## Running Everything
 
-### Preferred: VS Code Tasks (auto-rebuild on save)
+### Preferred: VS Code Tasks (run individually for full visibility)
 
-Use the VS Code task runner to start the full dev environment with watch mode:
+Start each process as a separate task via **Terminal → Run Task** so you can see each terminal independently:
 
-- **⌘⇧B** (Run Build Task) → runs **"Dev: All"** which starts all 4 processes in parallel:
-  - **Watch: Overlay** — esbuild `--watch`, rebuilds `overlay/dist/overlay.js` on every save
-  - **Watch: Panel** — `vite build --watch`, rebuilds `panel/dist/` on every save
-  - **Server (port 3333)** — Express + WebSocket server, started from `test-app/`
-  - **Test App (port 5173)** — Vite dev server for the test app
+1. **Watch: Overlay** — esbuild `--watch`, rebuilds `overlay/dist/overlay.js` on every save
+2. **Watch: Panel** — `vite build --watch`, rebuilds `panel/dist/` on every save
+3. **Server (port 3333)** — Express + WebSocket + MCP server, started from `test-app/`
+4. **Test App (port 5173)** — Vite dev server for the test app
+5. **Mock MCP Client** — spawns its own MCP server via stdio (like a real agent) and loops:
+   `implement_next_change` → 2s simulated work → `mark_change_implemented` → repeat.
+   Stage + commit patches in the panel and watch the mock agent pick them up.
 
-Individual tasks can also be run via **Terminal → Run Task**.
+> **Tip:** Run the Mock MCP Client to observe exactly what an AI agent receives from `implement_next_change` and how the full loop behaves end-to-end.
 
 ### ⚠️ Server Must Run from `test-app/` Directory
 

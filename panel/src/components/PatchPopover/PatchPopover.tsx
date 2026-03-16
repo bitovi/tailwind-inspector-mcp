@@ -89,7 +89,7 @@ export function PatchPopover({
 
       {open && (
         <div
-          className="absolute bottom-full mb-1 min-w-[220px] max-h-[260px] bg-bv-surface border border-bv-border rounded-lg shadow-lg overflow-hidden flex flex-col z-[9999]"
+          className="absolute bottom-full mb-1 min-w-[220px] bg-bv-surface border border-bv-border rounded-lg shadow-lg overflow-hidden flex flex-col z-[9999]"
           style={popoverLeft !== undefined ? { left: `${popoverLeft}px` } : undefined}
         >
           {/* Header */}

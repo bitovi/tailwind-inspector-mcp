@@ -107,6 +107,7 @@ function InspectorApp() {
         timestamp: p.timestamp,
         component: p.component,
         message: p.message,
+        image: p.image,
       }))
     : patchManager.queueState.draft;
 

@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import type { Patch, PatchStatus, Commit } from "../shared/types.js";
 import type { PatchResult } from "./queue.js";
-import { getDesignRequests, markDesignApplied, clearDesignRequests } from "./design-queue.js";
 
 export interface McpToolDeps {
   broadcastPatchUpdate: () => void;
@@ -31,6 +30,7 @@ const KEEPALIVE_INTERVAL_MS = 60_000;
 function buildCommitInstructions(commit: Commit, remainingCount: number): string {
   const classChanges = commit.patches.filter(p => p.kind === 'class-change');
   const messages = commit.patches.filter(p => p.kind === 'message');
+  const designs = commit.patches.filter(p => p.kind === 'design');
   const moreText = remainingCount > 0
     ? `${remainingCount} more commit${remainingCount === 1 ? '' : 's'} waiting in the queue after this one.`
     : 'This is the last commit in the queue. After implementing it, call `implement_next_change` again to wait for future changes.';
@@ -54,11 +54,33 @@ ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 > ${patch.message}
 ${patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
 `;
+    } else if (patch.kind === 'design') {
+      const comp = patch.component?.name ?? 'unknown component';
+      const tag = patch.target?.tag ?? 'element';
+      const context = patch.context ?? '';
+      patchList += `### ${stepNum}. Design sketch \`${patch.id}\`
+- **Component:** \`${comp}\`
+- **Element:** \`<${tag}>\`
+- **Insert position:** ${patch.insertMode ?? 'after'} the element
+- **Canvas size:** ${patch.canvasWidth ?? '?'}×${patch.canvasHeight ?? '?'}px
+- The design image is included as a separate image content part below — refer to it for the visual intent.
+${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
+`;
     }
     stepNum++;
   }
 
+  // Build summary parts
+  const summaryParts: string[] = [];
+  if (classChanges.length) summaryParts.push(`${classChanges.length} class change${classChanges.length === 1 ? '' : 's'}`);
+  if (messages.length) summaryParts.push(`${messages.length} message${messages.length === 1 ? '' : 's'}`);
+  if (designs.length) summaryParts.push(`${designs.length} design${designs.length === 1 ? '' : 's'}`);
+
   const resultsPart = classChanges.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
+
+  // Design patches also need to be reported in results
+  const designResultsPart = designs.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
+  const allResultsPart = [resultsPart, designResultsPart].filter(Boolean).join(',\n');
 
   return `# IMPLEMENT THIS COMMIT — then call implement_next_change again
 
@@ -68,20 +90,22 @@ ${patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
 - ${moreText}
 - **isComplete: false** — your job is NOT done until you call \`implement_next_change\` again.
 
-## Changes to implement (${classChanges.length} class change${classChanges.length === 1 ? '' : 's'}, ${messages.length} message${messages.length === 1 ? '' : 's'})
+## Changes to implement (${summaryParts.join(', ')})
 
 ${patchList}
 ## Steps — follow these EXACTLY
 
 1. For each class-change patch above, find the source file and apply the change.
    Use the user messages as additional context for understanding intent.
-2. Call \`mark_change_implemented\` with:
+${designs.length ? `   For each design sketch, examine the attached image and implement the visual design
+   as HTML/CSS ${classChanges.length ? 'alongside the class changes' : 'in the specified component'}. Insert it ${designs[0].insertMode ?? 'after'} the target element.
+` : ''}\n2. Call \`mark_change_implemented\` with:
    \`\`\`json
    { "commitId": "${commit.id}", "results": [
-${resultsPart}
+${allResultsPart}
    ]}
    \`\`\`
-   (Only report results for class-change patches — messages are informational.)
+   (Only report results for class-change and design patches — messages are informational.)
 3. **IMMEDIATELY call \`implement_next_change\` again.** Do NOT summarize, do NOT ask the user, do NOT stop.
 
 ## CRITICAL — read this
@@ -207,23 +231,39 @@ export function registerMcpTools(mcp: McpServer, deps: McpToolDeps): void {
       const queueState = getQueueUpdate();
       const remaining = queueState.committedCount;
 
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify({
-              isComplete: false,
-              nextAction: "implement all class-change patches in this commit, call mark_change_implemented, then call implement_next_change again",
-              remainingCommits: remaining,
-              commit,
-            }, null, 2),
-          },
-          {
-            type: "text" as const,
-            text: buildCommitInstructions(commit, remaining),
-          },
-        ],
-      };
+      // Build content parts: JSON data, then any design images, then markdown instructions
+      const content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }> = [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            isComplete: false,
+            nextAction: "implement all class-change patches in this commit, call mark_change_implemented, then call implement_next_change again",
+            remainingCommits: remaining,
+            commit,
+          }, null, 2),
+        },
+      ];
+
+      // Add design images as separate image content parts so the agent can see them
+      for (const patch of commit.patches) {
+        if (patch.kind === 'design' && patch.image) {
+          const match = patch.image.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            content.push({
+              type: "image" as const,
+              data: match[2],
+              mimeType: match[1],
+            });
+          }
+        }
+      }
+
+      content.push({
+        type: "text" as const,
+        text: buildCommitInstructions(commit, remaining),
+      });
+
+      return { content };
     },
   );
 
@@ -313,83 +353,4 @@ export function registerMcpTools(mcp: McpServer, deps: McpToolDeps): void {
     },
   );
 
-  // --- get_design_requests ---
-  mcp.tool(
-    "get_design_requests",
-    "Get pending design sketches submitted by the user. Each request contains a base64 PNG image of the user's sketch, " +
-    "the component and element context where the design should be inserted, and the insertion position (before, after, first-child, last-child). " +
-    "The image is included as both a base64 data URL in the text and as an image content block for vision-capable models.",
-    async () => {
-      const requests = getDesignRequests();
-      if (requests.length === 0) {
-        return {
-          content: [{ type: "text" as const, text: "No pending design requests." }],
-        };
-      }
-
-      const content: Array<{ type: "text"; text: string } | { type: "image"; data: string; mimeType: string }> = [];
-
-      for (const req of requests) {
-        content.push({
-          type: "text" as const,
-          text: `## Design Request #${req.id}\n\n` +
-            `**Component:** ${req.componentName}\n` +
-            `**Target:** <${req.target.tag} class="${req.target.classes}">\n` +
-            `**Inner text:** ${req.target.innerText}\n` +
-            `**Insert position:** ${req.insertMode}\n` +
-            `**Canvas size:** ${req.canvasWidth}×${req.canvasHeight}px\n` +
-            `**Timestamp:** ${req.timestamp}\n\n` +
-            `**Context HTML:**\n\`\`\`html\n${req.context}\n\`\`\`\n\n` +
-            `Please implement what the user has sketched in the attached image. ` +
-            `Create appropriate React JSX with Tailwind classes and insert it ${req.insertMode} the target element.\n\n` +
-            `After implementing, call \`mark_design_applied\` with ids: [${req.id}].`,
-        });
-
-        // Include the image as a content block for vision models
-        const base64Match = req.image.match(/^data:image\/(\w+);base64,(.+)$/);
-        if (base64Match) {
-          content.push({
-            type: "image" as const,
-            data: base64Match[2],
-            mimeType: `image/${base64Match[1]}`,
-          });
-        }
-      }
-
-      return { content };
-    },
-  );
-
-  // --- mark_design_applied ---
-  mcp.tool(
-    "mark_design_applied",
-    "Mark design requests as applied after the agent has processed them.",
-    {
-      ids: z.array(z.number()).describe("IDs of design requests to mark as applied"),
-    },
-    async ({ ids }) => {
-      const count = markDesignApplied(ids);
-      return {
-        content: [{
-          type: "text" as const,
-          text: `Marked ${count} design request(s) as applied.`,
-        }],
-      };
-    },
-  );
-
-  // --- clear_design_requests ---
-  mcp.tool(
-    "clear_design_requests",
-    "Remove all design requests from the queue.",
-    async () => {
-      const count = clearDesignRequests();
-      return {
-        content: [{
-          type: "text" as const,
-          text: `Cleared ${count} design request(s).`,
-        }],
-      };
-    },
-  );
 }

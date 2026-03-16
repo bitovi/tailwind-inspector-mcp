@@ -5,7 +5,6 @@ import type { Server } from "http";
 
 import { addPatch, commitDraft, getQueueUpdate, discardDraftPatch } from "./queue.js";
 import type { Patch } from "../shared/types.js";
-import { addDesignRequest } from "./design-queue.js";
 
 export interface WebSocketDeps {
   broadcastPatchUpdate: () => void;
@@ -88,16 +87,6 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
         } else if (msg.type === "PING") {
           ws.send(JSON.stringify({ type: "PONG" }));
         } else if (msg.type === "DESIGN_SUBMIT") {
-          addDesignRequest({
-            image: msg.image,
-            componentName: msg.componentName,
-            target: msg.target,
-            context: msg.context,
-            insertMode: msg.insertMode,
-            canvasWidth: msg.canvasWidth,
-            canvasHeight: msg.canvasHeight,
-          });
-          // Also add as a patch so draft count increases and panel sees it
           const patch: Patch = {
             id: crypto.randomUUID(),
             kind: 'design',

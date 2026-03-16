@@ -66,6 +66,8 @@ export function usePatchManager(): PatchManager {
   const [queueState, setQueueState] = useState<QueueState>({ draft: [], commits: [] });
   const patchesRef = useRef(patches);
   patchesRef.current = patches;
+  const queueStateRef = useRef(queueState);
+  queueStateRef.current = queueState;
 
   const preview = useCallback((oldClass: string, newClass: string) => {
     sendTo('overlay', { type: 'PATCH_PREVIEW', oldClass, newClass });
@@ -137,15 +139,17 @@ export function usePatchManager(): PatchManager {
       : { type: 'MESSAGE_STAGE', id, message, elementKey });
   }, []);
 
+
   const commitAll = useCallback(() => {
-    const current = patchesRef.current;
-    const stagedIds = current.filter(p => p.status === 'staged').map(p => p.id);
-    if (stagedIds.length === 0) return;
+    // Use server draft as authoritative source — it includes designs and messages
+    // staged directly by the overlay, which are not in local React state.
+    const serverDraftIds = queueStateRef.current.draft.map(p => p.id);
+    // Also include any local patches not yet acknowledged by the server
+    const localIds = patchesRef.current.filter(p => p.status === 'staged').map(p => p.id);
+    const allIds = Array.from(new Set([...serverDraftIds, ...localIds]));
+    if (allIds.length === 0) return;
 
-    // Send commit to server
-    send({ type: 'PATCH_COMMIT', ids: stagedIds });
-
-    // Clear local patches (they now live on the server as a commit)
+    send({ type: 'PATCH_COMMIT', ids: allIds });
     setPatches([]);
   }, []);
 
@@ -156,10 +160,12 @@ export function usePatchManager(): PatchManager {
   }, []);
 
   const discardAll = useCallback(() => {
-    const ids = patchesRef.current.filter(p => p.status === 'staged').map(p => p.id);
+    const serverIds = queueStateRef.current.draft.map(p => p.id);
+    const localIds = patchesRef.current.filter(p => p.status === 'staged').map(p => p.id);
+    const allIds = Array.from(new Set([...serverIds, ...localIds]));
     setPatches([]);
-    if (ids.length > 0) {
-      send({ type: 'DISCARD_DRAFTS', ids });
+    if (allIds.length > 0) {
+      send({ type: 'DISCARD_DRAFTS', ids: allIds });
     }
     sendTo('overlay', { type: 'PATCH_REVERT' });
   }, []);
