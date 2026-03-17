@@ -48,3 +48,18 @@ export async function resolveTailwindConfig(): Promise<TailwindThemeSubset> {
 export async function generateCssForClasses(classes: string[]): Promise<string> {
   return (await getAdapter()).generateCssForClasses(classes);
 }
+
+/**
+ * Synchronous pre-flight check: can we find tailwindcss from the current cwd?
+ * Used at startup to give an early, actionable error before the server binds.
+ */
+export function checkTailwindAvailable(): { ok: true } | { ok: false; error: string } {
+  try {
+    const cwd = process.cwd();
+    const req = createRequire(resolve(cwd, "package.json"));
+    req.resolve("tailwindcss/package.json");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}

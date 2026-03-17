@@ -14,6 +14,7 @@ import {
   getByStatus,
   getCounts,
   getNextCommitted,
+  reclaimImplementingCommits,
   markCommitImplementing,
   markCommitImplemented,
   markImplementing,
@@ -130,6 +131,7 @@ describe('Server integration tests', () => {
     registerMcpTools(mcpServer, {
       broadcastPatchUpdate,
       getNextCommitted,
+      reclaimImplementingCommits,
       onCommitted,
       markCommitImplementing,
       markCommitImplemented,

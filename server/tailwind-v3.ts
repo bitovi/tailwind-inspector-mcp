@@ -91,7 +91,6 @@ export class TailwindV3Adapter implements TailwindAdapter {
     if (configPath) {
       try {
         const req = createRequire(resolve(cwd, "package.json"));
-        // @ts-expect-error — tailwindcss resolveConfig lacks NodeNext-compatible exports
         const resolveConfig = (await import(req.resolve("tailwindcss/resolveConfig"))).default;
         const userConfig = (await import(configPath)).default;
         const full = resolveConfig(userConfig);

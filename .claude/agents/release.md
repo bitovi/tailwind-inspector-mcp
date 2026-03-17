@@ -1,7 +1,7 @@
 ---
 name: release
 description: Automate the release workflow — bump version, build, publish to npm, commit, tag, and push. Use when asked to cut a release or publish a new version.
-model: sonnet
+model: haiku
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

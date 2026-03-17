@@ -15,6 +15,39 @@ import { getByStatus, getCounts, getNextCommitted, reclaimImplementingCommits, m
 import { createApp } from "./app.js";
 import { setupWebSocket } from "./websocket.js";
 import { registerMcpTools } from "./mcp-tools.js";
+import { checkTailwindAvailable } from "./tailwind.js";
+
+// --- Resolve project root (precedence: --cwd flag, VYBIT_PROJECT_ROOT, cwd) ---
+const argv = process.argv.slice(2);
+let desiredProjectRoot = process.cwd();
+const cwdFlagIndex = argv.findIndex(a => a === "--cwd" || a === "-C");
+if (cwdFlagIndex !== -1 && argv[cwdFlagIndex + 1]) {
+  desiredProjectRoot = path.resolve(argv[cwdFlagIndex + 1]);
+} else if (process.env.VYBIT_PROJECT_ROOT) {
+  desiredProjectRoot = path.resolve(process.env.VYBIT_PROJECT_ROOT);
+}
+
+if (desiredProjectRoot !== process.cwd()) {
+  try {
+    process.chdir(desiredProjectRoot);
+    console.error(`[startup] Using project root: ${desiredProjectRoot}`);
+  } catch (err) {
+    console.error(`Failed to change cwd to ${desiredProjectRoot}: ${err}`);
+    process.exit(1);
+  }
+}
+
+// --- Startup check: tailwindcss must be resolvable from cwd ---
+const tailwindCheck = checkTailwindAvailable();
+if (!tailwindCheck.ok) {
+  console.error("VyBit: tailwindcss not found — cannot start");
+  console.error(`cwd: ${process.cwd()}`);
+  console.error("VyBit must run from your project directory so it can find tailwindcss in node_modules.");
+  console.error('If your app runs in Docker, run VyBit inside the container:');
+  console.error('  docker exec -i <container> npx @bitovi/vybit');
+  console.error("See: https://github.com/bitovi/vybit#running-inside-docker");
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,6 +115,7 @@ const mcp = new McpServer(
 registerMcpTools(mcp, {
   broadcastPatchUpdate,
   getNextCommitted,
+  reclaimImplementingCommits,
   onCommitted,
   markCommitImplementing,
   markCommitImplemented,

@@ -52,6 +52,35 @@ __Claude Code__ in `.mcp.json`
 }
 ```
 
+#### Running inside Docker
+
+If your app runs in a Docker container, run VyBit **inside the container** instead of on the host. This is necessary because VyBit needs access to your project's `node_modules` to resolve Tailwind — which only exist inside the container, not on the host.
+
+Replace the `npx` command with `docker exec`. For example, Claude Code in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "vybit": {
+      "command": "docker",
+      "args": ["exec", "-i", "<your-container-name>", "npx", "@bitovi/vybit"]
+    }
+  }
+}
+```
+
+You can find your container name by running `docker ps`.
+
+You also need to expose port `3333` so the browser can load the editor overlay script. Add it to your `docker-compose.yml` (or override file):
+
+```yaml
+ports:
+  - "3000:3000"
+  - "3333:3333"
+```
+
+Then restart your containers for the port mapping to take effect.
+
 ### Start the MCP connection
 
 Different agents connect to an MCP service in different ways:
