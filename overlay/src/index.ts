@@ -1,6 +1,6 @@
 import { computePosition, flip, offset } from '@floating-ui/dom';
 import { connect, send, sendTo, onMessage } from './ws';
-import { getFiber, findComponentBoundary, getRootFiber, findAllInstances, getChildPath, resolvePathToDOM, findInlineRepeatedNodes } from './fiber';
+import { getFiber, findComponentBoundary, getRootFiber, findAllInstances, getChildPath, resolvePathToDOM, findInlineRepeatedNodes, findDOMEquivalents } from './fiber';
 import { parseClasses } from './class-parser';
 import { buildContext } from './context';
 import { applyPreview, revertPreview, getPreviewState, commitPreview } from './patcher';
@@ -458,11 +458,10 @@ function mouseMoveHandler(e: MouseEvent): void {
   if (rect.width < 10 || rect.height < 10) { clearHoverPreview(); return; }
 
   const fiber = getFiber(target);
-  if (!fiber) { clearHoverPreview(); return; }
-  const boundary = findComponentBoundary(fiber);
-  if (!boundary) { clearHoverPreview(); return; }
+  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  const label = boundary?.componentName ?? target.tagName.toLowerCase();
 
-  showHoverPreview(target, boundary.componentName);
+  showHoverPreview(target, label);
 }
 
 const PENCIL_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -814,30 +813,30 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 
   const target = e.target as Element;
   const fiber = getFiber(target);
-  if (!fiber) {
-    showToast('Could not detect a React component for this element.');
-    return;
-  }
-
-  const boundary = findComponentBoundary(fiber);
-  if (!boundary) {
-    showToast('Could not detect a React component for this element.');
-    return;
-  }
-
-  const rootFiber = getRootFiber();
-  if (!rootFiber) {
-    showToast('Could not find React root.');
-    return;
-  }
-
-  const instances = findAllInstances(rootFiber, boundary.componentType);
-  const path = getChildPath(boundary.componentFiber, fiber);
+  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  const hasFiber = fiber !== null && boundary !== null;
 
   const newNodes: HTMLElement[] = [];
-  for (const inst of instances) {
-    const node = resolvePathToDOM(inst, path);
-    if (node) newNodes.push(node);
+  let componentName: string;
+
+  if (hasFiber) {
+    const rootFiber = getRootFiber();
+    if (!rootFiber) {
+      showToast('Could not find React root.');
+      return;
+    }
+    const instances = findAllInstances(rootFiber, boundary!.componentType);
+    const path = getChildPath(boundary!.componentFiber, fiber);
+    for (const inst of instances) {
+      const node = resolvePathToDOM(inst, path);
+      if (node) newNodes.push(node);
+    }
+    componentName = boundary!.componentName;
+  } else {
+    // Non-React page (Astro, plain HTML, etc.) — fall back to DOM-based matching
+    const targetEl = target as HTMLElement;
+    newNodes.push(...findDOMEquivalents(targetEl));
+    componentName = targetEl.tagName.toLowerCase();
   }
 
   // In add mode, merge new nodes into the existing selection (dedup by reference)
@@ -853,7 +852,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
     selectedInstanceIndices = new Set(); // reset picker
     // Rebuild toolbar anchored to the first (original) target
     if (currentTargetEl) showDrawButton(currentTargetEl);
-    sendTo('panel', { type: 'ELEMENT_SELECTED', componentName: currentBoundary?.componentName ?? boundary.componentName, instanceCount: merged.length, classes: currentTargetEl?.className ?? '', tailwindConfig: await fetchTailwindConfig() });
+    sendTo('panel', { type: 'ELEMENT_SELECTED', componentName: currentBoundary?.componentName ?? componentName, instanceCount: merged.length, classes: currentTargetEl?.className ?? '', tailwindConfig: await fetchTailwindConfig() });
     return;
   }
 
@@ -865,11 +864,10 @@ async function clickHandler(e: MouseEvent): Promise<void> {
     highlightElement(node);
   }
 
-  // Fallback: if only one node found, the element is probably rendered inline via .map()
-  // without its own React component. Walk the fiber tree within the boundary to find the
-  // level with the most same-type siblings and resolve equivalent DOM nodes from each.
-  if (equivalentNodes.length <= 1) {
-    const repeated = findInlineRepeatedNodes(fiber, boundary.componentFiber);
+  // React fallback: if only one node found, the element may be rendered inline via .map()
+  // without its own component boundary — walk the fiber tree to find repeated siblings.
+  if (hasFiber && equivalentNodes.length <= 1) {
+    const repeated = findInlineRepeatedNodes(fiber, boundary!.componentFiber);
     if (repeated.length > 0) {
       clearHighlights();
       equivalentNodes.length = 0;
@@ -880,7 +878,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
     }
   }
 
-  console.log(`[overlay] ${boundary.componentName} — ${instances.length} instances, ${equivalentNodes.length} highlighted`);
+  console.log(`[overlay] ${componentName} — ${equivalentNodes.length} highlighted`);
 
   // Fetch tailwind config (cached after first fetch)
   const config = await fetchTailwindConfig();
@@ -889,23 +887,31 @@ async function clickHandler(e: MouseEvent): Promise<void> {
   const targetEl = target as HTMLElement;
   const classString = targetEl.className;
   if (typeof classString !== 'string') return;
-  const parsedClasses = parseClasses(classString);
-  if (parsedClasses.length === 0) return;
 
   // Store selection state for Patcher WS handlers
   currentEquivalentNodes = equivalentNodes;
   currentTargetEl = targetEl;
-  currentBoundary = { componentName: boundary.componentName };
+  currentBoundary = { componentName };
   selectedInstanceIndices = new Set(); // reset picker state for new element
-  currentInstances = instances.map((inst, i) => {
-    const domNode = inst.stateNode instanceof HTMLElement ? inst.stateNode : null;
-    const label = domNode
-      ? (domNode.innerText || '').trim().slice(0, 40) || `#${i + 1}`
-      : `#${i + 1}`;
-    const parentFiber = inst.return;
-    const parent = parentFiber?.type?.name ?? '';
-    return { index: i, label, parent };
-  });
+  if (hasFiber) {
+    const rootFiber = getRootFiber();
+    const instances = rootFiber ? findAllInstances(rootFiber, boundary!.componentType) : [];
+    currentInstances = instances.map((inst, i) => {
+      const domNode = inst.stateNode instanceof HTMLElement ? inst.stateNode : null;
+      const label = domNode
+        ? (domNode.innerText || '').trim().slice(0, 40) || `#${i + 1}`
+        : `#${i + 1}`;
+      const parentFiber = inst.return;
+      const parent = parentFiber?.type?.name ?? '';
+      return { index: i, label, parent };
+    });
+  } else {
+    currentInstances = equivalentNodes.map((node, i) => ({
+      index: i,
+      label: (node.innerText || '').trim().slice(0, 40) || `#${i + 1}`,
+      parent: node.parentElement?.tagName.toLowerCase() ?? '',
+    }));
+  }
 
   // Selection complete — deactivate hover preview and selection mode cursor
   clearHoverPreview();
@@ -923,7 +929,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
   // Send element data to Panel via WS
   sendTo('panel', {
     type: 'ELEMENT_SELECTED',
-    componentName: boundary.componentName,
+    componentName,
     instanceCount: equivalentNodes.length,
     classes: classString,
     tailwindConfig: config,

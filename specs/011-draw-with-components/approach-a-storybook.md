@@ -185,7 +185,7 @@ If detected, the panel receives the Storybook URL via `GET /storybook-status` an
 
 ---
 
-**Option P2 — Storybook static build + `express.static` (recommended)**
+**Option P2 — Storybook static build + `express.static`**
 
 `storybook build` produces a `storybook-static/` folder of plain HTML/JS/CSS. The MCP server serves it with `express.static` — no separate port, no process spawning:
 
@@ -215,7 +215,14 @@ server.tool('build_component_previews',
 );
 ```
 
-*Grade: ~60s one-time build cost, no extra port, full live prop-configurable previews, served from the existing MCP server. Recommended for most setups.*
+**⚠️ Staleness problem**: The static build snapshots CSS at build time. If this tool is used to change Tailwind classes on a component (e.g. `bg-indigo-600` → `bg-blue-500` on Button), the Storybook previews continue showing the old styles until `build_component_previews` is re-run. The running app reflects the change immediately; the preview does not.
+
+This is an inherent limitation of the static build approach. Mitigations:
+- The panel could show a "previews may be outdated" banner after any Tailwind patch is committed
+- `build_component_previews` could be called automatically after a patch is marked implemented (adds ~60s to the agent loop — probably not worth it)
+- **Prefer P1 (running Storybook dev) during active design sessions** — HMR keeps previews instantly current with every file save
+
+*Grade: ~60s one-time build cost, no extra port, full prop-configurable previews, but stale after component style changes. Best for initial setup and component selection; P1 is better during active editing.*
 
 ---
 
@@ -258,15 +265,16 @@ spawn('npx', ['storybook', 'dev', '-p', '6007', '--no-open'], { cwd: process.cwd
 
 ```
 Server startup:
-  → Check for storybook-static/ → if present, serve at /storybook (P2)
-  → Check for running Storybook at :6006/:6007 → if found, use that URL (P1)
+  → Check for running Storybook at :6006/:6007 → if found, use that URL (P1) ← preferred during active editing
+  → Check for storybook-static/ → if present, serve at /storybook (P2) ← good for initial setup
   → Fall back to ReactDOMServer thumbnails for palette grid (P3)
   → ComponentPalette renders without previews if all else fails
 
 Panel shows:
-  → Palette thumbnails: static HTML (P3) or scaled iframe (P1/P2)  
+  → Palette thumbnails: SSR HTML (P3) or scaled iframe (P1/P2)
   → PropEditor live preview: full iframe (P1/P2) — disabled if neither available
   → Placed components on canvas: same iframe (P1/P2) or placeholder if unavailable
+  → "Previews may be outdated" banner shown after any committed patch when using P2
 ```
 
 ---

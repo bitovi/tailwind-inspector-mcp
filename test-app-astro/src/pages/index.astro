@@ -1,0 +1,104 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/services', label: 'Services' },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+];
+
+const cards = [
+  {
+    title: 'Consulting',
+    description: 'Expert guidance to help your team ship faster with modern architecture.',
+    icon: '🧭',
+  },
+  {
+    title: 'Training',
+    description: 'Hands-on workshops covering React, Angular, DevOps, and more.',
+    icon: '📚',
+  },
+  {
+    title: 'Development',
+    description: 'Embedded engineers to help you build, scale, and maintain your product.',
+    icon: '⚙️',
+  },
+];
+
+const features = [
+  'No long-term contracts — start small, grow as needed',
+  'Senior-level engineers with deep framework expertise',
+  'Proven track record across startups and Fortune 500',
+  'Transparent process with weekly syncs and demos',
+  'Open source contributors and community thought leaders',
+];
+---
+
+<Layout title="Bitovi — Test App (Astro)">
+  <!-- Nav -->
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-5xl mx-auto px-6 flex items-center justify-between h-16">
+      <span class="text-lg font-bold text-teal-700">Bitovi</span>
+      <nav class="flex gap-1">
+        {navLinks.map((link, i) => (
+          <a
+            href={link.href}
+            class={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              i === 0
+                ? 'bg-teal-700 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="max-w-5xl mx-auto px-6 py-20 text-center">
+    <h1 class="text-4xl font-extrabold text-gray-900 mb-4">
+      Build better software, faster
+    </h1>
+    <p class="text-lg text-gray-500 max-w-xl mx-auto mb-8">
+      Bitovi helps teams design, develop, and deliver exceptional digital experiences.
+    </p>
+    <a
+      href="/contact"
+      class="inline-block px-6 py-3 rounded-lg bg-teal-700 text-white font-semibold text-sm hover:bg-teal-800 transition-colors"
+    >
+      Get started
+    </a>
+  </section>
+
+  <!-- Cards -->
+  <section class="max-w-5xl mx-auto px-6 pb-20">
+    <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">What we do</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {cards.map((card) => (
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="text-3xl mb-3">{card.icon}</div>
+          <h3 class="text-base font-semibold text-gray-900 mb-1">{card.title}</h3>
+          <p class="text-sm text-gray-500 leading-relaxed">{card.description}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Feature list -->
+  <section class="bg-white border-t border-gray-200">
+    <div class="max-w-5xl mx-auto px-6 py-16">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">Why teams choose Bitovi</h2>
+      <ul class="space-y-3">
+        {features.map((feature) => (
+          <li class="flex items-start gap-3 text-sm text-gray-700">
+            <span class="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold">✓</span>
+            {feature}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+</Layout>

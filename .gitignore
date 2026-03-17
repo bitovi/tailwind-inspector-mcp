@@ -27,6 +27,7 @@ temp/
 # Build caches
 .vite/
 *.tsbuildinfo
+.astro/
 
 # Storybook
 panel/storybook-static/

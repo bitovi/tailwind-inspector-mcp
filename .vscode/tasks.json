@@ -106,6 +106,19 @@
       "options": { "cwd": "${workspaceFolder}/test-app" },
       "presentation": { "panel": "dedicated", "reveal": "always", "focus": true },
       "problemMatcher": []
+    },
+    {
+      "label": "Test App Astro (port 5176)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/test-app-astro" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "astro",
+        "pattern": { "regexp": "^(.*error.*)$", "message": 1 },
+        "background": { "activeOnStart": true, "beginsPattern": "astro", "endsPattern": "localhost" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "always" }
     }
   ]
 }

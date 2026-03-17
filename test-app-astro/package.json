@@ -1,0 +1,15 @@
+{
+  "name": "test-app-astro",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 5176",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.5.5",
+    "@tailwindcss/vite": "^4.0.0",
+    "tailwindcss": "^4.0.0"
+  }
+}

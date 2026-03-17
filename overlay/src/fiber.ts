@@ -272,3 +272,48 @@ export function findInlineRepeatedNodes(
 
   return bestResult;
 }
+
+/**
+ * For non-React (plain HTML / Astro) pages: find all elements with the same tag name
+ * and exact className as the clicked element.
+ *
+ * If the element has no classes, or only one element has those classes, returns [el] alone.
+ *
+ * Outlier tolerance (for "active" items): if clicking the parent of the matched elements,
+ * also check whether siblings share a majority class with ≤1 outlier — but only among
+ * the direct siblings of the clicked element, not the entire document.
+ */
+export function findDOMEquivalents(el: HTMLElement): HTMLElement[] {
+  const classes = typeof el.className === 'string' ? el.className.trim() : '';
+  if (!classes) return [el];
+
+  // Primary: exact tagName + className match across the whole document
+  const exactMatches = Array.from(
+    document.querySelectorAll<HTMLElement>(el.tagName.toLowerCase()),
+  ).filter((n) => n.className === el.className);
+
+  if (exactMatches.length >= 2) return exactMatches;
+
+  // Fallback: majority-class among direct siblings, tolerating ≤1 outlier (e.g. active link).
+  // This lets clicking a non-active nav link select all sibling nav links.
+  const parent = el.parentElement;
+  if (!parent) return [el];
+
+  const siblings = Array.from(parent.children).filter(
+    (c): c is HTMLElement => c instanceof HTMLElement && c.tagName === el.tagName,
+  );
+  if (siblings.length < 2) return [el];
+
+  const majorityClass = siblings
+    .map((n) => n.className)
+    .sort(
+      (a, b) =>
+        siblings.filter((n) => n.className === b).length -
+        siblings.filter((n) => n.className === a).length,
+    )[0];
+
+  const outliers = siblings.filter((n) => n.className !== majorityClass);
+  if (outliers.length > 1) return [el];
+
+  return siblings.filter((n) => n.className === majorityClass);
+}
