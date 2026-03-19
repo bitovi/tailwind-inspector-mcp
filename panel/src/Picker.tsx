@@ -1,39 +1,115 @@
 import { useState, useEffect, useRef } from 'react';
 import { useFloating, offset, flip, shift, size, autoUpdate, FloatingPortal, useDismiss, useInteractions } from '@floating-ui/react';
-import type { ParsedClass } from '../../overlay/src/class-parser';
-import { PROPERTY_RULES, type Category, getCompositeConsumingPrefixes, buildEnumGroupsFromRules, buildAddablePropertiesFromRules } from '../../overlay/src/propertyRules';
+import type { ParsedToken } from '../../overlay/src/grammar';
+import { PROPERTY_RULES, type Category, buildEnumGroupsFromRules, buildAddablePropertiesFromRules } from '../../overlay/src/propertyRules';
 import { ColorGrid } from './components/ColorGrid';
 import { ScaleScrubber } from './components/ScaleScrubber';
 import { getScaleValues } from './components/getScaleValues';
 import { BoxModel } from './components/BoxModel';
 import { boxModelLayersFromClasses } from './components/BoxModel/layerUtils';
 import type { LayerName, LayerState, SlotKey } from './components/BoxModel/types';
+import { CornerModel } from './components/CornerModel';
+import type { CornerModelState, SlotKey as CornerSlotKey } from './components/CornerModel';
 import { PropertySection } from './components/PropertySection';
 import type { AvailableProperty } from './components/PropertySection/types';
 import { GradientEditor, parsedClassesToGradientEditorProps } from './components/GradientEditor';
+import { FlexDirection } from './components/FlexDirection';
+import type { FlexDirectionValue } from './components/FlexDirection';
+import { FlexJustify } from './components/FlexJustify';
+import { FlexAlign } from './components/FlexAlign';
+import { FlexWrap } from './components/FlexWrap';
+import type { FlexWrapValue } from './components/FlexWrap';
 import { sendTo } from './ws';
 import type { PatchManager } from './hooks/usePatchManager';
 
-const CATEGORY_LABELS: Record<Category, string> = {
+const SECTION_LABELS: Record<string, string> = {
   spacing: 'Spacing',
   sizing: 'Sizing',
   typography: 'Typography',
   color: 'Backgrounds',
-  borders: 'Borders',
   effects: 'Effects',
   layout: 'Layout',
   flexbox: 'Flexbox & Grid',
-  gradient: 'Gradient',
+  overflow: 'Overflow',
 };
 
 /**
- * Ordered list of all categories to render as sections (gradient excluded — it renders inside 'color').
- * Categories always render, even when empty, so users can always add via [+].
+ * Ordered list of sections to render (spacing handled by BoxModel; overflow not shown yet).
+ * Sections always render, even when empty, so users can always add via [+].
  */
-const ALL_CATEGORIES: Category[] = ['sizing', 'typography', 'color', 'flexbox', 'borders', 'effects', 'layout'];
+const ALL_SECTIONS = ['sizing', 'typography', 'color', 'flexbox', 'effects', 'layout'];
 
-/** Prefixes & exact classes consumed by composite components (BoxModel, GradientEditor). */
-const COMPOSITE_CONSUMING_PREFIXES = getCompositeConsumingPrefixes();
+/** Derives the class prefix string for building new class names (e.g. 'py-2' → 'py-'). */
+function tokenClassPrefix(t: ParsedToken): string {
+  const val = t.scale ?? t.color ?? t.style ?? t.align ?? t.size ?? t.value;
+  if (val) return t.fullClass.slice(0, t.fullClass.length - val.length);
+  return t.property + '-';
+}
+
+/** Returns true for tokens consumed by BoxModel, CornerModel, or GradientEditor (not rendered as chips). */
+function isCompositeConsumed(t: ParsedToken): boolean {
+  if (t.section === 'spacing') return true;
+  if (t.property === 'border' && !t.style && !t.color) return true;
+  if (t.property === 'rounded') return true; // consumed by CornerModel
+  if (t.property === 'bg' || t.property === 'bg-gradient-to' || t.property === 'from' || t.property === 'via' || t.property === 'to') return true;
+  return false;
+}
+
+const RADIUS_SCALE = [
+  'rounded-none', 'rounded-sm', 'rounded', 'rounded-md',
+  'rounded-lg', 'rounded-xl', 'rounded-2xl', 'rounded-3xl', 'rounded-full',
+];
+
+function cornerScale(prefix: string) {
+  return [
+    `${prefix}-none`, `${prefix}-sm`, prefix,
+    `${prefix}-md`, `${prefix}-lg`, `${prefix}-xl`,
+    `${prefix}-2xl`, `${prefix}-3xl`, `${prefix}-full`,
+  ];
+}
+
+/** Builds CornerModelState from the current parsedClasses */
+function cornerModelStateFromClasses(classes: ParsedToken[]): CornerModelState {
+  const rounded = classes.filter(c => c.property === 'rounded');
+
+  // Map fullClass → slot key
+  const PREFIXES: { prefix: RegExp; key: CornerSlotKey }[] = [
+    { prefix: /^rounded-tl(-|$)/, key: 'tl' },
+    { prefix: /^rounded-tr(-|$)/, key: 'tr' },
+    { prefix: /^rounded-br(-|$)/, key: 'br' },
+    { prefix: /^rounded-bl(-|$)/, key: 'bl' },
+    { prefix: /^rounded-t(-|$)/,  key: 't' },
+    { prefix: /^rounded-r(-|$)/,  key: 'r' },
+    { prefix: /^rounded-b(-|$)/,  key: 'b' },
+    { prefix: /^rounded-l(-|$)/,  key: 'l' },
+  ];
+
+  const slotValues = new Map<CornerSlotKey, string>();
+  let shorthandValue: string | null = null;
+
+  for (const cls of rounded) {
+    const fc = cls.fullClass;
+    const match = PREFIXES.find(p => p.prefix.test(fc));
+    if (match) {
+      slotValues.set(match.key, fc);
+    } else {
+      // bare rounded or rounded-{size} with no side/corner → shorthand
+      shorthandValue = fc;
+    }
+  }
+
+  const allKeys: CornerSlotKey[] = ['all', 't', 'r', 'b', 'l', 'tl', 'tr', 'br', 'bl'];
+  return {
+    shorthandValue,
+    shorthandScaleValues: RADIUS_SCALE,
+    slots: allKeys.map(key => ({
+      key,
+      value: key === 'all' ? shorthandValue : (slotValues.get(key) ?? null),
+      placeholder: key,
+      scaleValues: key === 'all' ? RADIUS_SCALE : cornerScale(`rounded-${key}`),
+    })),
+  };
+}
 
 /** Maps each class token → its enum alternatives + staging property key. Built from propertyRules. */
 const ENUM_GROUPS = buildEnumGroupsFromRules();
@@ -45,9 +121,9 @@ const ADDABLE_PROPERTIES_MAP = buildAddablePropertiesFromRules();
  * Typography properties that need virtual prefixes (text- is ambiguous: font-size vs color vs align).
  * These are the only special cases not auto-generated from PROPERTY_RULES.
  */
-const TYPOGRAPHY_ADDABLE_SPECIALS: Record<string, { themeKey: string | null; valueType: 'scalar' | 'color' | 'enum'; enumAlts?: string[] }> = {
-  'text-size':  { themeKey: 'fontSize',  valueType: 'scalar' },
-  'text-color': { themeKey: 'colors',    valueType: 'color' },
+const TYPOGRAPHY_ADDABLE_SPECIALS: Record<string, { scaleName: string | null; valueType: 'scalar' | 'color' | 'enum'; enumAlts?: string[] }> = {
+  'text-size':  { scaleName: 'fontSize', valueType: 'scalar' },
+  'text-color': { scaleName: null,       valueType: 'color' },
 };
 
 /** Augment the typography section with the virtual specials not in PROPERTY_RULES. */
@@ -57,7 +133,7 @@ ADDABLE_PROPERTIES_MAP.typography.unshift(
 );
 
 /** Look up pending/staging config for a prefix. Covers PROPERTY_RULES entries and typography specials. */
-function getPendingConfig(prefix: string): { themeKey: string | null; valueType: 'scalar' | 'color' | 'enum'; enumAlts?: string[]; stagingKey: string } | null {
+function getPendingConfig(prefix: string): { scaleName: string | null; valueType: 'scalar' | 'color' | 'enum'; enumAlts?: string[]; stagingKey: string } | null {
   // Typography specials (virtual prefixes)
   const special = TYPOGRAPHY_ADDABLE_SPECIALS[prefix];
   if (special) return { ...special, stagingKey: prefix };
@@ -67,9 +143,9 @@ function getPendingConfig(prefix: string): { themeKey: string | null; valueType:
     ([key, r]) => (r.propertyKey ?? key.replace(/-$/g, '')) === prefix && r.addable
   );
   if (ruleEntry) {
-    const [key, rule] = ruleEntry;
+    const [_key, rule] = ruleEntry;
     return {
-      themeKey: rule.themeKey,
+      scaleName: rule.themeKey,
       valueType: rule.valueType,
       enumAlts: rule.enumAlts,
       stagingKey: prefix,
@@ -80,7 +156,7 @@ function getPendingConfig(prefix: string): { themeKey: string | null; valueType:
   const directRule = PROPERTY_RULES[prefix];
   if (directRule) {
     return {
-      themeKey: directRule.themeKey,
+      scaleName: directRule.themeKey,
       valueType: directRule.valueType,
       enumAlts: directRule.enumAlts,
       stagingKey: prefix.replace(/-$/g, ''),
@@ -93,12 +169,12 @@ function getPendingConfig(prefix: string): { themeKey: string | null; valueType:
 /** Filter available [+] properties to only those not already present, pending, or staged. */
 function filterAvailable(
   available: AvailableProperty[],
-  classes: ParsedClass[],
+  classes: ParsedToken[],
   pending: Set<string>,
   staged?: Set<string>
 ): AvailableProperty[] {
   const usedFullClasses = new Set(classes.map(c => c.fullClass));
-  const usedPrefixes = new Set(classes.map(c => c.prefix));
+  const usedProperties = new Set(classes.map(c => c.property));
   return available.filter(p => {
     if (pending.has(p.prefix)) return false;
     if (staged?.has(p.prefix)) return false;
@@ -106,22 +182,23 @@ function filterAvailable(
     if (config?.valueType === 'enum' && config.enumAlts) {
       return !config.enumAlts.some(alt => usedFullClasses.has(alt));
     }
-    // For scalars/colors, check if the prefix is already used
+    // For scalars/colors, check if the property is already used
     if (config && config.valueType !== 'enum') {
-      // text-size and text-color share the 'text-' prefix — check themeKey too
-      if (p.prefix === 'text-size') return !classes.some(c => c.prefix === 'text-' && c.themeKey === 'fontSize');
-      if (p.prefix === 'text-color') return !classes.some(c => c.prefix === 'text-' && c.themeKey === 'colors');
+      // text-size and text-color share the 'text' property — check scaleName/color field
+      if (p.prefix === 'text-size') return !classes.some(c => c.property === 'text' && c.scaleName === 'fontSize');
+      if (p.prefix === 'text-color') return !classes.some(c => c.property === 'text' && c.color !== undefined);
     }
-    return !usedPrefixes.has(p.prefix);
+    return !usedProperties.has(p.prefix.replace(/-$/g, ''));
   });
 }
 
-function groupByCategory(classes: ParsedClass[]): Map<Category, ParsedClass[]> {
-  const groups = new Map<Category, ParsedClass[]>();
+function groupBySection(classes: ParsedToken[]): Map<string, ParsedToken[]> {
+  const groups = new Map<string, ParsedToken[]>();
   for (const cls of classes) {
-    const list = groups.get(cls.category) || [];
+    const section = cls.section ?? 'unknown';
+    const list = groups.get(section) || [];
     list.push(cls);
-    groups.set(cls.category, list);
+    groups.set(section, list);
   }
   return groups;
 }
@@ -129,19 +206,23 @@ function groupByCategory(classes: ParsedClass[]): Map<Category, ParsedClass[]> {
 interface PickerProps {
   componentName: string;
   instanceCount: number;
-  parsedClasses: ParsedClass[];
+  parsedClasses: ParsedToken[];
   tailwindConfig: any;
   patchManager: PatchManager;
 }
 
 export function Picker({ componentName, instanceCount, parsedClasses, tailwindConfig, patchManager }: PickerProps) {
-  const [selectedClass, setSelectedClass] = useState<ParsedClass | null>(null);
+  const [selectedClass, setSelectedClass] = useState<ParsedToken | null>(null);
   // Local overrides for BoxModel slots staged this session (key: "layer-slotKey" → fullClass)
   const [boxModelOverrides, setBoxModelOverrides] = useState<Map<string, string>>(new Map());
+  // Local overrides for CornerModel slots staged this session (key: slotKey → fullClass)
+  // Local overrides for CornerModel slots staged this session.
+  // string = overridden value, null = explicitly removed, absent = no change from parsedClasses
+  const [cornerOverrides, setCornerOverrides] = useState<Map<CornerSlotKey, string | null>>(new Map());
   // Active color picker for a box model color slot
   const [boxModelColorPicker, setBoxModelColorPicker] = useState<{ layer: LayerName; prefix: string; currentClass: string; staged: boolean; anchorEl: Element } | null>(null);
   // Active color picker for a property chip (Backgrounds, etc.)
-  const [chipColorPicker, setChipColorPicker] = useState<{ cls: ParsedClass; anchorEl: Element } | null>(null);
+  const [chipColorPicker, setChipColorPicker] = useState<{ cls: ParsedToken; anchorEl: Element } | null>(null);
   // Tracks the last hovered color swatch so onLeave can snap back to the staged color
   const boxModelHoveredColorRef = useRef<string | null>(null);
 
@@ -211,6 +292,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
       classesKeyRef.current = currentClassesKey;
       patchManager.revertPreview();
       setBoxModelOverrides(new Map());
+      setCornerOverrides(new Map());
       setBoxModelColorPicker(null);
       setChipColorPicker(null);
       setPendingPrefixes(new Set());
@@ -223,6 +305,29 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
   const stagedPendingPrefixes = new Set(
     stagedPatches.filter(p => p.originalClass === '').map(p => p.property)
   );
+
+  /**
+   * Resolves the effective state for a CSS property by merging the element's
+   * current parsed classes with any staged patches.
+   *
+   * Use this whenever a control renders unconditionally (regardless of whether
+   * the property already exists on the element), which means `token` may be
+   * undefined even though a staged patch for that property exists.
+   *
+   * @param property  - the CSS property key (e.g. 'justify-content', 'align-items')
+   * @param token     - the matching ParsedToken from parsedClasses, or undefined if unset
+   * @returns
+   *   - `originalClass`  — the class on the element before any staging (stable anchor for stage/remove calls)
+   *   - `effectiveClass` — the class currently "showing" (staged newClass if present, else originalClass)
+   *   - `hasValue`       — whether there is currently any value to show or remove
+   */
+  function resolvePropertyState(property: string, token: ParsedToken | undefined) {
+    const staged = stagedPatches.find(p => p.property === property);
+    const originalClass = token?.fullClass ?? staged?.originalClass ?? '';
+    const effectiveClass = staged?.newClass ?? token?.fullClass ?? '';
+    const hasValue = effectiveClass !== '';
+    return { originalClass, effectiveClass, hasValue };
+  }
 
   function applyBoxModelOverrides(layers: LayerState[]): LayerState[] {
     if (boxModelOverrides.size === 0) return layers;
@@ -242,7 +347,21 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
     });
   }
 
-  const groups = groupByCategory(parsedClasses);
+  function applyCornerOverrides(state: CornerModelState): CornerModelState {
+    if (cornerOverrides.size === 0) return state;
+    const allOverride = cornerOverrides.get('all'); // string | null | undefined
+    return {
+      ...state,
+      shorthandValue: allOverride === undefined ? state.shorthandValue : allOverride,
+      slots: state.slots.map(s => {
+        const override = cornerOverrides.get(s.key);
+        // undefined = no override; null = removed; string = new value
+        return override === undefined ? s : { ...s, value: override };
+      }),
+    };
+  }
+
+  const groups = groupBySection(parsedClasses);
 
   function handlePreview(oldClass: string, newClass: string) {
     patchManager.preview(oldClass, newClass);
@@ -266,10 +385,10 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
     handleStage(property, oldClass, newClass);
   }
 
-  function handleChipClick(cls: ParsedClass, anchorEl?: Element) {
+  function handleChipClick(cls: ParsedToken, anchorEl?: Element) {
     patchManager.revertPreview();
     sendTo('overlay', { type: 'CLEAR_HIGHLIGHTS' });
-    if (cls.valueType === 'color' && anchorEl) {
+    if (cls.color !== undefined && anchorEl) {
       setChipColorPicker(prev => prev?.cls.fullClass === cls.fullClass ? null : { cls, anchorEl });
       setSelectedClass(null);
     } else {
@@ -278,11 +397,11 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
     }
   }
 
-  function handleScrubberPreview(cls: ParsedClass, newClass: string) {
+  function handleScrubberPreview(cls: ParsedToken, newClass: string) {
     patchManager.preview(cls.fullClass, newClass);
   }
 
-  function handleScrubberRevert(_cls: ParsedClass) {
+  function handleScrubberRevert(_cls: ParsedToken) {
     patchManager.revertPreview();
   }
 
@@ -409,55 +528,116 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
         )}
       </div>
 
+      {/* ── Corner Model (border radius) ──────────────────────── */}
+      <div className="mt-3 mb-1 flex items-center gap-1.5">
+        <span className="w-[5px] h-[5px] rounded-full bg-bv-teal opacity-50 shrink-0" />
+        <span className="text-[9px] font-semibold uppercase tracking-[1px] text-bv-text-mid">Radius</span>
+      </div>
+      <div className="mb-4">
+        <CornerModel
+          state={applyCornerOverrides(cornerModelStateFromClasses(parsedClasses))}
+          onSlotHover={(_key, value) => {
+            const state = cornerModelStateFromClasses(parsedClasses);
+            // Use the slot's own current value as the old class — never fall back to shorthand.
+            // Falling back to shorthand would remove it from the preview when setting a side/corner.
+            const slotValue = _key === 'all'
+              ? (cornerOverrides.get('all') ?? state.shorthandValue)
+              : (cornerOverrides.get(_key) ?? state.slots.find(s => s.key === _key)?.value ?? null);
+            const current = slotValue ?? '';
+            if (value === null) patchManager.revertPreview();
+            else patchManager.preview(current, value);
+          }}
+          onSlotChange={(_key, value) => {
+            const state = cornerModelStateFromClasses(parsedClasses);
+            const current = cornerOverrides.get(_key)
+              ?? (_key === 'all' ? state.shorthandValue : state.slots.find(s => s.key === _key)?.value)
+              ?? '';
+            handleStage(`rounded-${_key}`, current, value);
+            setCornerOverrides(prev => new Map(prev).set(_key, value));
+          }}
+          onSlotRemove={(_key) => {
+            const current = cornerOverrides.get(_key)
+              ?? cornerModelStateFromClasses(parsedClasses).slots.find(s => s.key === _key)?.value
+              ?? '';
+            if (current) {
+              handleStage(`rounded-${_key}`, current, '');
+              setCornerOverrides(prev => new Map(prev).set(_key, null));
+            }
+          }}
+          onSlotRemoveHover={(_key) => {
+            const current = cornerOverrides.get(_key)
+              ?? cornerModelStateFromClasses(parsedClasses).slots.find(s => s.key === _key)?.value
+              ?? '';
+            if (current) patchManager.preview(current, '');
+          }}
+          onEditStart={() => sendTo('overlay', { type: 'CLEAR_HIGHLIGHTS' })}
+        />
+      </div>
+
       {chipColorPicker && (
         <FloatingPortal>
           <div ref={chipColorPickerRefs.setFloating} style={{ ...chipColorPickerStyles, zIndex: 9999, overflowY: 'auto' }} {...getChipColorPickerFloatingProps()}>
             <ColorGrid
-              prefix={chipColorPicker.cls.prefix}
-              currentValue={chipColorPicker.cls.value}
+              prefix={tokenClassPrefix(chipColorPicker.cls)}
+              currentValue={chipColorPicker.cls.color ?? ''}
               colors={tailwindConfig?.colors || {}}
               locked={false}
-              lockedValue={stagedPatches.find(p => p.property === chipColorPicker.cls.prefix)?.newClass ?? null}
+              lockedValue={stagedPatches.find(p => p.property === chipColorPicker.cls.property)?.newClass ?? null}
               onHover={(fullClass) => handlePreview(chipColorPicker.cls.fullClass, fullClass)}
               onLeave={handleRevert}
-              onClick={(fullClass) => handleStage(chipColorPicker.cls.prefix, chipColorPicker.cls.fullClass, fullClass)}
+              onClick={(fullClass) => handleStage(chipColorPicker.cls.property, chipColorPicker.cls.fullClass, fullClass)}
               onRemoveHover={() => handlePreview(chipColorPicker.cls.fullClass, '')}
-              onRemove={() => { handleStage(chipColorPicker.cls.prefix, chipColorPicker.cls.fullClass, ''); setChipColorPicker(null); }}
+              onRemove={() => { handleStage(chipColorPicker.cls.property, chipColorPicker.cls.fullClass, ''); setChipColorPicker(null); }}
             />
           </div>
         </FloatingPortal>
       )}
 
-      {/* ── Property Sections — always rendered for every category ─── */}
-      {ALL_CATEGORIES.map((category) => {
-        const rawClasses = groups.get(category) || [];
+      {/* ── Property Sections — always rendered for every section ─── */}
+      {ALL_SECTIONS.map((section) => {
+        const rawClasses = groups.get(section) || [];
         // Filter out classes consumed by composite components (BoxModel, GradientEditor)
-        const classes = rawClasses.filter(
-          c => !COMPOSITE_CONSUMING_PREFIXES.has(c.prefix) && !COMPOSITE_CONSUMING_PREFIXES.has(c.fullClass)
-        );
-        const addableProps = ADDABLE_PROPERTIES_MAP[category] || [];
-        const available = filterAvailable(addableProps, classes, pendingPrefixes, stagedPendingPrefixes);
+        const classes = rawClasses.filter(c => !isCompositeConsumed(c));
+        const addableProps = (ADDABLE_PROPERTIES_MAP as Record<string, typeof ADDABLE_PROPERTIES_MAP[Category]>)[section] || [];
+
+        // ── Flex-parent detection ──────────────────────────────────────────────────
+        // "Parent-type" flex property keys: present on any element that is a flex container
+        const FLEX_PARENT_KEYS = new Set(['flex-display', 'flex-direction', 'justify-content', 'align-items', 'flex-wrap']);
+        const isFlexParent = section === 'flexbox' && parsedClasses.some(c => {
+          const g = ENUM_GROUPS[c.fullClass];
+          return g && FLEX_PARENT_KEYS.has(g.propertyKey ?? '');
+        });
+
+        // When showing dedicated flex-parent controls, hide those properties from the [+] menu
+        const FLEX_PARENT_PREFIXES = new Set(['flex', 'flex-row', 'flex-wrap', 'justify-start', 'items-start']);
+        const filteredAddableProps = isFlexParent
+          ? addableProps.filter(p => !FLEX_PARENT_PREFIXES.has(p.prefix.replace(/-$/, '')))
+          : addableProps;
+
+        const available = filterAvailable(filteredAddableProps, classes, pendingPrefixes, stagedPendingPrefixes);
         const sectionPendingPrefixes = addableProps
           .filter(p => pendingPrefixes.has(p.prefix))
           .map(p => p.prefix);
         const sectionStagedPrefixes = addableProps
-          .filter(p => stagedPendingPrefixes.has(p.prefix))
+          .filter(p => stagedPendingPrefixes.has(p.prefix.replace(/-$/g, '')))
           .map(p => p.prefix);
 
-        const isEmpty = category === 'color'
+        const isEmpty = section === 'color'
           ? false  // GradientEditor always renders
+          : section === 'flexbox' && isFlexParent
+          ? false  // flex parent controls always render when isFlexParent
           : classes.length === 0 && sectionPendingPrefixes.length === 0 && sectionStagedPrefixes.length === 0;
 
         return (
           <PropertySection
-            key={category}
-            label={CATEGORY_LABELS[category]}
+            key={section}
+            label={SECTION_LABELS[section] ?? section}
             availableProperties={available}
             onAddProperty={handleAddProperty}
             isEmpty={isEmpty}
           >
-            {/* Composite: GradientEditor handles 'color' category */}
-            {category === 'color' && (
+            {/* Composite: GradientEditor handles 'color' section */}
+            {section === 'color' && (
               <GradientEditor
                 {...parsedClassesToGradientEditorProps(
                   parsedClasses,
@@ -471,12 +651,85 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
               />
             )}
 
+            {/* Composite: Flex-parent controls — show all when element is a flex container */}
+            {section === 'flexbox' && isFlexParent && (() => {
+              const allFlexClasses = parsedClasses;
+              const flexDisplayToken = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'flex-display'; });
+              const flexDirToken    = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'flex-direction'; });
+              const justifyToken    = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'justify-content'; });
+              const alignToken      = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'align-items'; });
+              const wrapToken       = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'flex-wrap'; });
+
+              const DIR_TO_CSS: Record<FlexDirectionValue, 'row' | 'column' | 'row-reverse' | 'column-reverse'> = {
+                'flex-row':         'row',
+                'flex-col':         'column',
+                'flex-row-reverse': 'row-reverse',
+                'flex-col-reverse': 'column-reverse',
+              };
+              const currentDir = (flexDirToken?.fullClass ?? null) as FlexDirectionValue | null;
+              const cssFd = currentDir ? (DIR_TO_CSS[currentDir] ?? 'row') : 'row';
+
+              const flexDir  = resolvePropertyState('flex-direction', flexDirToken);
+              const flexWrap = resolvePropertyState('flex-wrap', wrapToken);
+              const justify  = resolvePropertyState('justify-content', justifyToken);
+              const align    = resolvePropertyState('align-items', alignToken);
+
+              return (
+                <div className="flex flex-wrap gap-1">
+                  <FlexDirection
+                    value={currentDir}
+                    lockedValue={flexDir.effectiveClass !== flexDir.originalClass ? flexDir.effectiveClass : null}
+                    locked={false}
+                    onHover={(v) => handlePreview(flexDir.effectiveClass, v)}
+                    onLeave={handleRevert}
+                    onClick={(v) => handleStage('flex-direction', flexDir.originalClass, v)}
+                  />
+                  <FlexWrap
+                    value={(wrapToken?.fullClass ?? null) as FlexWrapValue | null}
+                    lockedValue={flexWrap.effectiveClass !== flexWrap.originalClass ? flexWrap.effectiveClass : null}
+                    locked={false}
+                    onHover={(v) => handlePreview(flexWrap.effectiveClass, v)}
+                    onLeave={handleRevert}
+                    onClick={(v) => handleStage('flex-wrap', flexWrap.originalClass, v)}
+                  />
+                  <FlexJustify
+                    currentValue={justifyToken?.fullClass ?? null}
+                    lockedValue={justify.effectiveClass !== justify.originalClass ? justify.effectiveClass : null}
+                    locked={false}
+                    flexDirection={cssFd}
+                    onHover={(v) => handlePreview(justify.effectiveClass, v)}
+                    onLeave={handleRevert}
+                    onClick={(v) => handleStage('justify-content', justify.originalClass, v)}
+                    onRemove={justify.hasValue ? () => handleStage('justify-content', justify.originalClass, '') : undefined}
+                    onRemoveHover={justify.hasValue ? () => handlePreview(justify.effectiveClass, '') : undefined}
+                  />
+                  <FlexAlign
+                    currentValue={alignToken?.fullClass ?? null}
+                    lockedValue={align.effectiveClass !== align.originalClass ? align.effectiveClass : null}
+                    locked={false}
+                    flexDirection={cssFd}
+                    onHover={(v) => handlePreview(align.effectiveClass, v)}
+                    onLeave={handleRevert}
+                    onClick={(v) => handleStage('align-items', align.originalClass, v)}
+                    onRemove={align.hasValue ? () => handleStage('align-items', align.originalClass, '') : undefined}
+                    onRemoveHover={align.hasValue ? () => handlePreview(align.effectiveClass, '') : undefined}
+                  />
+                </div>
+              );
+            })()}
+
             {/* Existing classes on the element */}
             {classes.map((cls) => {
-              if (cls.valueType === 'scalar') {
-                const scaleValues = getScaleValues(cls.prefix, cls.themeKey, tailwindConfig);
+              // Skip flex-parent classes when dedicated controls are shown above
+              if (isFlexParent) {
+                const grp = ENUM_GROUPS[cls.fullClass];
+                if (grp && FLEX_PARENT_KEYS.has(grp.propertyKey ?? '')) return null;
+              }
+
+              if (cls.scaleName !== undefined) {
+                const scaleValues = getScaleValues(tokenClassPrefix(cls), cls.scaleName, tailwindConfig);
                 if (scaleValues.length > 0) {
-                  const stagedValue = stagedPatches.find(p => p.property === cls.prefix)?.newClass ?? null;
+                  const stagedValue = stagedPatches.find(p => p.property === cls.property)?.newClass ?? null;
                   return (
                     <ScaleScrubber
                       key={cls.fullClass}
@@ -487,14 +740,14 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
                       onStart={() => sendTo('overlay', { type: 'CLEAR_HIGHLIGHTS' })}
                       onHover={(newClass) => handleScrubberPreview(cls, newClass)}
                       onLeave={() => handleScrubberRevert(cls)}
-                      onClick={(newClass) => handleStage(cls.prefix, cls.fullClass, newClass)}
+                      onClick={(newClass) => handleStage(cls.property, cls.fullClass, newClass)}
                       onRemoveHover={() => patchManager.preview(cls.fullClass, '')}
-                      onRemove={() => handleStage(cls.prefix, cls.fullClass, '')}
+                      onRemove={() => handleStage(cls.property, cls.fullClass, '')}
                     />
                   );
                 }
               }
-              if (cls.valueType === 'enum') {
+              if (cls.scaleName === undefined && cls.color === undefined) {
                 const group = ENUM_GROUPS[cls.fullClass];
                 if (group) {
                   const stagedValue = stagedPatches.find(p => p.property === group.propertyKey)?.newClass ?? null;
@@ -529,7 +782,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
                   <span
                     className="opacity-0 group-hover:opacity-60 hover:!opacity-100 ml-0.5 shrink-0"
                     title="Remove class"
-                    onClick={(e) => { e.stopPropagation(); handleStage(cls.prefix, cls.fullClass, ''); }}
+                    onClick={(e) => { e.stopPropagation(); handleStage(cls.property, cls.fullClass, ''); }}
                     onMouseEnter={(e) => { e.stopPropagation(); patchManager.preview(cls.fullClass, ''); }}
                     onMouseLeave={(e) => { e.stopPropagation(); patchManager.revertPreview(); }}
                   >
@@ -547,7 +800,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
               const config = getPendingConfig(prefix);
               if (!config) return null;
               if (config.valueType === 'scalar') {
-                const scaleValues = getScaleValues(prefix, config.themeKey, tailwindConfig);
+                const scaleValues = getScaleValues(prefix, config.scaleName, tailwindConfig);
                 if (scaleValues.length === 0) return null;
                 const patch = stagedPatches.find(pt => pt.property === config.stagingKey);
                 return (
@@ -588,7 +841,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
               const config = getPendingConfig(prefix);
               if (!config) return null;
               if (config.valueType === 'scalar') {
-                const scaleValues = getScaleValues(prefix, config.themeKey, tailwindConfig);
+                const scaleValues = getScaleValues(prefix, config.scaleName, tailwindConfig);
                 if (scaleValues.length > 0) {
                   return (
                     <ScaleScrubber
@@ -629,15 +882,13 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
                     data-testid={`pending-ghost-${prefix}`}
                     className="px-2 py-0.5 rounded cursor-pointer text-[11px] font-mono border border-dashed border-bv-border text-bv-muted hover:border-bv-teal hover:text-bv-teal transition-colors"
                     onClick={(e) => {
-                      const ghostCls: ParsedClass = {
-                        category: 'typography',
-                        valueType: 'color',
-                        prefix: 'text-',
-                        value: '',
+                      const ghostToken: ParsedToken = {
+                        property: 'text',
                         fullClass: '',
-                        themeKey: 'colors',
+                        section: 'typography',
+                        color: '',
                       };
-                      setChipColorPicker({ cls: ghostCls, anchorEl: e.currentTarget });
+                      setChipColorPicker({ cls: ghostToken, anchorEl: e.currentTarget });
                       setSelectedClass(null);
                     }}
                   >

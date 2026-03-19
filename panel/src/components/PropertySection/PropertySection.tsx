@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { PropertySectionProps } from './types';
 import { FocusTrapContainer } from '../FocusTrapContainer';
 
@@ -10,6 +10,18 @@ export function PropertySection({
   children,
 }: PropertySectionProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (dropdownContainerRef.current && !dropdownContainerRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [dropdownOpen]);
 
   function handleSelect(prefix: string) {
     onAddProperty?.(prefix);
@@ -25,7 +37,7 @@ export function PropertySection({
           {label}
         </span>
         {availableProperties.length > 0 && (
-          <div className="relative ml-auto">
+          <div ref={dropdownContainerRef} className="relative ml-auto">
             <button
               type="button"
               aria-label={`Add ${label} property`}
