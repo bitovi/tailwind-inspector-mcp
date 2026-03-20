@@ -48,7 +48,7 @@ describe('DirectionPicker', () => {
   it('shows solid active state when mode is solid', () => {
     render(<DirectionPicker {...defaultProps} mode="solid" />);
     const centerBtn = screen.getByText('●');
-    expect(centerBtn.className).toContain('bg-bv-orange');
+    expect(centerBtn.className).toContain('bg-bv-teal');
   });
 
   it('dims direction arrows in solid mode', () => {
@@ -61,5 +61,10 @@ describe('DirectionPicker', () => {
     render(<DirectionPicker {...defaultProps} direction="br" />);
     expect(screen.getByText('br')).toBeTruthy();
     expect(screen.getByText('to-')).toBeTruthy();
+  });
+
+  it('shows the solid color label with the main text color', () => {
+    render(<DirectionPicker {...defaultProps} mode="solid" solidColorName="indigo-600" />);
+    expect(screen.getByText('indigo-600').className).toContain('text-bv-text');
   });
 });

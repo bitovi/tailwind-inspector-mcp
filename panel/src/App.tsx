@@ -436,6 +436,7 @@ function InspectorApp() {
 						key={selectionId}
 						componentName={elementData.componentName}
 						instanceCount={elementData.instanceCount}
+						rawClasses={elementData.classes}
 						parsedClasses={parsedClasses}
 						tailwindConfig={elementData.tailwindConfig}
 						patchManager={patchManager}

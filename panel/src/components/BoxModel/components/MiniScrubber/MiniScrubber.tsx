@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useFloating, offset, flip, shift, autoUpdate, FloatingPortal } from '@floating-ui/react';
 import type { MiniScrubberProps } from './types';
 import { FocusTrapContainer } from '../../../../components/FocusTrapContainer';
 
@@ -25,7 +25,6 @@ export function MiniScrubber({
   onRemoveHover,
 }: MiniScrubberProps) {
   const [open, setOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
   const dragRef = useRef<{
     startX: number;
@@ -36,6 +35,14 @@ export function MiniScrubber({
   const containerRef = useRef<HTMLSpanElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
 
+  const { refs, floatingStyles } = useFloating({
+    open,
+    strategy: 'fixed',
+    placement: 'bottom-start',
+    middleware: [offset(4), flip(), shift({ padding: 4 })],
+    whileElementsMounted: autoUpdate,
+  });
+
   const hasVal = currentValue != null;
   const currentIndex = currentValue ? values.indexOf(currentValue) : -1;
 
@@ -44,15 +51,6 @@ export function MiniScrubber({
   const chipText = scrubValue
     ? (formatValue ? formatValue(scrubValue) : scrubValue)
     : (displayValue ?? placeholder);
-
-  // Update dropdown position when open
-  useEffect(() => {
-    if (!open) { setDropdownPos(null); return; }
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      setDropdownPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
-    }
-  }, [open]);
 
   // Scroll active item into view when dropdown opens
   useEffect(() => {
@@ -133,7 +131,10 @@ export function MiniScrubber({
 
   return (
     <span
-      ref={containerRef}
+      ref={(node) => {
+        (containerRef as React.MutableRefObject<HTMLSpanElement | null>).current = node;
+        refs.setReference(node);
+      }}
       className={className}
       style={{ position: 'relative', cursor }}
       onPointerDown={handlePointerDown}
@@ -144,49 +145,70 @@ export function MiniScrubber({
     >
       {chipText}
 
-      {open && dropdownPos && createPortal(
-        <FocusTrapContainer
-          className="bm-mini-dropdown"
-          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, transform: 'translateX(-50%)' }}
-          onClick={e => e.stopPropagation()}
-          onMouseLeave={() => onLeave?.()}
-          onMouseDown={e => e.stopPropagation()}
-          onClose={() => { setOpen(false); onClose?.(); onLeave?.(); }}
-        >
-          {onRemove && (
-            <div
-              className="bm-mini-dropdown-item bm-mini-dropdown-remove"
-              onMouseEnter={onRemoveHover}
-              onClick={e => { e.stopPropagation(); onRemove(); setOpen(false); onClose?.(); }}
-            >
-              <svg viewBox="0 0 10 10" width="8" height="8" xmlns="http://www.w3.org/2000/svg" style={{ display: 'inline-block', flexShrink: 0 }}>
-                <line x1="1" y1="1" x2="9" y2="9" stroke="#F5532D" strokeWidth="1.8" strokeLinecap="round" />
-                <line x1="9" y1="1" x2="1" y2="9" stroke="#F5532D" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              remove
-            </div>
-          )}
-          {values.map(val => {
-            const isActiveItem = val === currentValue;
-            return (
+      {open && (
+        <FloatingPortal>
+          <FocusTrapContainer
+            ref={refs.setFloating}
+            style={floatingStyles}
+            className="bm-mini-dropdown"
+            onClick={e => e.stopPropagation()}
+            onMouseLeave={() => onLeave?.()}
+            onPointerDown={e => e.stopPropagation()}
+            onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+            onClose={() => { setOpen(false); onClose?.(); onLeave?.(); }}
+          >
+            {onRemove && (
               <div
-                key={val}
-                ref={isActiveItem ? activeItemRef : undefined}
-                className={`bm-mini-dropdown-item${isActiveItem ? ' bm-active' : ''}`}
-                onMouseEnter={() => onHover?.(val)}
-                onClick={e => {
-                  e.stopPropagation();
-                  onClick?.(val);
-                  setOpen(false);
-                  onClose?.();
-                }}
+                className="bm-mini-dropdown-item bm-mini-dropdown-remove"
+                tabIndex={-1}
+                onMouseEnter={onRemoveHover}
+                onMouseDown={e => { e.preventDefault(); onRemove(); setOpen(false); onClose?.(); }}
               >
-                {val}
+                <svg viewBox="0 0 10 10" width="8" height="8" xmlns="http://www.w3.org/2000/svg" style={{ display: 'inline-block', flexShrink: 0 }}>
+                  <line x1="1" y1="1" x2="9" y2="9" stroke="#F5532D" strokeWidth="1.8" strokeLinecap="round" />
+                  <line x1="9" y1="1" x2="1" y2="9" stroke="#F5532D" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+                remove
               </div>
-            );
-          })}
-        </FocusTrapContainer>,
-        document.body
+            )}
+            {values.map(val => {
+              const isActiveItem = val === currentValue;
+              return (
+                <div
+                  key={val}
+                  ref={isActiveItem ? activeItemRef : undefined}
+                  tabIndex={-1}
+                  className={`bm-mini-dropdown-item${isActiveItem ? ' bm-active' : ''}`}
+                  onMouseEnter={() => onHover?.(val)}
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    onClick?.(val);
+                    setOpen(false);
+                    onClose?.();
+                  }}
+                  onClick={e => {
+                    if (e.detail === 0) {
+                      e.stopPropagation();
+                      onClick?.(val);
+                      setOpen(false);
+                      onClose?.();
+                    }
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onClick?.(val);
+                      setOpen(false);
+                      onClose?.();
+                    }
+                  }}
+                >
+                  {val}
+                </div>
+              );
+            })}
+          </FocusTrapContainer>
+        </FloatingPortal>
       )}
     </span>
   );

@@ -13,21 +13,28 @@ import type { CornerModelState, SlotKey as CornerSlotKey } from './components/Co
 import { PropertySection } from './components/PropertySection';
 import type { AvailableProperty } from './components/PropertySection/types';
 import { GradientEditor, parsedClassesToGradientEditorProps } from './components/GradientEditor';
-import { FlexDirection } from './components/FlexDirection';
-import type { FlexDirectionValue } from './components/FlexDirection';
-import { FlexJustify } from './components/FlexJustify';
-import { FlexAlign } from './components/FlexAlign';
-import { FlexWrap } from './components/FlexWrap';
-import type { FlexWrapValue } from './components/FlexWrap';
+import { FlexDirectionSelect } from './components/FlexDirectionSelect';
+import { FlexWrapSelect } from './components/FlexWrapSelect';
+import { FlexJustifySelect } from './components/FlexJustifySelect';
+import { FlexAlignSelect } from './components/FlexAlignSelect';
+import { GapModel } from './components/GapModel';
+import type { GapSlotData } from './components/GapModel/types';
 import { sendTo } from './ws';
 import type { PatchManager } from './hooks/usePatchManager';
+import { ShadowEditor } from './components/ShadowEditor';
+import type { ShadowLayerState } from './components/ShadowEditor/types';
+import {
+  SHADOW_TYPE_CONFIGS,
+  computeEffectiveShadowClasses,
+  parsedClassesToShadowLayers,
+} from './components/ShadowEditor/shadowUtils';
 
 const SECTION_LABELS: Record<string, string> = {
   spacing: 'Spacing',
   sizing: 'Sizing',
   typography: 'Typography',
   color: 'Backgrounds',
-  borders: 'Borders & Radius',
+  borders: 'Radius',
   effects: 'Effects',
   layout: 'Layout',
   flexbox: 'Flexbox & Grid',
@@ -38,7 +45,9 @@ const SECTION_LABELS: Record<string, string> = {
  * Ordered list of sections to render (spacing handled by BoxModel; overflow not shown yet).
  * Sections always render, even when empty, so users can always add via [+].
  */
-const ALL_SECTIONS = ['borders', 'sizing', 'typography', 'color', 'flexbox', 'effects', 'layout'];
+const ALL_SECTIONS = ['borders', 'sizing', 'typography', 'color', 'flexbox', 'shadows', 'effects', 'layout'];
+
+
 
 /** Derives the class prefix string for building new class names (e.g. 'py-2' → 'py-'). */
 function tokenClassPrefix(t: ParsedToken): string {
@@ -47,12 +56,13 @@ function tokenClassPrefix(t: ParsedToken): string {
   return t.property + '-';
 }
 
-/** Returns true for tokens consumed by BoxModel, CornerModel, or GradientEditor (not rendered as chips). */
+/** Returns true for tokens consumed by BoxModel, CornerModel, GradientEditor, or ShadowEditor (not rendered as chips). */
 function isCompositeConsumed(t: ParsedToken): boolean {
   if (t.section === 'spacing') return true;
-  if (t.property === 'border' && !t.style && !t.color) return true;
+  if (t.property === 'border') return true; // all border properties (width, color, style) consumed by BoxModel
   if (t.property === 'rounded') return true; // consumed by CornerModel
   if (t.property === 'bg' || t.property === 'bg-gradient-to' || t.property === 'from' || t.property === 'via' || t.property === 'to') return true;
+  if (t.property === 'shadow') return true; // consumed by ShadowEditor
   return false;
 }
 
@@ -206,12 +216,13 @@ function groupBySection(classes: ParsedToken[]): Map<string, ParsedToken[]> {
 interface PickerProps {
   componentName: string;
   instanceCount: number;
+  rawClasses: string;
   parsedClasses: ParsedToken[];
   tailwindConfig: any;
   patchManager: PatchManager;
 }
 
-export function Picker({ componentName, instanceCount, parsedClasses, tailwindConfig, patchManager }: PickerProps) {
+export function Picker({ componentName, instanceCount, rawClasses, parsedClasses, tailwindConfig, patchManager }: PickerProps) {
   const [selectedClass, setSelectedClass] = useState<ParsedToken | null>(null);
   // Local overrides for BoxModel slots staged this session (key: "layer-slotKey" → fullClass)
   const [boxModelOverrides, setBoxModelOverrides] = useState<Map<string, string>>(new Map());
@@ -222,6 +233,8 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
   const [boxModelColorPicker, setBoxModelColorPicker] = useState<{ layer: LayerName; prefix: string; currentClass: string; staged: boolean; anchorEl: Element } | null>(null);
   // Active color picker for a property chip (Backgrounds, etc.)
   const [chipColorPicker, setChipColorPicker] = useState<{ cls: ParsedToken; anchorEl: Element } | null>(null);
+  // Active color picker for a shadow/ring layer swatch
+  const [shadowColorPicker, setShadowColorPicker] = useState<{ layer: ShadowLayerState; anchorEl: Element } | null>(null);
   // Tracks the last hovered color swatch so onLeave can snap back to the staged color
   const boxModelHoveredColorRef = useRef<string | null>(null);
 
@@ -270,10 +283,11 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
 		floatingStyles: chipColorPickerStyles,
 		context: chipColorPickerContext,
 	} = useFloating({
-		open: chipColorPicker !== null,
+		open: chipColorPicker !== null || shadowColorPicker !== null,
 		onOpenChange: (open) => {
 			if (!open) {
 				setChipColorPicker(null);
+				setShadowColorPicker(null);
 				patchManager.revertPreview();
 			}
 		},
@@ -300,10 +314,9 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
 	);
 
 	useEffect(() => {
-		if (chipColorPicker?.anchorEl) {
-			chipColorPickerRefs.setReference(chipColorPicker.anchorEl);
-		}
-	}, [chipColorPicker?.anchorEl]);
+		const anchor = chipColorPicker?.anchorEl ?? shadowColorPicker?.anchorEl;
+		if (anchor) chipColorPickerRefs.setReference(anchor);
+	}, [chipColorPicker?.anchorEl, shadowColorPicker?.anchorEl]);
 
 	// Prefixes activated via the "+" button but not yet staged
 	const [pendingPrefixes, setPendingPrefixes] = useState<Set<string>>(
@@ -329,7 +342,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
 
 	const elementKey = componentName;
 	const stagedPatches = patchManager.patches.filter(
-		(p) => p.status === "staged",
+		(p) => p.status === "staged" && p.elementKey === elementKey,
 	);
 	// Prefixes that have a staged patch (from + button additions with originalClass === '')
 	const stagedPendingPrefixes = new Set(
@@ -394,6 +407,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
 		originalClass: string,
 		newClass: string,
 	) {
+
 		patchManager.stage(elementKey, property, originalClass, newClass);
 	}
 
@@ -672,30 +686,174 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
 
 
 
-      {chipColorPicker && (
+      {(chipColorPicker || shadowColorPicker) && (
         <FloatingPortal>
           <div ref={chipColorPickerRefs.setFloating} style={{ ...chipColorPickerStyles, zIndex: 9999, overflowY: 'auto' }} {...getChipColorPickerFloatingProps()}>
-            <ColorGrid
-              prefix={tokenClassPrefix(chipColorPicker.cls)}
-              currentValue={chipColorPicker.cls.color ?? ''}
-              colors={tailwindConfig?.colors || {}}
-              locked={false}
-              lockedValue={stagedPatches.find(p => p.property === chipColorPicker.cls.property)?.newClass ?? null}
-              onHover={(fullClass) => handlePreview(chipColorPicker.cls.fullClass, fullClass)}
-              onLeave={handleRevert}
-              onClick={(fullClass) => handleStage(chipColorPicker.cls.property, chipColorPicker.cls.fullClass, fullClass)}
-              onRemoveHover={() => handlePreview(chipColorPicker.cls.fullClass, '')}
-              onRemove={() => { handleStage(chipColorPicker.cls.property, chipColorPicker.cls.fullClass, ''); setChipColorPicker(null); }}
-            />
+            {chipColorPicker && (
+              <ColorGrid
+                prefix={tokenClassPrefix(chipColorPicker.cls)}
+                currentValue={chipColorPicker.cls.color ?? ''}
+                colors={tailwindConfig?.colors || {}}
+                locked={false}
+                lockedValue={stagedPatches.find(p => p.property === chipColorPicker.cls.property)?.newClass ?? null}
+                onHover={(fullClass) => handlePreview(chipColorPicker.cls.fullClass, fullClass)}
+                onLeave={handleRevert}
+                onClick={(fullClass) => handleStage(chipColorPicker.cls.property, chipColorPicker.cls.fullClass, fullClass)}
+                onRemoveHover={() => handlePreview(chipColorPicker.cls.fullClass, '')}
+                onRemove={() => { handleStage(chipColorPicker.cls.property, chipColorPicker.cls.fullClass, ''); setChipColorPicker(null); }}
+              />
+            )}
+            {shadowColorPicker && (() => {
+              const { layer } = shadowColorPicker;
+              const colorPrefix = layer.type === 'shadow' ? 'shadow-'
+                : layer.type === 'inset-shadow' ? 'inset-shadow-'
+                : layer.type === 'ring' ? 'ring-'
+                : 'inset-ring-';
+              const currentColorClass = layer.colorClass ?? '';
+              const currentColorValue = currentColorClass
+                ? currentColorClass.slice(colorPrefix.length).split('/')[0]
+                : '';
+              return (
+                <ColorGrid
+                  prefix={colorPrefix}
+                  currentValue={currentColorValue}
+                  colors={tailwindConfig?.colors || {}}
+                  locked={false}
+                  lockedValue={null}
+                  onHover={(fullClass) => handlePreview(currentColorClass, fullClass)}
+                  onLeave={handleRevert}
+                  onClick={(fullClass) => {
+                    // Use shadow-color property to avoid dedup with size changes
+                    const colorProp = layer.type === 'shadow' ? 'shadow-color'
+                      : layer.type === 'inset-shadow' ? 'inset-shadow-color'
+                      : layer.type === 'ring' ? 'ring-color'
+                      : 'inset-ring-color';
+                    patchManager.stage(elementKey, colorProp, currentColorClass, fullClass);
+                    setShadowColorPicker(null);
+                  }}
+                  onRemoveHover={() => { if (currentColorClass) handlePreview(currentColorClass, ''); }}
+                  onRemove={() => {
+                    if (currentColorClass) {
+                      const colorProp = layer.type === 'shadow' ? 'shadow-color'
+                        : layer.type === 'inset-shadow' ? 'inset-shadow-color'
+                        : layer.type === 'ring' ? 'ring-color'
+                        : 'inset-ring-color';
+                      patchManager.stage(elementKey, colorProp, currentColorClass, '');
+                    }
+                    setShadowColorPicker(null);
+                  }}
+                />
+              );
+            })()}
           </div>
         </FloatingPortal>
       )}
 
             {/* ── Property Sections — always rendered for every section ─── */}
       {ALL_SECTIONS.map((section) => {
-        const rawClasses = groups.get(section) || [];
-        // Filter out classes consumed by composite components (BoxModel, GradientEditor)
-        const classes = rawClasses.filter(c => !isCompositeConsumed(c));
+        // 'shadows' is a special section handled entirely by ShadowEditor
+        if (section === 'shadows') {
+          // Apply shadow-related staged patches on top of rawClasses, then parse.
+          // computeEffectiveShadowClasses correctly handles the size-vs-color removal
+          // distinction: color removal keeps the size class; size removal makes the row ghost.
+          const effectiveClasses = computeEffectiveShadowClasses(rawClasses, stagedPatches);
+          const shadowLayers = parsedClassesToShadowLayers(effectiveClasses, tailwindConfig);
+          return (
+            <PropertySection
+              key="shadows"
+              label="Shadows & Rings"
+              onAddProperty={() => {}}
+              isEmpty={false}
+              classCount={shadowLayers.length}
+            >
+              <ShadowEditor
+                layers={shadowLayers}
+                onPreview={(oldClass, newClass) => patchManager.preview(oldClass, newClass)}
+                onRevert={() => patchManager.revertPreview()}
+                onStage={(oldClass, newClass) => {
+                  const prefix = oldClass || newClass;
+                  // Distinguish size vs color classes to avoid dedup conflicts
+                  // Size classes: shadow-sm, shadow-lg, ring-1, ring-2, etc.
+                  // Color classes: shadow-red-500, ring-blue-600, etc.
+                  const isSizeClass = (cls: string) => {
+                    if (cls.startsWith('shadow-')) {
+                      const suffix = cls.slice('shadow-'.length).split('/')[0];
+                      return ['none', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(suffix);
+                    }
+                    if (cls.startsWith('inset-shadow-')) {
+                      const suffix = cls.slice('inset-shadow-'.length).split('/')[0];
+                      return ['none', '2xs', 'xs', 'sm'].includes(suffix);
+                    }
+                    if (cls.startsWith('ring-') || cls.startsWith('inset-ring-')) {
+                      const suffix = cls.slice(cls.startsWith('ring-') ? 'ring-'.length : 'inset-ring-'.length).split('/')[0];
+                      return ['0', '1', '2', '4', '8'].includes(suffix);
+                    }
+                    return false;
+                  };
+                  const baseType = prefix.startsWith('inset-shadow') ? 'inset-shadow'
+                    : prefix.startsWith('inset-ring') ? 'inset-ring'
+                    : prefix.startsWith('ring') ? 'ring'
+                    : 'shadow';
+                  // Use distinct property keys: add '-size' suffix if changing a size class
+                  const isSizeChange = isSizeClass(oldClass) || (oldClass === '' && isSizeClass(newClass));
+                  const prop = isSizeChange ? `${baseType}-size` : `${baseType}-color`;
+                  patchManager.stage(elementKey, prop, oldClass, newClass);
+                }}
+                onAdd={(defaultClass) => {
+                  const prop = defaultClass.startsWith('inset-shadow') ? 'inset-shadow-size'
+                    : defaultClass.startsWith('inset-ring') ? 'inset-ring-size'
+                    : defaultClass.startsWith('ring') ? 'ring-size'
+                    : 'shadow-size';
+                  patchManager.stage(elementKey, prop, '', defaultClass);
+                }}
+                onRemove={(classes) => {
+                  // Helper to determine if a class is a size class
+                  const isSizeClass = (cls: string) => {
+                    if (cls.startsWith('shadow-')) {
+                      const suffix = cls.slice('shadow-'.length).split('/')[0];
+                      return ['none', '2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(suffix);
+                    }
+                    if (cls.startsWith('inset-shadow-')) {
+                      const suffix = cls.slice('inset-shadow-'.length).split('/')[0];
+                      return ['none', '2xs', 'xs', 'sm'].includes(suffix);
+                    }
+                    if (cls.startsWith('ring-') || cls.startsWith('inset-ring-')) {
+                      const suffix = cls.slice(cls.startsWith('ring-') ? 'ring-'.length : 'inset-ring-'.length).split('/')[0];
+                      return ['0', '1', '2', '4', '8'].includes(suffix);
+                    }
+                    return false;
+                  };
+                  
+                  // Reverse so the size class is staged LAST to properly signal "ghost row" intent
+                  const reversed = [...classes].reverse();
+                  for (const cls of reversed) {
+                    const baseType = cls.startsWith('inset-shadow') ? 'inset-shadow'
+                      : cls.startsWith('inset-ring') ? 'inset-ring'
+                      : cls.startsWith('ring') ? 'ring'
+                      : 'shadow';
+                    const isSizeRemoval = isSizeClass(cls);
+                    const prop = isSizeRemoval ? `${baseType}-size` : `${baseType}-color`;
+                    patchManager.stage(elementKey, prop, cls, '');
+                  }
+                }}
+                onRemoveHover={(classes) => {
+                  if (classes.length === 1) patchManager.preview(classes[0], '');
+                  else if (classes.length > 1) patchManager.preview(classes.join(' '), '');
+                }}
+                onColorClick={(layer, anchorEl) => {
+                  setChipColorPicker(null);
+                  setShadowColorPicker(prev =>
+                    prev?.layer.type === layer.type ? null : { layer, anchorEl }
+                  );
+                }}
+              />
+            </PropertySection>
+          );
+        }
+
+        const sectionClasses = groups.get(section) || [];
+        // Filter out classes consumed by composite components (BoxModel, GradientEditor, ShadowEditor)
+        const classes = sectionClasses.filter(c => !isCompositeConsumed(c));
         const addableProps = (ADDABLE_PROPERTIES_MAP as Record<string, typeof ADDABLE_PROPERTIES_MAP[Category]>)[section] || [];
 
         // ── Flex-parent detection ──────────────────────────────────────────────────
@@ -806,13 +964,13 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
               const alignToken      = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'align-items'; });
               const wrapToken       = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'flex-wrap'; });
 
-              const DIR_TO_CSS: Record<FlexDirectionValue, 'row' | 'column' | 'row-reverse' | 'column-reverse'> = {
+              const DIR_TO_CSS: Record<string, 'row' | 'column' | 'row-reverse' | 'column-reverse'> = {
                 'flex-row':         'row',
                 'flex-col':         'column',
                 'flex-row-reverse': 'row-reverse',
                 'flex-col-reverse': 'column-reverse',
               };
-              const currentDir = (flexDirToken?.fullClass ?? null) as FlexDirectionValue | null;
+              const currentDir = flexDirToken?.fullClass ?? null;
               const cssFd = currentDir ? (DIR_TO_CSS[currentDir] ?? 'row') : 'row';
 
               const flexDir  = resolvePropertyState('flex-direction', flexDirToken);
@@ -820,25 +978,38 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
               const justify  = resolvePropertyState('justify-content', justifyToken);
               const align    = resolvePropertyState('align-items', alignToken);
 
+              const gapToken  = parsedClasses.find(c => c.property === 'gap');
+              const gapXToken = parsedClasses.find(c => c.property === 'gap-x');
+              const gapYToken = parsedClasses.find(c => c.property === 'gap-y');
+              const gapState  = resolvePropertyState('gap',   gapToken);
+              const gapXState = resolvePropertyState('gap-x', gapXToken);
+              const gapYState = resolvePropertyState('gap-y', gapYToken);
+              const gapSlots: GapSlotData[] = [
+                { key: 'gap',   value: gapState.effectiveClass  || null, scaleValues: getScaleValues('gap-',   'spacing', tailwindConfig) },
+                { key: 'gap-x', value: gapXState.effectiveClass || null, scaleValues: getScaleValues('gap-x-', 'spacing', tailwindConfig) },
+                { key: 'gap-y', value: gapYState.effectiveClass || null, scaleValues: getScaleValues('gap-y-', 'spacing', tailwindConfig) },
+              ];
+
               return (
-                <div className="flex flex-wrap gap-1">
-                  <FlexDirection
-                    value={currentDir}
+                <>
+                <div className="flex justify-between items-start w-full">
+                  <FlexDirectionSelect
+                    currentValue={(flexDirToken?.fullClass ?? null) as any}
                     lockedValue={flexDir.effectiveClass !== flexDir.originalClass ? flexDir.effectiveClass : null}
                     locked={false}
                     onHover={(v) => handlePreview(flexDir.effectiveClass, v)}
                     onLeave={handleRevert}
                     onClick={(v) => handleStage('flex-direction', flexDir.originalClass, v)}
                   />
-                  <FlexWrap
-                    value={(wrapToken?.fullClass ?? null) as FlexWrapValue | null}
+                  <FlexWrapSelect
+                    currentValue={(wrapToken?.fullClass ?? null) as any}
                     lockedValue={flexWrap.effectiveClass !== flexWrap.originalClass ? flexWrap.effectiveClass : null}
                     locked={false}
                     onHover={(v) => handlePreview(flexWrap.effectiveClass, v)}
                     onLeave={handleRevert}
                     onClick={(v) => handleStage('flex-wrap', flexWrap.originalClass, v)}
                   />
-                  <FlexJustify
+                  <FlexJustifySelect
                     currentValue={justifyToken?.fullClass ?? null}
                     lockedValue={justify.effectiveClass !== justify.originalClass ? justify.effectiveClass : null}
                     locked={false}
@@ -849,7 +1020,7 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
                     onRemove={justify.hasValue ? () => handleStage('justify-content', justify.originalClass, '') : undefined}
                     onRemoveHover={justify.hasValue ? () => handlePreview(justify.effectiveClass, '') : undefined}
                   />
-                  <FlexAlign
+                  <FlexAlignSelect
                     currentValue={alignToken?.fullClass ?? null}
                     lockedValue={align.effectiveClass !== align.originalClass ? align.effectiveClass : null}
                     locked={false}
@@ -861,6 +1032,31 @@ export function Picker({ componentName, instanceCount, parsedClasses, tailwindCo
                     onRemoveHover={align.hasValue ? () => handlePreview(align.effectiveClass, '') : undefined}
                   />
                 </div>
+                <div className="h-px w-full bg-bv-border opacity-50 my-2" />
+                <GapModel
+                  slots={gapSlots}
+                  onSlotHover={(_key, value) => {
+                    const state = _key === 'gap' ? gapState : _key === 'gap-x' ? gapXState : gapYState;
+                    if (value === null) patchManager.revertPreview();
+                    else patchManager.preview(state.effectiveClass, value);
+                  }}
+                  onSlotRemoveHover={(_key) => {
+                    const state = _key === 'gap' ? gapState : _key === 'gap-x' ? gapXState : gapYState;
+                    if (state.hasValue) patchManager.preview(state.effectiveClass, '');
+                  }}
+                  onSlotChange={(_key, value) => {
+                    const state = _key === 'gap' ? gapState : _key === 'gap-x' ? gapXState : gapYState;
+                    handleStage(_key, state.originalClass, value);
+                  }}
+                  onSlotRemove={(_key) => {
+                    const state = _key === 'gap' ? gapState : _key === 'gap-x' ? gapXState : gapYState;
+                    if (state.hasValue) {
+                      patchManager.preview(state.effectiveClass, '');
+                      handleStage(_key, state.originalClass, '');
+                    }
+                  }}
+                />
+                </>
               );
             })()}
 

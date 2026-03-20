@@ -56,17 +56,29 @@ describe('GradientEditor', () => {
     expect(svgs).toHaveLength(0);
     // Center ● should be active (orange)
     const centerBtn = screen.getByText('●');
-    expect(centerBtn.className).toContain('bg-bv-orange');
+    expect(centerBtn.className).toContain('bg-bv-teal');
   });
 
   it('shows hint text for gradient mode', () => {
     render(<GradientEditor {...makeProps()} />);
-    expect(screen.getByText(/Click handles to change color/)).toBeTruthy();
+    expect(screen.getByText(/Click handles to change color/)).toHaveClass(
+      'invisible',
+      'opacity-0',
+      'group-hover:opacity-100',
+      'group-hover:visible',
+      'group-focus-within:opacity-100'
+    );
   });
 
   it('shows hint text for solid mode', () => {
     render(<GradientEditor {...makeProps({ mode: 'solid', solidColorName: 'blue-500', solidColorHex: '#3B82F6' })} />);
-    expect(screen.getByText(/Click the swatch to change color/)).toBeTruthy();
+    expect(screen.getByText(/Click the swatch to change color/)).toHaveClass(
+      'invisible',
+      'opacity-0',
+      'group-hover:opacity-100',
+      'group-hover:visible',
+      'group-focus-within:opacity-100'
+    );
   });
 
   it('switches to solid mode when center ● is clicked', () => {

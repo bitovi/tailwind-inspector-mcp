@@ -56,63 +56,84 @@ The parent wires them:
 
 ## Dropdown Controls: the Focus-Trap Pattern
 
-Any control with a **dropdown / floating menu** must use `FocusTrapContainer` to guarantee `onLeave` fires in every "escape" scenario (click outside, Tab away, Escape, alt-tab, iframe blur).
+Any control with a **dropdown / floating menu** must use the canonical floating menu stack:
 
-**Never use `document.addEventListener('mousedown')`** — it misses keyboard navigation, alt-tab, and window switches. `FocusTrapContainer` handles all of these automatically.
+1. **`useFloating`** — positioning, flip, shift (from `@floating-ui/react`)
+2. **`FloatingPortal`** — renders outside any `overflow: hidden` ancestor, preventing clipping
+3. **`FocusTrapContainer`** — auto-focuses, fires `onClose` on blur/Escape
+4. **`useDismiss`** — optional, adds pointer click-outside close
+
+**Never use `position: absolute` with `top-full`** — it clips inside `overflow: hidden` containers (e.g. `PropertySection`'s collapse wrapper).  
+**Never use `createPortal` with manual position calculation** — use `useFloating` instead.  
+**Never use `document.addEventListener('mousedown')`** — misses keyboard navigation, alt-tab, window switches.
+
+### Canonical dropdown pattern
+
+```tsx
+import {
+  useFloating, offset, flip, shift, autoUpdate,
+  FloatingPortal, useDismiss, useInteractions,
+} from '@floating-ui/react';
+import { FocusTrapContainer } from '../FocusTrapContainer';
+
+const { refs, floatingStyles, context } = useFloating({
+  open,
+  strategy: 'fixed',
+  placement: 'bottom-start',
+  middleware: [offset(2), flip(), shift({ padding: 4 })],
+  whileElementsMounted: autoUpdate,
+});
+const dismiss = useDismiss(context);         // optional: click-outside
+const { getFloatingProps } = useInteractions([dismiss]);
+
+// Anchor the reference to the trigger element:
+<button ref={refs.setReference} onClick={() => setOpen(o => !o)}>
+  {displayValue}
+</button>
+
+{open && (
+  <FloatingPortal>
+    <FocusTrapContainer
+      ref={refs.setFloating}
+      style={floatingStyles}
+      className="z-50 ..."
+      onPointerDown={e => e.stopPropagation()}
+      onMouseLeave={onLeave}
+      onClose={() => { setOpen(false); onLeave(); }}
+      {...getFloatingProps()}
+    >
+      {items}
+    </FocusTrapContainer>
+  </FloatingPortal>
+)}
+```
 
 ### `FocusTrapContainer` — the shared primitive
 
 ```tsx
 import { FocusTrapContainer } from '../FocusTrapContainer';
-
-// Wrap any dropdown or floating menu root with it:
-{open && (
-  <FocusTrapContainer
-    className="absolute z-50 top-full left-0 ..."
-    onMouseLeave={onLeave}
-    onClose={() => { setOpen(false); onLeave(); }}
-  >
-    {items}
-  </FocusTrapContainer>
-)}
 ```
 
-`FocusTrapContainer` is a `<div>` that:
-- Accepts all standard `HTMLDivElement` props (className, style, onMouseLeave, etc.)
-- Auto-focuses itself on mount so blur events are tracked
+`FocusTrapContainer` is a `forwardRef` `<div>` that:
+- Accepts all standard `HTMLDivElement` props (className, style, onMouseLeave, etc.) + an external `ref` (for `refs.setFloating`)
+- Auto-focuses itself on mount with `preventScroll: true` so blur events are tracked without scrolling the panel
 - Calls `onClose` when focus leaves the container (`onBlur` + `relatedTarget` check)
 - Calls `onClose` when Escape is pressed
 
 `onClose` should close the menu AND call `onLeave()` to revert any active preview.
 
-### Portal dropdowns (e.g., MiniScrubber)
-
-Same pattern — `FocusTrapContainer` works inside `createPortal` too:
-
-```tsx
-{open && dropdownPos && createPortal(
-  <FocusTrapContainer
-    className="bm-mini-dropdown"
-    style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left }}
-    onMouseLeave={() => onLeave?.()}
-    onClose={() => { setOpen(false); onClose?.(); onLeave?.(); }}
-  >
-    {items}
-  </FocusTrapContainer>,
-  document.body
-)}
-```
-
-> **Note for portals**: The dropdown position is set in a separate `useEffect` step. `FocusTrapContainer` auto-focuses on mount, which fires *after* the portal renders at the correct position — no separate focus `useEffect` needed.
+> **Critical: `onPointerDown` event isolation**  
+> Always add `onPointerDown={e => e.stopPropagation()}` to the `FocusTrapContainer`. Without this, pointer events from dropdown items bubble through the React tree to the parent chip's `onPointerDown` handler, which calls `e.preventDefault()` and suppresses `onClick` from firing on menu items.
 
 ### Reference implementations
 
-| Control | File |
-|---------|------|
-| ScaleScrubber dropdown | `panel/src/components/ScaleScrubber/ScaleScrubber.tsx` |
-| MiniScrubber portal dropdown | `panel/src/components/BoxModel/components/MiniScrubber/MiniScrubber.tsx` |
-| PropertySection + menu | `panel/src/components/PropertySection/PropertySection.tsx` |
-| FocusTrapContainer itself | `panel/src/components/FocusTrapContainer/FocusTrapContainer.tsx` |
+| Control | File | Notes |
+|---------|------|-------|
+| ScaleScrubber | `panel/src/components/ScaleScrubber/ScaleScrubber.tsx` | Canonical: `useFloating` + `FloatingPortal` + `FocusTrapContainer` |
+| FlexDiagramPicker | `panel/src/components/FlexDiagramPicker/FlexDiagramPicker.tsx` | Canonical + `useDismiss` |
+| FlexAlignSelect | `panel/src/components/FlexAlignSelect/FlexAlignSelect.tsx` | Canonical + `useDismiss` |
+| MiniScrubber | `panel/src/components/BoxModel/components/MiniScrubber/MiniScrubber.tsx` | Canonical: `useFloating` + `FloatingPortal` + `FocusTrapContainer` |
+| FocusTrapContainer | `panel/src/components/FocusTrapContainer/FocusTrapContainer.tsx` | The shared primitive |
 
 ---
 
@@ -169,7 +190,9 @@ Accessed via `usePatchManager()` in `Picker.tsx` and passed down as callbacks:
 
 ## `resolvePropertyState` — Wiring Controls That Render Unconditionally
 
-Some controls always render regardless of whether the element already has a class for that property (e.g., `FlexJustify`, `FlexAlign`). This means the `token` from `parsedClasses` may be `undefined` even though a staged patch for that property already exists.
+> **⚠️ MANDATORY for any control wired in Picker.tsx that always renders** (i.e. not inside `classes.map()`). Skipping this causes staged changes to silently revert.
+
+Some controls always render regardless of whether the element already has a class for that property (e.g., `FlexJustify`, `FlexAlign`, `GapModel`). This means the `token` from `parsedClasses` may be `undefined` even though a staged patch for that property already exists.
 
 **Always use `resolvePropertyState` when a control renders unconditionally.** It merges `parsedClasses` with `stagedPatches` to give you a single stable set of values to wire to `onHover`, `onClick`, and `onRemove`:
 

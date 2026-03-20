@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, forwardRef } from 'react';
 
 export interface FocusTrapContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
@@ -19,17 +19,22 @@ export interface FocusTrapContainerProps extends React.HTMLAttributes<HTMLDivEle
  * Use this as the root element of any dropdown or floating menu that needs
  * to revert a live preview when the user stops interacting.
  */
-export function FocusTrapContainer({ onClose, children, ...rest }: FocusTrapContainerProps) {
+export const FocusTrapContainer = forwardRef<HTMLDivElement, FocusTrapContainerProps>(
+  function FocusTrapContainer({ onClose, children, ...rest }, forwardedRef) {
   const ref = useRef<HTMLDivElement>(null);
 
   // Auto-focus on mount so onBlur fires when the user moves focus away.
   useEffect(() => {
-    ref.current?.focus();
+    ref.current?.focus({ preventScroll: true });
   }, []);
 
   return (
     <div
-      ref={ref}
+      ref={(node) => {
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        if (typeof forwardedRef === 'function') forwardedRef(node);
+        else if (forwardedRef) forwardedRef.current = node;
+      }}
       tabIndex={-1}
       onBlur={(e) => {
         if (!ref.current?.contains(e.relatedTarget as Node)) {
@@ -44,4 +49,4 @@ export function FocusTrapContainer({ onClose, children, ...rest }: FocusTrapCont
       {children}
     </div>
   );
-}
+});

@@ -38,8 +38,8 @@ export function DirectionPicker({
                 type="button"
                 className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-xs cursor-pointer transition-all duration-150
                   ${active
-                    ? 'border-[1.5px] border-bv-orange bg-bv-orange text-white'
-                    : 'border-[1.5px] border-bv-border bg-bv-bg text-bv-muted hover:border-bv-orange hover:bg-bv-orange/9 hover:text-bv-orange'
+                    ? 'border-[1.5px] border-bv-teal bg-bv-teal text-white'
+                    : 'border-[1.5px] border-bv-border bg-bv-bg text-bv-muted hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
                   }`}
                 title="Solid color"
                 onClick={onSolidClick}
@@ -71,7 +71,7 @@ export function DirectionPicker({
       <div className="text-[10px] font-mono text-bv-text-mid mt-0.75 max-w-[68px] truncate text-center">
         {isSolid ? (
           solidColorName
-            ? <span className="text-bv-orange font-bold">{solidColorName}</span>
+            ? <span className="text-bv-text font-bold">{solidColorName}</span>
             : <span className="text-bv-muted italic">none</span>
         ) : (
           <span>to-<span className="text-bv-teal font-bold">{direction}</span></span>

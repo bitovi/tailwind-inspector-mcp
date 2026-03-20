@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shadows & Rings Editor — Dark Theme Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #4a4a4a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #777777;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.12);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --teal-dark:    #00464A;
+      --green:        #2E7229;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1e1e1e;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 32px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 11px;
+      color: var(--text-mid);
+      margin-bottom: 32px;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+
+    .sections {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .section-tag.teal   { background: var(--teal); }
+    .section-tag.purple { background: #8B5CF6; }
+    .section-tag.amber  { background: #F59E0B; }
+    .section-tag.orange { background: var(--orange); }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .section-desc {
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1.6;
+      max-width: 800px;
+    }
+
+    .demo-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .demo-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .demo-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+    }
+
+    /* ─── PANEL ──────────────────────────────────────── */
+    .panel {
+      width: 340px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      overflow: visible;
+    }
+
+    .panel-body { padding: 12px; }
+
+    /* ─── SECTION HEADER ─────────────────────────────── */
+    .sec-hd {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+
+    .sec-hd .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      opacity: 0.5;
+    }
+
+    .sec-hd .label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-mid);
+      flex: 1;
+      font-family: var(--font-mono);
+    }
+
+    .sec-hd .add-btn {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--t-fast);
+    }
+    .sec-hd .add-btn:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    /* ─── INLINE PREVIEW SQUARE (per row) ─────────────── */
+    .layer-preview {
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      background: var(--surface-hi);
+      flex-shrink: 0;
+      transition: box-shadow 200ms ease;
+      border: 1px solid var(--border);
+    }
+
+    /* ─── LAYER ROW ──────────────────────────────────── */
+    .layer-row {
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .layer-row:last-child { margin-bottom: 0; }
+
+    .layer-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-mid);
+      font-family: var(--font-mono);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .layer-label .active-dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--orange);
+    }
+
+    .layer-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ─── SCRUBBER ───────────────────────────────────── */
+    .scrubber {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      height: 26px;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .scrubber-arrow {
+      width: 18px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 8px;
+      transition: color var(--t-fast), background var(--t-fast);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .scrubber-arrow:hover {
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    .scrubber-value {
+      flex: 1;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 2px;
+      user-select: none;
+      cursor: grab;
+    }
+
+    .scrubber-value.is-active {
+      color: var(--orange);
+      font-weight: 700;
+    }
+
+    .scrubber-value.is-none {
+      color: var(--muted);
+      font-style: italic;
+      font-family: var(--font-ui);
+      font-weight: 400;
+    }
+
+    /* Fixed-width scrubbers */
+    .scrubber.size-scrub { max-width: 100px; }
+    .scrubber.opacity-scrub { max-width: 80px; }
+
+    /* ─── COLOR SWATCH ───────────────────────────────── */
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      transition: border-color var(--t-fast);
+    }
+
+    .color-swatch:hover {
+      border-color: var(--teal);
+    }
+
+    .color-swatch-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    /* Checkerboard for "current color" / no color */
+    .color-swatch.no-color .color-swatch-inner {
+      background:
+        linear-gradient(45deg, #555 25%, transparent 25%),
+        linear-gradient(-45deg, #555 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #555 75%),
+        linear-gradient(-45deg, transparent 75%, #555 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+    }
+
+    /* ─── OPACITY LABEL ──────────────────────────────── */
+    .opacity-badge {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      min-width: 32px;
+      text-align: center;
+    }
+
+    /* ─── REMOVE BUTTON ──────────────────────────────── */
+    .remove-btn {
+      width: 18px; height: 18px;
+      border-radius: 3px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--t-fast);
+      flex-shrink: 0;
+      opacity: 0;
+    }
+
+    .layer-row:hover .remove-btn { opacity: 1; }
+
+    .remove-btn:hover {
+      color: var(--orange);
+      background: var(--orange-dim);
+    }
+
+    /* ─── GHOST ROW ──────────────────────────────────── */
+    .ghost-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 0;
+      margin-bottom: 2px;
+    }
+
+    .ghost-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      opacity: 0.5;
+    }
+
+    .ghost-label {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .ghost-add {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--t-fast);
+      flex-shrink: 0;
+    }
+
+    .ghost-add:hover {
+      border-color: var(--teal);
+      border-style: solid;
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    /* ─── COLOR GRID (expanded) ──────────────────────── */
+    .color-grid-container {
+      margin-top: 8px;
+      margin-bottom: 4px;
+      padding: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(11, 1fr);
+      gap: 2px;
+    }
+
+    .color-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: border-color 80ms ease, transform 80ms ease;
+    }
+
+    .color-cell:hover {
+      border-color: #fff;
+      transform: scale(1.15);
+      z-index: 1;
+    }
+
+    .color-cell.is-selected {
+      border-color: #fff;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .color-grid-row-label {
+      font-size: 8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-align: center;
+      padding: 1px 0;
+    }
+
+    /* ─── DISABLED STATE ─────────────────────────────── */
+    .is-disabled {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* ─── DIVIDER ────────────────────────────────────── */
+    .section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0 8px;
+      opacity: 0.5;
+    }
+
+    /* ─── TOOLTIP / CLASS TAG ────────────────────────── */
+    .class-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .class-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    .class-tag.active {
+      background: var(--orange-dim);
+      color: var(--orange);
+      border: 1px solid rgba(245, 83, 45, 0.2);
+    }
+
+    .class-tag.staged {
+      background: var(--teal-dim);
+      color: var(--teal);
+      border: 1px solid rgba(0, 132, 139, 0.2);
+    }
+
+    .class-tag .tag-x {
+      cursor: pointer;
+      opacity: 0.6;
+      font-size: 9px;
+    }
+
+    .class-tag .tag-x:hover { opacity: 1; }
+
+    /* ─── COMBINED PREVIEW DEMO ──────────────────────── */
+    .combined-demo {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .combined-card {
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      background: var(--surface-hi);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* ─── NONE STATE VARIANT ─────────────────────────── */
+    .layer-row.is-none .scrubber.size-scrub .scrubber-value {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .layer-row.is-none .color-swatch,
+    .layer-row.is-none .scrubber.opacity-scrub {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<h1>Shadows & Rings Editor</h1>
+<p class="page-subtitle">
+  Visual editor for Tailwind v4's four box-shadow layer types: <strong>shadow</strong>,
+  <strong>inset-shadow</strong>, <strong>ring</strong>, and <strong>inset-ring</strong>.
+  Each supports size/width, color, and opacity. All four compose into a single CSS <code>box-shadow</code>.
+</p>
+
+<div class="sections">
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  STATE 1: Full — all four layers active         -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag teal">State 1</span>
+      <span class="section-title">All Four Layers Active</span>
+    </div>
+    <p class="section-desc">
+      Element has <code>shadow-lg shadow-blue-500/50 inset-shadow-sm ring-2 ring-red-600 inset-ring-1 inset-ring-gray-400</code>.
+      All four layer rows are visible with full controls.
+    </p>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">Panel — Shadows & Rings section</div>
+        <div class="panel">
+          <div class="panel-body">
+            <!-- Section header -->
+            <div class="sec-hd">
+              <div class="dot"></div>
+              <div class="label">Shadows & Rings</div>
+              <button class="add-btn" title="Add layer">+</button>
+            </div>
+
+            <!-- ── SHADOW ROW ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Shadow
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">lg</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch" title="shadow-blue-500/50">
+                  <div class="color-swatch-inner" style="background: #3b82f6; opacity: 0.5; border-radius: 4px;"></div>
+                </div>
+                <div class="scrubber opacity-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">50%</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: 0 10px 15px -3px rgba(59,130,246,0.5), 0 4px 6px -4px rgba(59,130,246,0.5);" title="shadow-lg shadow-blue-500/50"></div>
+                <button class="remove-btn" title="Remove shadow">×</button>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ── INSET SHADOW ROW ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Inset Shadow
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">sm</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch no-color" title="default (black/5%)">
+                  <div class="color-swatch-inner"></div>
+                </div>
+                <div class="scrubber opacity-scrub is-disabled">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value">—</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" title="inset-shadow-sm"></div>
+                <button class="remove-btn" title="Remove inset shadow">×</button>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ── RING ROW ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Ring
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">2</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch" title="ring-red-600">
+                  <div class="color-swatch-inner" style="background: #dc2626; border-radius: 4px;"></div>
+                </div>
+                <div class="scrubber opacity-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value">100%</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: 0 0 0 2px #dc2626;" title="ring-2 ring-red-600"></div>
+                <button class="remove-btn" title="Remove ring">×</button>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ── INSET RING ROW ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Inset Ring
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">1</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch" title="inset-ring-gray-400">
+                  <div class="color-swatch-inner" style="background: #9ca3af; border-radius: 4px;"></div>
+                </div>
+                <div class="scrubber opacity-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value">100%</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: inset 0 0 0 1px #9ca3af;" title="inset-ring-1 inset-ring-gray-400"></div>
+                <button class="remove-btn" title="Remove inset ring">×</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Demo preview cards -->
+      <div class="demo-col">
+        <div class="demo-label">Actual combined box-shadow</div>
+        <div class="combined-demo">
+          <div class="combined-card" style="box-shadow:
+            0 10px 15px -3px rgba(59,130,246,0.5), 0 4px 6px -4px rgba(59,130,246,0.5),
+            inset 0 1px 2px rgba(0,0,0,0.05),
+            0 0 0 2px #dc2626,
+            inset 0 0 0 1px #9ca3af;
+          ">
+            shadow-lg<br>+ ring-2<br>+ inset
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  STATE 2: Partial — only shadow, rest ghost     -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag purple">State 2</span>
+      <span class="section-title">Only Shadow Active — Ghost Rows for Others</span>
+    </div>
+    <p class="section-desc">
+      Element has <code>shadow-xl shadow-indigo-500/30</code>. Inset shadow, ring, and inset ring
+      appear as ghost rows with [+] to add.
+    </p>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">Panel — partial state</div>
+        <div class="panel">
+          <div class="panel-body">
+            <div class="sec-hd">
+              <div class="dot"></div>
+              <div class="label">Shadows & Rings</div>
+              <button class="add-btn" title="Add layer">+</button>
+            </div>
+
+            <!-- ── SHADOW ROW (active) ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Shadow
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">xl</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch" title="shadow-indigo-500/30">
+                  <div class="color-swatch-inner" style="background: #6366f1; opacity: 0.3; border-radius: 4px;"></div>
+                </div>
+                <div class="scrubber opacity-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">30%</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: 0 20px 25px -5px rgba(99,102,241,0.3), 0 8px 10px -6px rgba(99,102,241,0.3);" title="shadow-xl shadow-indigo-500/30"></div>
+                <button class="remove-btn" title="Remove shadow">×</button>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ── GHOST: Inset Shadow ── -->
+            <div class="ghost-row">
+              <span class="ghost-label">inset shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add inset-shadow-sm">+</button>
+            </div>
+
+            <!-- ── GHOST: Ring ── -->
+            <div class="ghost-row">
+              <span class="ghost-label">ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add ring-2">+</button>
+            </div>
+
+            <!-- ── GHOST: Inset Ring ── -->
+            <div class="ghost-row">
+              <span class="ghost-label">inset ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add inset-ring-2">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  STATE 3: "None" state — shadow-none active     -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag orange">State 3</span>
+      <span class="section-title">Shadow Set to "none" — Explicit Override</span>
+    </div>
+    <p class="section-desc">
+      Element has <code>shadow-none</code>. The size scrubber shows "none", and the color swatch
+      and opacity scrubber are disabled. The row is still visible (not a ghost) because
+      <code>shadow-none</code> is an active class on the element.
+    </p>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">Panel — shadow-none state</div>
+        <div class="panel">
+          <div class="panel-body">
+            <div class="sec-hd">
+              <div class="dot"></div>
+              <div class="label">Shadows & Rings</div>
+              <button class="add-btn" title="Add layer">+</button>
+            </div>
+
+            <!-- ── SHADOW ROW (none) ── -->
+            <div class="layer-row is-none">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Shadow
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-none">none</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch no-color" style="opacity:0.3; pointer-events:none;">
+                  <div class="color-swatch-inner"></div>
+                </div>
+                <div class="scrubber opacity-scrub" style="opacity:0.3; pointer-events:none;">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value">—</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: none;" title="shadow-none"></div>
+                <button class="remove-btn" title="Remove shadow-none" style="opacity:1;">×</button>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Ghost rows -->
+            <div class="ghost-row">
+              <span class="ghost-label">inset shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">inset ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  STATE 4: Color grid expanded                   -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag amber">State 4</span>
+      <span class="section-title">Color Grid Expanded — Picking Shadow Color</span>
+    </div>
+    <p class="section-desc">
+      User clicked the shadow color swatch. The ColorGrid expands inline below the shadow row.
+      Hovering a color cell previews it live on the page.
+    </p>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">Panel — color grid open</div>
+        <div class="panel">
+          <div class="panel-body">
+            <div class="sec-hd">
+              <div class="dot"></div>
+              <div class="label">Shadows & Rings</div>
+              <button class="add-btn">+</button>
+            </div>
+
+            <!-- ── SHADOW ROW ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Shadow
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">lg</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch" style="border-color: var(--teal);">
+                  <div class="color-swatch-inner" style="background: #3b82f6; opacity: 0.5; border-radius: 4px;"></div>
+                </div>
+                <div class="scrubber opacity-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">50%</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: 0 10px 15px -3px rgba(59,130,246,0.5), 0 4px 6px -4px rgba(59,130,246,0.5);" title="shadow-lg shadow-blue-500/50"></div>
+                <button class="remove-btn">×</button>
+              </div>
+
+              <!-- COLOR GRID (expanded) -->
+              <div class="color-grid-container">
+                <div class="color-grid" id="shadowColorGrid"></div>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="ghost-row">
+              <span class="ghost-label">inset shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">inset ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  STATE 5: Empty — no shadow classes at all      -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag teal">State 5</span>
+      <span class="section-title">No Shadow Classes — All Ghost Rows</span>
+    </div>
+    <p class="section-desc">
+      Element has no shadow, inset-shadow, ring, or inset-ring classes. All four layer types
+      appear as ghost rows. The section is still visible so the user can discover and add layers.
+    </p>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">Panel — empty state</div>
+        <div class="panel">
+          <div class="panel-body">
+            <div class="sec-hd">
+              <div class="dot"></div>
+              <div class="label">Shadows & Rings</div>
+              <button class="add-btn">+</button>
+            </div>
+
+            <div class="ghost-row">
+              <span class="ghost-label">shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add shadow-md">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">inset shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add inset-shadow-sm">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add ring-2">+</button>
+            </div>
+            <div class="ghost-row">
+              <span class="ghost-label">inset ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add" title="Add inset-ring-2">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  STATE 6: Ring only — ring-4 ring-blue-500/50   -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag purple">State 6</span>
+      <span class="section-title">Ring Only — Focused Ring Editing</span>
+    </div>
+    <p class="section-desc">
+      Element has <code>ring-4 ring-blue-500/50</code>. Only the ring row is active.
+      Shows how ring width scrubber works (numeric scale: 0, 1, 2, 4, 8).
+    </p>
+
+    <div class="demo-row">
+      <div class="demo-col">
+        <div class="demo-label">Panel — ring only</div>
+        <div class="panel">
+          <div class="panel-body">
+            <div class="sec-hd">
+              <div class="dot"></div>
+              <div class="label">Shadows & Rings</div>
+              <button class="add-btn">+</button>
+            </div>
+
+            <!-- Ghost: shadow -->
+            <div class="ghost-row">
+              <span class="ghost-label">shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+
+            <!-- Ghost: inset shadow -->
+            <div class="ghost-row">
+              <span class="ghost-label">inset shadow</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- ── RING ROW (active) ── -->
+            <div class="layer-row">
+              <div class="layer-label">
+                <span class="active-dot"></span>
+                Ring
+              </div>
+              <div class="layer-controls">
+                <div class="scrubber size-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">4</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="color-swatch" title="ring-blue-500/50">
+                  <div class="color-swatch-inner" style="background: #3b82f6; opacity: 0.5; border-radius: 4px;"></div>
+                </div>
+                <div class="scrubber opacity-scrub">
+                  <div class="scrubber-arrow">◂</div>
+                  <div class="scrubber-value is-active">50%</div>
+                  <div class="scrubber-arrow">▸</div>
+                </div>
+                <div class="layer-preview" style="box-shadow: 0 0 0 4px rgba(59,130,246,0.5);" title="ring-4 ring-blue-500/50"></div>
+                <button class="remove-btn" title="Remove ring">×</button>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <!-- Ghost: inset ring -->
+            <div class="ghost-row">
+              <span class="ghost-label">inset ring</span>
+              <span class="ghost-line"></span>
+              <button class="ghost-add">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scale reference -->
+      <div class="demo-col">
+        <div class="demo-label">Ring width scale preview</div>
+        <div class="combined-demo" style="gap: 16px;">
+          <div class="combined-card" style="width:60px; height:60px; box-shadow: 0 0 0 1px #3b82f6;">
+            ring-1
+          </div>
+          <div class="combined-card" style="width:60px; height:60px; box-shadow: 0 0 0 2px #3b82f6;">
+            ring-2
+          </div>
+          <div class="combined-card" style="width:60px; height:60px; box-shadow: 0 0 0 4px #3b82f6;">
+            ring-4
+          </div>
+          <div class="combined-card" style="width:60px; height:60px; box-shadow: 0 0 0 8px #3b82f6;">
+            ring-8
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!--  SHADOW SIZE SCALE REFERENCE                    -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag teal">Reference</span>
+      <span class="section-title">Shadow Size Scale</span>
+    </div>
+    <p class="section-desc">
+      Visual reference showing all shadow sizes. The scrubber steps through these values.
+    </p>
+
+    <div class="combined-demo" style="gap: 32px; padding: 48px 32px;">
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 1px rgba(255,255,255,0.15); margin-bottom: 8px;">2xs</div>
+        <div class="demo-label">shadow-2xs</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 1px 2px 0 rgba(255,255,255,0.15); margin-bottom: 8px;">xs</div>
+        <div class="demo-label">shadow-xs</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 1px 3px 0 rgba(255,255,255,0.2), 0 1px 2px -1px rgba(255,255,255,0.2); margin-bottom: 8px;">sm</div>
+        <div class="demo-label">shadow-sm</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 4px 6px -1px rgba(255,255,255,0.2), 0 2px 4px -2px rgba(255,255,255,0.2); margin-bottom: 8px;">md</div>
+        <div class="demo-label">shadow-md</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 10px 15px -3px rgba(255,255,255,0.2), 0 4px 6px -4px rgba(255,255,255,0.2); margin-bottom: 8px;">lg</div>
+        <div class="demo-label">shadow-lg</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 20px 25px -5px rgba(255,255,255,0.2), 0 8px 10px -6px rgba(255,255,255,0.2); margin-bottom: 8px;">xl</div>
+        <div class="demo-label">shadow-xl</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="combined-card" style="box-shadow: 0 25px 50px -12px rgba(255,255,255,0.35); margin-bottom: 8px;">2xl</div>
+        <div class="demo-label">shadow-2xl</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Populate color grid ──────────────────────────────
+  const COLORS = {
+    slate:   ['#f8fafc','#f1f5f9','#e2e8f0','#cbd5e1','#94a3b8','#64748b','#475569','#334155','#1e293b','#0f172a','#020617'],
+    gray:    ['#f9fafb','#f3f4f6','#e5e7eb','#d1d5db','#9ca3af','#6b7280','#4b5563','#374151','#1f2937','#111827','#030712'],
+    zinc:    ['#fafafa','#f4f4f5','#e4e4e7','#d4d4d8','#a1a1aa','#71717a','#52525b','#3f3f46','#27272a','#18181b','#09090b'],
+    red:     ['#fef2f2','#fee2e2','#fecaca','#fca5a5','#f87171','#ef4444','#dc2626','#b91c1c','#991b1b','#7f1d1d','#450a0a'],
+    orange:  ['#fff7ed','#ffedd5','#fed7aa','#fdba74','#fb923c','#f97316','#ea580c','#c2410c','#9a3412','#7c2d12','#431407'],
+    amber:   ['#fffbeb','#fef3c7','#fde68a','#fcd34d','#fbbf24','#f59e0b','#d97706','#b45309','#92400e','#78350f','#451a03'],
+    yellow:  ['#fefce8','#fef9c3','#fef08a','#fde047','#facc15','#eab308','#ca8a04','#a16207','#854d0e','#713f12','#422006'],
+    green:   ['#f0fdf4','#dcfce7','#bbf7d0','#86efac','#4ade80','#22c55e','#16a34a','#15803d','#166534','#14532d','#052e16'],
+    blue:    ['#eff6ff','#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e40af','#1e3a8a','#172554'],
+    indigo:  ['#eef2ff','#e0e7ff','#c7d2fe','#a5b4fc','#818cf8','#6366f1','#4f46e5','#4338ca','#3730a3','#312e81','#1e1b4b'],
+    purple:  ['#faf5ff','#f3e8ff','#e9d5ff','#d8b4fe','#c084fc','#a855f7','#9333ea','#7e22ce','#6b21a8','#581c87','#3b0764'],
+  };
+
+  const grid = document.getElementById('shadowColorGrid');
+  if (grid) {
+    const SHADES = ['50','100','200','300','400','500','600','700','800','900','950'];
+
+    // Shade labels row
+    SHADES.forEach(s => {
+      const lbl = document.createElement('div');
+      lbl.className = 'color-grid-row-label';
+      lbl.textContent = s;
+      grid.appendChild(lbl);
+    });
+
+    Object.entries(COLORS).forEach(([name, shades]) => {
+      shades.forEach((hex, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'color-cell';
+        if (name === 'blue' && i === 5) cell.classList.add('is-selected');
+        cell.style.background = hex;
+        cell.title = `${name}-${SHADES[i]}`;
+        grid.appendChild(cell);
+      });
+    });
+  }
+</script>
+
+</body>
+</html>

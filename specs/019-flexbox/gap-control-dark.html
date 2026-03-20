@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gap Control — Dark Theme Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── DARK DESIGN TOKENS ──────────────────────────────── */
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #4a4a4a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #777777;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.12);
+      --orange-fill:  rgba(245, 83, 45, 0.15);
+      --orange-fill-hi: rgba(245, 83, 45, 0.28);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.14);
+      --teal-fill:    rgba(0, 132, 139, 0.15);
+      --teal-fill-hi: rgba(0, 132, 139, 0.28);
+      --teal-dark:    #00464A;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1e1e1e;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 32px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 11px;
+      color: var(--text-mid);
+      margin-bottom: 32px;
+      max-width: 700px;
+      line-height: 1.6;
+    }
+
+    .sections {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .section-tag.teal   { background: var(--teal); }
+    .section-tag.purple { background: #8B5CF6; }
+    .section-tag.amber  { background: #F59E0B; }
+    .section-tag.orange { background: var(--orange); }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .section-desc {
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1.6;
+      max-width: 800px;
+    }
+
+    .demo-row {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .note {
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1.6;
+      max-width: 320px;
+    }
+    .note strong { color: #60A5FA; }
+    .note ul { margin-top: 6px; padding-left: 16px; }
+    .note li { margin-bottom: 2px; }
+    .note code { font-family: var(--font-mono); font-size: 10px; background: rgba(255,255,255,0.08); padding: 1px 3px; border-radius: 2px; }
+
+    /* ─── PANEL SIMULATION ──────────────────────────────────── */
+    .panel-sim {
+      width: 340px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+      overflow: visible;
+    }
+
+    .panel-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 8px 8px 0 0;
+      background: var(--surface);
+    }
+
+    .comp-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .panel-body {
+      padding: 12px;
+    }
+
+    .prop-section-header {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .prop-section-header .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--teal);
+      opacity: 0.5;
+    }
+    .prop-section-header .label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-mid);
+    }
+    .prop-section-header .add-btn {
+      margin-left: auto;
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; font-size: 11px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 10px 0 4px;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       GAP DIAGRAM — wrapped layout
+       Row 1: [BOX] [x-scrub] [BOX]
+       Row 2: [y-scrub]  [gap-scrub]
+       Row 3: [BOX]
+    ═══════════════════════════════════════════════════ */
+
+    .gap-grid {
+      display: grid;
+      user-select: none;
+      width: fit-content;
+    }
+
+    .gap-grid {
+      grid-template-columns: min-content auto min-content;
+      grid-template-rows: min-content auto min-content;
+    }
+
+    /* Item boxes — rounded, outlined, small */
+    .gb-item {
+      min-width: 24px;
+      min-height: 20px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      transition: border-color var(--t-fast), background var(--t-fast);
+    }
+    .gb-item.active-x {
+      border-color: rgba(245, 83, 45, 0.35);
+    }
+    .gb-item.active-y {
+      border-color: rgba(0, 132, 139, 0.35);
+    }
+    .gb-item.active-gap {
+      border-color: rgba(0, 132, 139, 0.35);
+    }
+
+    /* ─── X scrubber (between top-row boxes) ──── */
+    .gb-scrubber-x {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 4px;
+      cursor: ew-resize;
+      border-radius: 4px;
+      transition: background var(--t-fast);
+    }
+    .gb-scrubber-x:hover {
+      background: var(--orange-fill);
+    }
+    .gb-scrubber-x.active {
+      background: var(--orange-fill-hi);
+    }
+
+    .gb-scrubber-x .scrub-value {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-mid);
+      transition: color var(--t-fast);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .gb-scrubber-x:hover .scrub-value,
+    .gb-scrubber-x.active .scrub-value {
+      color: var(--orange);
+    }
+
+    /* ─── Y scrubber (left side of middle row) ─── */
+    .gb-scrubber-y {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 4px;
+      cursor: ns-resize;
+      border-radius: 4px;
+      transition: background var(--t-fast);
+    }
+    .gb-scrubber-y:hover {
+      background: var(--teal-fill);
+    }
+    .gb-scrubber-y.active {
+      background: var(--teal-fill-hi);
+    }
+
+    .gb-scrubber-y .scrub-value {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-mid);
+      transition: color var(--t-fast);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .gb-scrubber-y:hover .scrub-value,
+    .gb-scrubber-y.active .scrub-value {
+      color: var(--teal);
+    }
+
+    /* ─── Gap (unified) scrubber ────────────────── */
+    .gb-scrubber-gap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 4px;
+      cursor: ew-resize;
+      border-radius: 4px;
+      transition: background var(--t-fast);
+    }
+    .gb-scrubber-gap:hover {
+      background: var(--teal-fill);
+    }
+    .gb-scrubber-gap.active {
+      background: var(--teal-fill-hi);
+    }
+
+    .gb-scrubber-gap .scrub-value {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-mid);
+      transition: color var(--t-fast);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .gb-scrubber-gap:hover .scrub-value,
+    .gb-scrubber-gap.active .scrub-value {
+      color: var(--teal);
+    }
+
+    /* Dimmed label (unified mode shows dim axis values) */
+    .gb-scrubber-dim {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 4px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .gb-scrubber-dim .scrub-value {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      color: var(--muted);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* ─── Gap dropdown ──────────────────────────── */
+    .gap-dropdown {
+      position: fixed;
+      z-index: 100;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      min-width: 90px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+    .gap-dropdown.open { display: block; }
+
+    .gap-dd-item {
+      display: block;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-mid);
+      cursor: pointer;
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+    .gap-dd-item:hover { background: var(--teal-dim); color: var(--teal); }
+    .gap-dd-item.active {
+      background: rgba(0,132,139,0.18);
+      color: var(--teal);
+      font-weight: 700;
+    }
+    .gap-dropdown.x-mode .gap-dd-item:hover { background: var(--orange-dim); color: var(--orange); }
+    .gap-dropdown.x-mode .gap-dd-item.active { background: rgba(245,83,45,0.18); color: var(--orange); font-weight:700; }
+
+    /* ─── Mode toggle ────────────────────────────── */
+    .gap-mode-toggle {
+      display: flex;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .gap-mode-btn {
+      padding: 3px 8px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      transition: all var(--t-fast);
+      line-height: 1.4;
+    }
+    .gap-mode-btn:not(:last-child) { border-right: 1px solid var(--border); }
+    .gap-mode-btn:hover { background: var(--teal-dim); color: var(--teal); }
+    .gap-mode-btn.active { background: var(--teal); color: #fff; }
+
+    /* ─── Flex pills ─────────────────────────────── */
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .flex-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-mid);
+      cursor: pointer;
+      user-select: none;
+      transition: all var(--t-fast);
+      white-space: nowrap;
+    }
+    .flex-pill:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+    .flex-pill .axis-arrow { font-size: 10px; opacity: 0.45; }
+    .flex-pill .caret { font-size: 8px; opacity: 0.35; margin-left: 1px; }
+
+    /* ═══════════════════════════════════════════════
+       STATES GRID
+    ═══════════════════════════════════════════════ */
+    .states-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .state-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .state-name {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .design-note {
+      background: rgba(245,83,45,0.06);
+      border: 1px solid rgba(245,83,45,0.25);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1.7;
+      max-width: 340px;
+    }
+    .design-note strong { color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<h1>Gap Control — Wrapped 3-Box Layout</h1>
+<p class="page-subtitle">
+  A visual gap editor showing 3 flex children in a wrapped arrangement: 2 on the first row, 1 below.
+  Scrubbers sit where the gaps live: <code style="font-family:var(--font-mono);font-size:11px">gap-x</code> (orange)
+  between the two top boxes, <code style="font-family:var(--font-mono);font-size:11px">gap-y</code> (teal) on the left
+  between rows, and <code style="font-family:var(--font-mono);font-size:11px">gap</code> (shorthand)
+  in the center opening. Scrubbers are sized like the Radius / Box Model controls.
+</p>
+
+<div class="sections">
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 1 — INTERACTIVE PANEL MOCK
+  ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag teal">1</span>
+      <span class="section-title">Interactive Panel Mock</span>
+    </div>
+    <p class="section-desc">
+      <code style="font-family:var(--font-mono)">[BOX] [x-2] [BOX]</code> on the top row,
+      <code style="font-family:var(--font-mono)">[y-6] [gap-3]</code> in the middle,
+      <code style="font-family:var(--font-mono)">[BOX]</code> below.
+      Toggle between unified (gap shorthand) and split (gap-x / gap-y) with the mode buttons.
+    </p>
+
+    <div class="demo-row">
+      <div class="panel-sim">
+        <div class="panel-header">
+          <span class="comp-name">Toolbar</span>
+        </div>
+        <div class="panel-body" style="position:relative; overflow:visible;">
+
+          <div class="prop-section-header">
+            <span class="dot"></span>
+            <span class="label">Flexbox &amp; Grid</span>
+            <button class="add-btn">+</button>
+          </div>
+
+          <!-- Context chips -->
+          <div class="chip-row">
+            <div class="flex-pill"><span class="axis-arrow">→</span>flex-row<span class="caret">▾</span></div>
+            <div class="flex-pill"><span class="axis-arrow">↩</span>wrap<span class="caret">▾</span></div>
+            <div class="flex-pill"><span class="axis-arrow">→</span>justify-start<span class="caret">▾</span></div>
+            <div class="flex-pill"><span class="axis-arrow">↓</span>items-stretch<span class="caret">▾</span></div>
+          </div>
+
+          <!-- GAP CONTROL -->
+          <div style="display:flex; align-items:flex-start; gap:8px; margin-top:4px;">
+            <div class="gap-mode-toggle" style="margin-top:6px;">
+              <button class="gap-mode-btn" data-mode="unified" id="modeUnified" onclick="setMode('unified')">↔↕</button>
+              <button class="gap-mode-btn active" data-mode="split" id="modeSplit" onclick="setMode('split')">↔/↕</button>
+            </div>
+
+            <div id="gapControl" style="flex:1;">
+
+              <!-- ═══ SPLIT MODE (default) ═══
+                   Row 1: [BOX] [x-scrub] [BOX]
+                   Row 2: [y-scrub] [gap-label spanning 2-3]
+                   Row 3: [BOX]
+              -->
+              <div id="splitView" class="gap-grid split-grid">
+                <div class="gb-item" style="grid-area:1/1;" id="sBox1"></div>
+                <div class="gb-scrubber-x" style="grid-area:1/2;" id="scrubX"
+                     onmouseenter="hoverX()" onmouseleave="clearHover()"
+                     onclick="toggleDropdown('ddX', this)">
+                  <span class="scrub-value" id="xVal">x-2</span>
+                </div>
+                <div class="gb-item" style="grid-area:1/3;" id="sBox2"></div>
+
+                <div class="gb-scrubber-y" style="grid-area:2/1;" id="scrubY"
+                     onmouseenter="hoverY()" onmouseleave="clearHover()"
+                     onclick="toggleDropdown('ddY', this)">
+                  <span class="scrub-value" id="yVal">y-6</span>
+                </div>
+                <div class="gb-scrubber-gap" style="grid-area:2/2; opacity:0.45; cursor:default;"
+                     title="Switch to unified mode to edit gap shorthand">
+                  <span class="scrub-value" id="sGapVal">gap-3</span>
+                </div>
+
+                <div class="gb-item" style="grid-area:3/1;" id="sBox3"></div>
+              </div>
+
+              <!-- ═══ UNIFIED MODE ═══ -->
+              <div id="unifiedView" class="gap-grid unified-grid" style="display:none;">
+                <div class="gb-item" style="grid-area:1/1;" id="uBox1"></div>
+                <div class="gb-scrubber-dim" style="grid-area:1/2;">
+                  <span class="scrub-value" id="uDimX">3</span>
+                </div>
+                <div class="gb-item" style="grid-area:1/3;" id="uBox2"></div>
+
+                <div class="gb-scrubber-dim" style="grid-area:2/1;">
+                  <span class="scrub-value" id="uDimY">3</span>
+                </div>
+                <div class="gb-scrubber-gap" style="grid-area:2/2;" id="uScrubGap"
+                     onmouseenter="hoverGap()" onmouseleave="clearHover()"
+                     onclick="toggleDropdown('ddGap', this)">
+                  <span class="scrub-value" id="uGapVal">gap-3</span>
+                </div>
+
+                <div class="gb-item" style="grid-area:3/1;" id="uBox3"></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Dropdowns -->
+          <div class="gap-dropdown x-mode" id="ddX"></div>
+          <div class="gap-dropdown" id="ddY"></div>
+          <div class="gap-dropdown" id="ddGap"></div>
+
+          <hr class="divider">
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Wrapped 3-box layout:</strong>
+        <ul>
+          <li>2 boxes on row 1, 1 box on row 3 — simulates <code>flex-wrap</code></li>
+          <li><strong>Between top boxes (↔):</strong> orange scrubber for <code>gap-x</code></li>
+          <li><strong>Left of middle row (↕):</strong> teal scrubber for <code>gap-y</code></li>
+          <li><strong>Center of middle row:</strong> gap shorthand (dimmed in split, active in unified)</li>
+          <li>Hover highlights the axis; click opens dropdown; drag scrubs</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 2 — VISUAL STATES
+  ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag purple">2</span>
+      <span class="section-title">Visual States</span>
+    </div>
+    <p class="section-desc">
+      All the states the wrapped 3-box gap control can be in.
+    </p>
+
+    <div class="states-grid">
+
+      <!-- No gap set -->
+      <div class="state-card">
+        <span class="state-name">No gap set</span>
+        <div class="gap-grid" style="opacity:0.5;">
+          <div class="gb-item" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-x" style="grid-area:1/2; pointer-events:none;">
+            <span class="scrub-value" style="color:var(--muted);">—</span>
+          </div>
+          <div class="gb-item" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-y" style="grid-area:2/1; pointer-events:none;">
+            <span class="scrub-value" style="color:var(--muted);">—</span>
+          </div>
+          <div style="grid-area:2/2;"></div>
+          <div class="gb-item" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+      <!-- gap-2 unified -->
+      <div class="state-card">
+        <span class="state-name">gap-2 (unified)</span>
+        <div class="gap-grid">
+          <div class="gb-item" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-dim" style="grid-area:1/2;">
+            <span class="scrub-value">2</span>
+          </div>
+          <div class="gb-item" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-dim" style="grid-area:2/1;">
+            <span class="scrub-value">2</span>
+          </div>
+          <div class="gb-scrubber-gap" style="grid-area:2/2; pointer-events:none;">
+            <span class="scrub-value">gap-2</span>
+          </div>
+          <div class="gb-item" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+      <!-- gap-8 unified -->
+      <div class="state-card">
+        <span class="state-name">gap-8 (unified)</span>
+        <div class="gap-grid">
+          <div class="gb-item" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-dim" style="grid-area:1/2;">
+            <span class="scrub-value">8</span>
+          </div>
+          <div class="gb-item" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-dim" style="grid-area:2/1;">
+            <span class="scrub-value">8</span>
+          </div>
+          <div class="gb-scrubber-gap" style="grid-area:2/2; pointer-events:none;">
+            <span class="scrub-value">gap-8</span>
+          </div>
+          <div class="gb-item" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+      <!-- Split gap-x-6 / gap-y-2 -->
+      <div class="state-card">
+        <span class="state-name">gap-x-6 / gap-y-2 (split)</span>
+        <div class="gap-grid">
+          <div class="gb-item" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-x" style="grid-area:1/2; pointer-events:none;">
+            <span class="scrub-value" style="color:var(--orange);">x-6</span>
+          </div>
+          <div class="gb-item" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-y" style="grid-area:2/1; pointer-events:none;">
+            <span class="scrub-value" style="color:var(--teal);">y-2</span>
+          </div>
+          <div style="grid-area:2/2;"></div>
+          <div class="gb-item" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+      <!-- gap-x hovered -->
+      <div class="state-card">
+        <span class="state-name">gap-x hover</span>
+        <div class="gap-grid">
+          <div class="gb-item active-x" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-x active" style="grid-area:1/2; pointer-events:none;">
+            <span class="scrub-value">x-4</span>
+          </div>
+          <div class="gb-item active-x" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-y" style="grid-area:2/1; pointer-events:none;">
+            <span class="scrub-value">y-4</span>
+          </div>
+          <div style="grid-area:2/2;"></div>
+          <div class="gb-item" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+      <!-- gap-y hovered -->
+      <div class="state-card">
+        <span class="state-name">gap-y hover</span>
+        <div class="gap-grid">
+          <div class="gb-item" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-x" style="grid-area:1/2; pointer-events:none;">
+            <span class="scrub-value">x-4</span>
+          </div>
+          <div class="gb-item" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-y active" style="grid-area:2/1; pointer-events:none;">
+            <span class="scrub-value">y-4</span>
+          </div>
+          <div style="grid-area:2/2;"></div>
+          <div class="gb-item active-y" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 3 — ANATOMY
+  ═══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag amber">3</span>
+      <span class="section-title">Anatomy &amp; Scrubber Sizing</span>
+    </div>
+    <p class="section-desc">
+      CSS grid: 3 columns × 3 rows. Boxes at 1/1, 1/3, 3/1. X-scrubber at 1/2.
+      Y-scrubber at 2/1. Gap shorthand at 2/2.
+    </p>
+
+    <div class="demo-row" style="gap:32px; align-items:center;">
+
+      <!-- Large annotated diagram -->
+      <div style="position:relative; padding:16px;">
+        <div class="gap-grid">
+          <div class="gb-item" style="grid-area:1/1;"></div>
+          <div class="gb-scrubber-x active" style="grid-area:1/2;">
+            <span class="scrub-value">x-2</span>
+          </div>
+          <div class="gb-item" style="grid-area:1/3;"></div>
+          <div class="gb-scrubber-y active" style="grid-area:2/1;">
+            <span class="scrub-value">y-6</span>
+          </div>
+          <div class="gb-scrubber-gap active" style="grid-area:2/2;">
+            <span class="scrub-value">gap-3</span>
+          </div>
+          <div class="gb-item" style="grid-area:3/1;"></div>
+        </div>
+      </div>
+
+      <!-- Annotation table -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:6px; overflow:hidden;">
+          <table style="border-collapse:collapse; font-size:11px; font-family:var(--font-mono);">
+            <thead>
+              <tr style="background:var(--surface); color:var(--text-mid);">
+                <th style="padding:5px 10px; text-align:left; font-size:9px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;">Zone</th>
+                <th style="padding:5px 10px; text-align:left; font-size:9px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;">Grid area</th>
+                <th style="padding:5px 10px; text-align:left; font-size:9px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;">Controls</th>
+                <th style="padding:5px 10px; text-align:left; font-size:9px; letter-spacing:0.5px; text-transform:uppercase; font-weight:600;">Cursor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="padding:5px 10px; color:var(--muted);">box ×3</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">1/1, 1/3, 3/1</td>
+                <td style="padding:5px 10px; color:var(--muted);">visual only</td>
+                <td style="padding:5px 10px; color:var(--muted);">default</td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="padding:5px 10px; color:var(--orange);">x-scrub</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">1/2</td>
+                <td style="padding:5px 10px; color:var(--orange);">gap-x</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">ew-resize</td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="padding:5px 10px; color:var(--teal);">y-scrub</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">2/1</td>
+                <td style="padding:5px 10px; color:var(--teal);">gap-y</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">ns-resize</td>
+              </tr>
+              <tr style="border-top:1px solid var(--border);">
+                <td style="padding:5px 10px; color:var(--teal);">gap-scrub</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">2/2–2/3</td>
+                <td style="padding:5px 10px; color:var(--teal);">gap (unified)</td>
+                <td style="padding:5px 10px; color:var(--text-mid);">ew-resize</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="design-note">
+          <strong>Why this layout:</strong> 2 boxes on top + 1 below naturally exposes
+          both gap axes — the horizontal gap is visible between the top two boxes, and
+          the vertical gap is the space before the bottom box. Scrubbers sit exactly
+          where the gap exists, making the spatial relationship intuitive.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /sections -->
+
+<script>
+  /* ─── GAP SCALE ──────────────────────────────── */
+  const GAP_SCALE = [
+    'gap-0', 'gap-px', 'gap-0.5', 'gap-1', 'gap-1.5', 'gap-2', 'gap-2.5',
+    'gap-3', 'gap-3.5', 'gap-4', 'gap-5', 'gap-6', 'gap-8', 'gap-10',
+    'gap-12', 'gap-16', 'gap-20', 'gap-24', 'gap-32',
+  ];
+  const GAP_X_SCALE = GAP_SCALE.map(v => v.replace('gap-', 'gap-x-'));
+  const GAP_Y_SCALE = GAP_SCALE.map(v => v.replace('gap-', 'gap-y-'));
+
+  /* ─── State ─────────────────────────────────── */
+  let state = {
+    mode: 'split',
+    gap: 'gap-3',
+    gapX: 'gap-x-2',
+    gapY: 'gap-y-6',
+  };
+
+  /* ─── Build dropdown ─────────────────────────── */
+  function buildDD(el, values, current, onSelect) {
+    el.innerHTML = '';
+    values.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'gap-dd-item' + (v === current ? ' active' : '');
+      item.textContent = v;
+      item.addEventListener('click', () => { onSelect(v); closeAll(); });
+      el.appendChild(item);
+    });
+  }
+
+  function initDropdowns() {
+    buildDD(document.getElementById('ddX'), GAP_X_SCALE, state.gapX, v => {
+      state.gapX = v; applySplit();
+    });
+    buildDD(document.getElementById('ddY'), GAP_Y_SCALE, state.gapY, v => {
+      state.gapY = v; applySplit();
+    });
+    buildDD(document.getElementById('ddGap'), GAP_SCALE, state.gap, v => {
+      state.gap = v; applyUnified();
+    });
+  }
+
+  function shortLabel(cls) {
+    return cls.replace('gap-x-', 'x-').replace('gap-y-', 'y-');
+  }
+
+  function applySplit() {
+    document.getElementById('xVal').textContent = shortLabel(state.gapX);
+    document.getElementById('yVal').textContent = shortLabel(state.gapY);
+    document.getElementById('sGapVal').textContent = state.gap;
+    buildDD(document.getElementById('ddX'), GAP_X_SCALE, state.gapX, v => {
+      state.gapX = v; applySplit();
+    });
+    buildDD(document.getElementById('ddY'), GAP_Y_SCALE, state.gapY, v => {
+      state.gapY = v; applySplit();
+    });
+  }
+
+  function applyUnified() {
+    const val = state.gap.replace('gap-', '');
+    document.getElementById('uGapVal').textContent = state.gap;
+    document.getElementById('uDimX').textContent = val;
+    document.getElementById('uDimY').textContent = val;
+    buildDD(document.getElementById('ddGap'), GAP_SCALE, state.gap, v => {
+      state.gap = v; applyUnified();
+    });
+  }
+
+  /* ─── Mode toggle ───────────────────────────── */
+  function setMode(mode) {
+    state.mode = mode;
+    document.getElementById('modeUnified').classList.toggle('active', mode === 'unified');
+    document.getElementById('modeSplit').classList.toggle('active', mode === 'split');
+    document.getElementById('splitView').style.display = mode === 'split' ? 'grid' : 'none';
+    document.getElementById('unifiedView').style.display = mode === 'unified' ? 'grid' : 'none';
+    closeAll();
+    if (mode === 'unified') applyUnified();
+    else applySplit();
+  }
+
+  /* ─── Dropdown toggle ────────────────────────── */
+  let openDD = null;
+  let openTrigger = null;
+
+  function toggleDropdown(ddId, triggerEl) {
+    const dd = document.getElementById(ddId);
+    const isOpen = dd.classList.contains('open');
+    closeAll();
+    if (!isOpen) {
+      const rect = triggerEl.getBoundingClientRect();
+      dd.style.top = (rect.bottom + 4) + 'px';
+      dd.style.left = (rect.left + rect.width / 2 - 45) + 'px';
+      dd.classList.add('open');
+      openDD = dd;
+      openTrigger = triggerEl;
+      triggerEl.classList.add('active');
+    }
+  }
+
+  function closeAll() {
+    document.querySelectorAll('.gap-dropdown').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.gb-scrubber-x, .gb-scrubber-y, .gb-scrubber-gap').forEach(s => s.classList.remove('active'));
+    openDD = null;
+    openTrigger = null;
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.gb-scrubber-x') && !e.target.closest('.gb-scrubber-y') &&
+        !e.target.closest('.gb-scrubber-gap') && !e.target.closest('.gap-dropdown')) {
+      closeAll();
+    }
+  });
+
+  /* ─── Hover effects ──────────────────────────── */
+  function hoverX() {
+    document.getElementById('scrubX').classList.add('active');
+    document.getElementById('sBox1').classList.add('active-x');
+    document.getElementById('sBox2').classList.add('active-x');
+  }
+  function hoverY() {
+    document.getElementById('scrubY').classList.add('active');
+    document.getElementById('sBox1').classList.add('active-y');
+    document.getElementById('sBox3').classList.add('active-y');
+  }
+  function hoverGap() {
+    document.getElementById('uScrubGap').classList.add('active');
+    document.getElementById('uBox1').classList.add('active-gap');
+    document.getElementById('uBox2').classList.add('active-gap');
+    document.getElementById('uBox3').classList.add('active-gap');
+  }
+  function clearHover() {
+    document.querySelectorAll('.gb-scrubber-x, .gb-scrubber-y, .gb-scrubber-gap').forEach(s => {
+      if (s !== openTrigger) s.classList.remove('active');
+    });
+    document.querySelectorAll('.gb-item').forEach(b => {
+      b.classList.remove('active-x', 'active-y', 'active-gap');
+    });
+  }
+
+  /* ─── Init ──────────────────────────────────── */
+  initDropdowns();
+  applySplit();
+</script>
+
+</body>
+</html>

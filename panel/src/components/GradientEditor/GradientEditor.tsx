@@ -52,7 +52,7 @@ export function GradientEditor(props: GradientEditorProps) {
 	}, [state.anchorEl]);
 
 	return (
-		<div>
+		<div className="group">
 			{/* Combo row: direction picker + gradient bar (or solid swatch) */}
 			<div className="flex items-start gap-2.5 mb-2">
 				<DirectionPicker
@@ -170,7 +170,7 @@ export function GradientEditor(props: GradientEditorProps) {
 			)}
 
 			{/* Hint text */}
-			<div className="text-[10px] text-bv-muted italic">
+			<div className="min-h-[1rem] text-[10px] text-bv-muted italic opacity-0 invisible transition-opacity duration-150 group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
 				{isSolid
 					? "Click the swatch to change color · Click a direction arrow for gradient"
 					: "Click handles to change color · Drag to reposition · Click bar to add stop"}

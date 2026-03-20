@@ -1,0 +1,121 @@
+/* ─── Gap Model ─────────────────────────────────────────────
+   3×3 grid showing two flex items on the first row, one below,
+   with scrubbers placed where each gap lives:
+
+     BOX   | X-SCRUB | BOX
+     Y-SCRUB | GAP   |
+     BOX   |         |
+
+   X-scrub  = gap-x  (orange)
+   Y-scrub  = gap-y  (teal)
+   GAP      = unified gap shorthand (teal)
+   ──────────────────────────────────────────────────────────── */
+
+.gm-root {
+  --t-fast: 150ms ease-out;
+  --orange:         var(--color-bv-orange, #F5532D);
+  --orange-fill:    rgba(245, 83, 45, 0.15);
+  --orange-fill-hi: rgba(245, 83, 45, 0.28);
+  --teal:           var(--color-bv-teal, #00848B);
+  --teal-fill:      rgba(0, 132, 139, 0.15);
+  --teal-fill-hi:   rgba(0, 132, 139, 0.28);
+  --border:         var(--color-bv-border, #3a3a3a);
+  --text-mid:       var(--color-bv-text-mid, #b3b3b3);
+  --muted:          var(--color-bv-muted, #999999);
+
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  user-select: none;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+/* ─── 3×3 grid ──────────────────────────────────────────────── */
+.gm-grid {
+  display: grid;
+  /* Middle col and row auto-size to the widest/tallest scrubber text */
+  grid-template-columns: min-content auto min-content;
+  grid-template-rows:    min-content auto min-content;
+}
+
+/* ─── Visual boxes ───────────────────────────────────────────── */
+.gm-box {
+  min-width: 24px;
+  min-height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+
+/* Make the right column as wide as the left (which is sized by the gap-y scrubber) */
+.gm-box-tr {
+  min-width: 48px;
+}
+
+/* ─── Column / row gap highlights ───────────────────────── */
+/* Boxes and cells sit above the highlight overlays */
+.gm-box,
+.gm-cell {
+  position: relative;
+  z-index: 1;
+}
+
+.gm-col-highlight,
+.gm-row-highlight {
+  border-radius: 4px;
+  pointer-events: none;
+  transition: background var(--t-fast);
+}
+
+.gm-active-x .gm-col-highlight {
+  background: rgba(245, 83, 45, 0.15);
+}
+
+.gm-active-y .gm-row-highlight {
+  background: rgba(0, 132, 139, 0.15);
+}
+
+.gm-active-gap .gm-col-highlight,
+.gm-active-gap .gm-row-highlight {
+  background: rgba(0, 132, 139, 0.15);
+}
+
+/* ─── Grid cell wrappers (center content in each cell) ────────── */
+.gm-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding-block: 4px;
+}
+
+/* ─── Strip borders from scrubber chips in this component ───── */
+.gm-root .bm-slot:hover,
+.gm-root .bm-slot.bm-scrubbing {
+  border-color: transparent !important;
+}
+
+/* ─── Lock scrubber chip padding — prevent layout shift on scrub ─ */
+.gm-root .bm-slot {
+  padding: 2px 5px !important;
+}
+
+/* ─── Dimmed read-only display (opposite mode) ───────────────── */
+.gm-dim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+.gm-dim-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1;
+  white-space: nowrap;
+}

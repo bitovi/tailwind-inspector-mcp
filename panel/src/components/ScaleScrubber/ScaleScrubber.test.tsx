@@ -137,3 +137,44 @@ test('does not call onStart when foreign-locked', () => {
   fireEvent.pointerDown(chip, { clientX: 0 });
   expect(onStart).not.toHaveBeenCalled();
 });
+
+test('calls onRemove when remove button is clicked', () => {
+  const onRemove = vi.fn();
+  setup({ onRemove });
+  const chip = getChip();
+  stubPointerCapture(chip);
+
+  // Open dropdown
+  fireEvent.pointerDown(chip, { clientX: 0 });
+  fireEvent.pointerUp(chip, { clientX: 0 });
+
+  // Click remove button (appears in dropdown when onRemove is defined)
+  fireEvent.click(screen.getByText('remove'));
+  expect(onRemove).toHaveBeenCalledTimes(1);
+});
+
+test('dropdown items respond to events even inside portal (onPointerDown stopPropagation fix)', () => {
+  // Regression test: React synthetic events bubble through the React tree even when
+  // inside a FocusTrapContainer. Without onPointerDown stopPropagation on the container,
+  // the chip's handlePointerDown receives the event, calls preventDefault(), which
+  // blocks the browser's synthetic mousedown/click from reaching dropdown items.
+  const onClick = vi.fn();
+  const onRemove = vi.fn();
+  setup({ onClick, onRemove });
+  const chip = getChip();
+  stubPointerCapture(chip);
+
+  // Open dropdown
+  fireEvent.pointerDown(chip, { clientX: 0 });
+  fireEvent.pointerUp(chip, { clientX: 0 });
+
+  // Value item click must work (tests the fix for this scenario)
+  fireEvent.click(screen.getAllByText('px-8')[0]);
+  expect(onClick).toHaveBeenCalledWith('px-8');
+
+  // Re-open to test remove button
+  fireEvent.pointerDown(chip, { clientX: 0 });
+  fireEvent.pointerUp(chip, { clientX: 0 });
+  fireEvent.click(screen.getByText('remove'));
+  expect(onRemove).toHaveBeenCalledTimes(1);
+});
