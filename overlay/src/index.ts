@@ -1,3 +1,4 @@
+import { armInsert, cancelInsert } from "./drop-zone";
 import { computePosition, flip, offset } from "@floating-ui/dom";
 import { parseClasses } from "./tailwind/class-parser";
 import type { ContainerName, IContainer } from "./containers/IContainer";
@@ -1628,6 +1629,10 @@ function init(): void {
 			}
 		} else if (msg.type === "CLOSE_PANEL") {
 			if (active) toggleInspect(btn);
+		} else if (msg.type === "COMPONENT_ARM") {
+			armInsert(msg, shadowHost);
+		} else if (msg.type === "COMPONENT_DISARM") {
+			cancelInsert();
 		} else if (msg.type === "DESIGN_CLOSE") {
 			// Remove the most recently added canvas wrapper, restoring replaced nodes if any
 			const last = designCanvasWrappers.pop();

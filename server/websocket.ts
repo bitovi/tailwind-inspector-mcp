@@ -114,6 +114,10 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
           console.error(`[ws] Design patch staged: ${patch.id}`);
         } else if (msg.type === "DESIGN_CLOSE") {
           broadcastTo("overlay", { type: "DESIGN_CLOSE" }, ws);
+        } else if (msg.type === "COMPONENT_DROPPED") {
+          const patch = addPatch({ ...msg.patch, kind: msg.patch.kind ?? 'component-drop' });
+          console.error(`[ws] Component-drop patch staged: #${patch.id}`);
+          broadcastPatchUpdate();
         }
       } catch (err) {
         console.error("[ws] Bad message:", err);

@@ -1,9 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { ArgType, ComponentGroup, StoryEntry } from './types';
 import { ComponentGroupItem } from './components/ComponentGroupItem';
+import { sendTo, onMessage } from '../../ws';
 
 export function DrawTab() {
   const { groups, loading, error } = useComponentGroups();
+  const [armedGroup, setArmedGroup] = useState<string | null>(null);
+
+  const arm = useCallback((group: ComponentGroup, ghostHtml: string) => {
+    setArmedGroup(group.name);
+    sendTo('overlay', {
+      type: 'COMPONENT_ARM',
+      componentName: group.name,
+      storyId: group.stories[0]?.id ?? '',
+      ghostHtml,
+    });
+  }, []);
+
+  const disarm = useCallback(() => {
+    setArmedGroup(null);
+    sendTo('overlay', { type: 'COMPONENT_DISARM' });
+  }, []);
+
+  // Disarm when the overlay tells us the user placed or escaped in the app
+  useEffect(() => {
+    return onMessage((msg) => {
+      if (msg.type === 'COMPONENT_DISARMED') setArmedGroup(null);
+    });
+  }, []);
+
+  // Disarm when the user clicks anywhere in the panel (while armed)
+  // The arm button calls e.stopPropagation() so it won't trigger this handler
+  useEffect(() => {
+    if (!armedGroup) return;
+    const handler = () => {
+      setArmedGroup(null);
+      sendTo('overlay', { type: 'COMPONENT_DISARM' });
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [armedGroup]);
 
   return (
     <div className="p-3 flex flex-col gap-3">
@@ -29,6 +65,9 @@ export function DrawTab() {
               <ComponentGroupItem
                 key={group.name}
                 group={group}
+                isArmed={armedGroup === group.name}
+                onArm={(ghostHtml) => arm(group, ghostHtml)}
+                onDisarm={disarm}
               />
             ))}
           </ul>

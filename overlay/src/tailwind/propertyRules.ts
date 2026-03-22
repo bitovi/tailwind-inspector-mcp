@@ -21,6 +21,15 @@ export interface PropertyRule {
   isComposite?: boolean;  // Multiple prefixes render as one unit
   compositeRelatedPrefixes?: string[];  // All prefixes consumed by this composite
   compositeExactMatches?: string[];  // Exact class names also consumed
+  /**
+   * Names a control group this property belongs to. When ANY member of the group is present or
+   * pending, the panel renders the entire group as a dedicated composite widget instead of
+   * individual chips. Useful for properties that only make sense together (e.g. flex container
+   * controls: direction, wrap, justify, align, gap).
+   *
+   * Example groups: 'flex-container'
+   */
+  controlGroup?: string;
 }
 
 export const PROPERTY_RULES: Record<string, PropertyRule> = {
@@ -33,8 +42,8 @@ export const PROPERTY_RULES: Record<string, PropertyRule> = {
       'm-', 'mx-', 'my-', 'mt-', 'mr-', 'mb-', 'ml-', 'ms-', 'me-',
       // BoxModel: padding layer
       'p-', 'px-', 'py-', 'pt-', 'pr-', 'pb-', 'pl-', 'ps-', 'pe-',
-      // BoxModel: padding layer (gap/space render inside padding area)
-      'gap-', 'gap-x-', 'gap-y-', 'space-x-', 'space-y-',
+      // BoxModel: padding layer (space render inside padding area)
+      'space-x-', 'space-y-',
       // BoxModel: border layer (width slots — style/color slots derived from class keywords)
       'border-', 'border-t-', 'border-r-', 'border-b-', 'border-l-',
       // TODO: no BoxModel layer yet — rounded-* are consumed here but never displayed anywhere
@@ -62,9 +71,9 @@ export const PROPERTY_RULES: Record<string, PropertyRule> = {
   'pl-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
   'ps-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
   'pe-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
-  'gap-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
-  'gap-x-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
-  'gap-y-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
+  'gap-': { category: 'flexbox', themeKey: 'spacing', valueType: 'scalar', addable: true, controlGroup: 'flex-container', propertyKey: 'gap' },
+  'gap-x-': { category: 'flexbox', themeKey: 'spacing', valueType: 'scalar', controlGroup: 'flex-container', propertyKey: 'gap-x' },
+  'gap-y-': { category: 'flexbox', themeKey: 'spacing', valueType: 'scalar', controlGroup: 'flex-container', propertyKey: 'gap-y' },
   'space-x-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
   'space-y-': { category: 'spacing', themeKey: 'spacing', valueType: 'scalar' },
 
@@ -160,19 +169,21 @@ export const PROPERTY_RULES: Record<string, PropertyRule> = {
   // ─────────────────────────────────────────────────────────────
   // LAYOUT
   // ─────────────────────────────────────────────────────────────
-  'block': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'inline-block': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'inline': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'grid': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'inline-grid': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'hidden': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'table': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'contents': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'static': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'fixed': { category: 'layout', themeKey: null, valueType: 'enum' },
+  // All CSS display values — grouped as one enum scrubber in the Layout section.
+  // 'block' is the canonical addable entry; toggling between values replaces the class.
+  'block':        { category: 'layout', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'inline-block': { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'inline':       { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'grid':         { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'inline-grid':  { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'hidden':       { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'table':        { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'contents':     { category: 'layout', themeKey: null, valueType: 'enum',               propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'static':   { category: 'layout', themeKey: null, valueType: 'enum' },
+  'fixed':    { category: 'layout', themeKey: null, valueType: 'enum' },
   'absolute': { category: 'layout', themeKey: null, valueType: 'enum' },
   'relative': { category: 'layout', themeKey: null, valueType: 'enum' },
-  'sticky': { category: 'layout', themeKey: null, valueType: 'enum' },
+  'sticky':   { category: 'layout', themeKey: null, valueType: 'enum' },
   'inset-': { category: 'layout', themeKey: 'spacing', valueType: 'scalar' },
   'top-': { category: 'layout', themeKey: 'spacing', valueType: 'scalar' },
   'right-': { category: 'layout', themeKey: 'spacing', valueType: 'scalar' },
@@ -183,15 +194,15 @@ export const PROPERTY_RULES: Record<string, PropertyRule> = {
   // ─────────────────────────────────────────────────────────────
   // FLEXBOX & GRID
   // ─────────────────────────────────────────────────────────────
-  'flex':        { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'flex-display',    enumAlts: ['flex', 'inline-flex'] },
-  'inline-flex': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'flex-display',    enumAlts: ['flex', 'inline-flex'] },
-  'flex-row':         { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
-  'flex-col':         { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
-  'flex-row-reverse': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
-  'flex-col-reverse': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
-  'flex-wrap':         { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'flex-wrap',      enumAlts: ['flex-wrap', 'flex-nowrap', 'flex-wrap-reverse'] },
-  'flex-nowrap':       { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'flex-wrap',      enumAlts: ['flex-wrap', 'flex-nowrap', 'flex-wrap-reverse'] },
-  'flex-wrap-reverse': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'flex-wrap',      enumAlts: ['flex-wrap', 'flex-nowrap', 'flex-wrap-reverse'] },
+  'flex':        { category: 'layout', themeKey: null, valueType: 'enum', controlGroup: 'flex-container', propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'inline-flex': { category: 'layout', themeKey: null, valueType: 'enum', controlGroup: 'flex-container', propertyKey: 'display', enumAlts: ['block', 'inline-block', 'inline', 'flex', 'inline-flex', 'grid', 'inline-grid', 'hidden', 'table', 'contents'] },
+  'flex-row':         { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, controlGroup: 'flex-container', propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
+  'flex-col':         { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
+  'flex-row-reverse': { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
+  'flex-col-reverse': { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'flex-direction', enumAlts: ['flex-row', 'flex-col', 'flex-row-reverse', 'flex-col-reverse'] },
+  'flex-wrap':         { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, controlGroup: 'flex-container', propertyKey: 'flex-wrap',      enumAlts: ['flex-wrap', 'flex-nowrap', 'flex-wrap-reverse'] },
+  'flex-nowrap':       { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'flex-wrap',      enumAlts: ['flex-wrap', 'flex-nowrap', 'flex-wrap-reverse'] },
+  'flex-wrap-reverse': { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'flex-wrap',      enumAlts: ['flex-wrap', 'flex-nowrap', 'flex-wrap-reverse'] },
   'flex-1': { category: 'flexbox', themeKey: null, valueType: 'enum' },
   'flex-auto': { category: 'flexbox', themeKey: null, valueType: 'enum' },
   'flex-initial': { category: 'flexbox', themeKey: null, valueType: 'enum' },
@@ -200,18 +211,18 @@ export const PROPERTY_RULES: Record<string, PropertyRule> = {
   'grow-0': { category: 'flexbox', themeKey: null, valueType: 'enum' },
   'shrink': { category: 'flexbox', themeKey: null, valueType: 'enum' },
   'shrink-0': { category: 'flexbox', themeKey: null, valueType: 'enum' },
-  'justify-start':   { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'justify-end':     { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'justify-center':  { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'justify-between': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'justify-around':  { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'justify-evenly':  { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'justify-stretch': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
-  'items-start':    { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
-  'items-end':      { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
-  'items-center':   { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
-  'items-baseline': { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
-  'items-stretch':  { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
+  'justify-start':   { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'justify-end':     { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'justify-center':  { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'justify-between': { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'justify-around':  { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'justify-evenly':  { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'justify-stretch': { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'justify-content', enumAlts: ['justify-start', 'justify-end', 'justify-center', 'justify-between', 'justify-around', 'justify-evenly', 'justify-stretch'] },
+  'items-start':    { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, controlGroup: 'flex-container', propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
+  'items-end':      { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
+  'items-center':   { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
+  'items-baseline': { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
+  'items-stretch':  { category: 'flexbox', themeKey: null, valueType: 'enum',               controlGroup: 'flex-container', propertyKey: 'align-items', enumAlts: ['items-start', 'items-end', 'items-center', 'items-baseline', 'items-stretch'] },
   'content-normal':   { category: 'flexbox', themeKey: null, valueType: 'enum', addable: true, propertyKey: 'align-content', enumAlts: ['content-normal', 'content-start', 'content-end', 'content-center', 'content-between', 'content-around', 'content-evenly', 'content-baseline', 'content-stretch'] },
   'content-start':    { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'align-content', enumAlts: ['content-normal', 'content-start', 'content-end', 'content-center', 'content-between', 'content-around', 'content-evenly', 'content-baseline', 'content-stretch'] },
   'content-end':      { category: 'flexbox', themeKey: null, valueType: 'enum',               propertyKey: 'align-content', enumAlts: ['content-normal', 'content-start', 'content-end', 'content-center', 'content-between', 'content-around', 'content-evenly', 'content-baseline', 'content-stretch'] },
@@ -238,6 +249,37 @@ export const PROPERTY_RULES: Record<string, PropertyRule> = {
   'row-span-': { category: 'flexbox', themeKey: null, valueType: 'enum' },
   'order-': { category: 'flexbox', themeKey: null, valueType: 'enum' },
 };
+
+/**
+ * Maps each controlGroup name → the set of propertyKeys (PROPERTY_RULES[*].propertyKey) whose
+ * entries belong to that group. Used to detect whether a parsed class token is a group member.
+ * Derived from `controlGroup` — do not maintain manually.
+ */
+export const CONTROL_GROUP_PROPERTY_KEYS: ReadonlyMap<string, ReadonlySet<string>> = (() => {
+  const map = new Map<string, Set<string>>();
+  for (const [key, rule] of Object.entries(PROPERTY_RULES)) {
+    if (!rule.controlGroup) continue;
+    const propKey = rule.propertyKey ?? key.replace(/-$/g, '');
+    if (!map.has(rule.controlGroup)) map.set(rule.controlGroup, new Set());
+    map.get(rule.controlGroup)!.add(propKey);
+  }
+  return map;
+})();
+
+/**
+ * Maps each controlGroup name → the set of PROPERTY_RULES entry keys (prefixes/exact class names)
+ * belonging to that group. Used to match against addable and pending prefix sets.
+ * Derived from `controlGroup` — do not maintain manually.
+ */
+export const CONTROL_GROUP_RULE_KEYS: ReadonlyMap<string, ReadonlySet<string>> = (() => {
+  const map = new Map<string, Set<string>>();
+  for (const [key, rule] of Object.entries(PROPERTY_RULES)) {
+    if (!rule.controlGroup) continue;
+    if (!map.has(rule.controlGroup)) map.set(rule.controlGroup, new Set());
+    map.get(rule.controlGroup)!.add(key);
+  }
+  return map;
+})();
 
 /**
  * Helper: Get the parse rule for a class token.

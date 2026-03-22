@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useFloating, offset, flip, shift, size, autoUpdate, FloatingPortal, useDismiss, useInteractions } from '@floating-ui/react';
 import type { ParsedToken } from '../../overlay/src/tailwind/grammar';
-import { PROPERTY_RULES, type Category, buildEnumGroupsFromRules, buildAddablePropertiesFromRules } from '../../overlay/src/tailwind/propertyRules';
+import { PROPERTY_RULES, type Category, buildEnumGroupsFromRules, buildAddablePropertiesFromRules, CONTROL_GROUP_PROPERTY_KEYS, CONTROL_GROUP_RULE_KEYS } from '../../overlay/src/tailwind/propertyRules';
 import { ColorGrid } from './components/ColorGrid';
 import { ScaleScrubber } from './components/ScaleScrubber';
 import { getScaleValues } from './components/getScaleValues';
@@ -53,7 +53,7 @@ const SECTION_LABELS: Record<string, string> = {
  * Ordered list of sections to render (spacing handled by BoxModel; overflow not shown yet).
  * Sections always render, even when empty, so users can always add via [+].
  */
-const ALL_SECTIONS = ['borders', 'sizing', 'typography', 'color', 'flexbox', 'shadows', 'effects', 'layout'];
+const ALL_SECTIONS = ['layout', 'borders', 'sizing', 'typography', 'color', 'flexbox', 'shadows', 'effects'];
 
 
 
@@ -443,6 +443,20 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
   }
 
 	function handleAddProperty(prefix: string) {
+		// If adding a flex-container property to an element without display:flex/inline-flex,
+		// auto-stage `flex` so the grouped controls appear with a valid container.
+		const rule = PROPERTY_RULES[prefix];
+		if (rule?.controlGroup === 'flex-container' && rule?.propertyKey === 'display') {
+			// flex/inline-flex have controlGroup AND propertyKey 'display' — skip, don't self-trigger
+		} else if (rule?.controlGroup === 'flex-container') {
+			const hasFlexDisplay = parsedClasses.some(c => c.fullClass === 'flex' || c.fullClass === 'inline-flex');
+			const hasStagedFlexDisplay = stagedPatches.some(
+				p => p.property === 'display' && p.originalClass === '' && (p.newClass === 'flex' || p.newClass === 'inline-flex')
+			);
+			if (!hasFlexDisplay && !hasStagedFlexDisplay) {
+				patchManager.stage(elementKey, 'display', '', 'flex');
+			}
+		}
 		setPendingPrefixes((prev) => new Set(prev).add(prefix));
 	}
 
@@ -868,17 +882,27 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
         const addableProps = (ADDABLE_PROPERTIES_MAP as Record<string, typeof ADDABLE_PROPERTIES_MAP[Category]>)[section] || [];
 
         // ── Flex-parent detection ──────────────────────────────────────────────────
-        // "Parent-type" flex property keys: present on any element that is a flex container
-        const FLEX_PARENT_KEYS = new Set(['flex-display', 'flex-direction', 'justify-content', 'align-items', 'flex-wrap']);
-        const isFlexParent = section === 'flexbox' && parsedClasses.some(c => {
+        // A single computed boolean: is this element a flex/grid container?
+        // True when ANY member of the 'flex-container' controlGroup exists on the element OR is
+        // pending/staged. Source of truth: controlGroup: 'flex-container' in propertyRules.ts.
+        const flexContainerPropertyKeys = CONTROL_GROUP_PROPERTY_KEYS.get('flex-container') ?? new Set<string>();
+        const flexContainerRuleKeys = CONTROL_GROUP_RULE_KEYS.get('flex-container') ?? new Set<string>();
+        const isFlexParentFromClasses = parsedClasses.some(c => {
+          // flex/inline-flex share propertyKey 'display' with non-flex display values,
+          // so detect them by class name rather than propertyKey
+          if (c.fullClass === 'flex' || c.fullClass === 'inline-flex') return true;
           const g = ENUM_GROUPS[c.fullClass];
-          return g && FLEX_PARENT_KEYS.has(g.propertyKey ?? '');
+          if (g && g.propertyKey !== 'display' && flexContainerPropertyKeys.has(g.propertyKey)) return true;
+          // Scalar group members (gap, gap-x, gap-y) don't appear in ENUM_GROUPS
+          if (flexContainerPropertyKeys.has(c.property)) return true;
+          return false;
         });
-
-        // When showing dedicated flex-parent controls, hide those properties from the [+] menu
-        const FLEX_PARENT_PREFIXES = new Set(['flex', 'flex-row', 'flex-wrap', 'justify-start', 'items-start']);
+        const isFlexParentFromPending = [...flexContainerRuleKeys].some(
+          key => pendingPrefixes.has(key) || stagedPendingPrefixes.has(key.replace(/-$/, ''))
+        );
+        const isFlexParent = section === 'flexbox' && (isFlexParentFromClasses || isFlexParentFromPending);
         const filteredAddableProps = isFlexParent
-          ? addableProps.filter(p => !FLEX_PARENT_PREFIXES.has(p.prefix.replace(/-$/, '')))
+          ? addableProps.filter(p => !flexContainerRuleKeys.has(p.prefix))
           : addableProps;
 
         const available = filterAvailable(filteredAddableProps, classes, pendingPrefixes, stagedPendingPrefixes);
@@ -969,7 +993,6 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
             {/* Composite: Flex-parent controls — show all when element is a flex container */}
             {section === 'flexbox' && isFlexParent && (() => {
               const allFlexClasses = parsedClasses;
-              const flexDisplayToken = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'flex-display'; });
               const flexDirToken    = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'flex-direction'; });
               const justifyToken    = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'justify-content'; });
               const alignToken      = allFlexClasses.find(c => { const g = ENUM_GROUPS[c.fullClass]; return g?.propertyKey === 'align-items'; });
@@ -1073,10 +1096,12 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
 
             {/* Existing classes on the element */}
             {classes.map((cls) => {
-              // Skip flex-parent classes when dedicated controls are shown above
+              // Skip flex-container group classes when dedicated controls are shown above
               if (isFlexParent) {
                 const grp = ENUM_GROUPS[cls.fullClass];
-                if (grp && FLEX_PARENT_KEYS.has(grp.propertyKey ?? '')) return null;
+                if (grp && flexContainerPropertyKeys.has(grp.propertyKey)) return null;
+                // Scalar group members (gap, gap-x, gap-y) don't appear in ENUM_GROUPS
+                if (flexContainerPropertyKeys.has(cls.property)) return null;
               }
 
               if (cls.scaleName !== undefined) {
@@ -1149,7 +1174,11 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
             })}
 
             {/* Staged pending values (from + button, user picked a value) */}
-            {sectionStagedPrefixes.map(prefix => {
+            {sectionStagedPrefixes.filter(prefix => {
+              // Skip flex-container group staged prefixes — consumed by the grouped flex controls
+              if (isFlexParent && flexContainerRuleKeys.has(prefix)) return false;
+              return true;
+            }).map(prefix => {
               const config = getPendingConfig(prefix);
               if (!config) return null;
               if (config.valueType === 'scalar') {
@@ -1190,7 +1219,11 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
             })}
 
             {/* Pending ghost scrubbers from + button (not yet staged) */}
-            {sectionPendingPrefixes.map(prefix => {
+            {sectionPendingPrefixes.filter(prefix => {
+              // Skip flex-container group pending prefixes — consumed by the grouped flex controls
+              if (isFlexParent && flexContainerRuleKeys.has(prefix)) return false;
+              return true;
+            }).map(prefix => {
               const config = getPendingConfig(prefix);
               if (!config) return null;
               if (config.valueType === 'scalar') {

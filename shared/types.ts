@@ -3,7 +3,7 @@
 
 export type ContainerName = 'modal' | 'popover' | 'sidebar' | 'popup';
 
-export type PatchKind = 'class-change' | 'message' | 'design';
+export type PatchKind = 'class-change' | 'message' | 'design' | 'component-drop';
 
 export type PatchStatus = 'staged' | 'committed' | 'implementing' | 'implemented' | 'error';
 
@@ -30,6 +30,9 @@ export interface Patch {
   insertMode?: string;       // before | after | first-child | last-child
   canvasWidth?: number;
   canvasHeight?: number;
+  // Component-drop fields (used when kind === 'component-drop'):
+  ghostHtml?: string;        // HTML of the dropped component
+  componentStoryId?: string; // Storybook story ID
   // Commit reference:
   commitId?: string;         // Set when committed into a Commit
 }
@@ -283,6 +286,37 @@ export interface ClosePanelMessage {
 }
 
 // ---------------------------------------------------------------------------
+// Component arm-and-place messages
+// ---------------------------------------------------------------------------
+
+/** Panel → Overlay: user armed a component for placement from the Draw tab */
+export interface ComponentArmMessage {
+  type: 'COMPONENT_ARM';
+  to: 'overlay';
+  componentName: string;
+  storyId: string;
+  ghostHtml: string;
+}
+
+/** Panel → Overlay: user cancelled the armed state (panel click or escape) */
+export interface ComponentDisarmMessage {
+  type: 'COMPONENT_DISARM';
+  to: 'overlay';
+}
+
+/** Overlay → Panel: overlay has disarmed (user placed or pressed Escape in app) */
+export interface ComponentDisarmedMessage {
+  type: 'COMPONENT_DISARMED';
+  to: 'panel';
+}
+
+/** Overlay → Server: component was placed, stage a patch */
+export interface ComponentDroppedMessage {
+  type: 'COMPONENT_DROPPED';
+  patch: Patch;
+}
+
+// ---------------------------------------------------------------------------
 // Union types
 // ---------------------------------------------------------------------------
 
@@ -296,8 +330,10 @@ export type PanelToOverlay =
   | SwitchContainerMessage
   | InsertDesignCanvasMessage
   | CaptureScreenshotMessage
-  | ClosePanelMessage;
-export type OverlayToServer = PatchStagedMessage;
+  | ClosePanelMessage
+  | ComponentArmMessage
+  | ComponentDisarmMessage;
+export type OverlayToServer = PatchStagedMessage | ComponentDroppedMessage;
 export type PanelToServer = PatchCommitMessage | MessageStageMessage;
 export type ClientToServer =
   | RegisterMessage
@@ -306,6 +342,7 @@ export type ClientToServer =
   | MessageStageMessage
   | DesignSubmitMessage
   | DesignCloseMessage
+  | ComponentDroppedMessage
   | PingMessage;
 export type ServerToClient =
   | PongMessage
@@ -336,5 +373,9 @@ export type AnyMessage =
   | DesignSubmitMessage
   | DesignCloseMessage
   | ClosePanelMessage
+  | ComponentArmMessage
+  | ComponentDisarmMessage
+  | ComponentDisarmedMessage
+  | ComponentDroppedMessage
   | PingMessage
   | PongMessage;

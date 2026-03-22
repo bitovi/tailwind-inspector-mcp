@@ -121,18 +121,24 @@ export function PatchPopover({
 							items.map((item) => {
 								const isMessage = "kind" in item && item.kind === "message";
 								const isDesign = "kind" in item && item.kind === "design";
+								const isComponentDrop = "kind" in item && item.kind === "component-drop";
 								return (
 									<div
 										key={item.id}
 										className="flex items-center gap-1.5 px-3 py-1.5 border-b border-bv-border last:border-b-0 group"
 									>
 										<div className="flex-1 min-w-0">
-											{!isMessage && !isDesign && item.component?.name && (
+											{!isMessage && !isDesign && !isComponentDrop && item.component?.name && (
 												<div className="text-[10px] text-bv-muted truncate">
 													{item.component.name}
 												</div>
 											)}
-											{isDesign ? (
+											{isComponentDrop ? (
+												<div className="text-[11px] text-bv-text truncate">
+													<span className="mr-1">📦</span>
+													Drop {item.component?.name ?? 'component'}
+												</div>
+											) : isDesign ? (
 												<div className="text-[11px] text-bv-text">
 													<div className="flex items-center gap-1.5 mb-1">
 														<span>✏️</span>

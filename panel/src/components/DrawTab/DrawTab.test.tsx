@@ -76,8 +76,6 @@ test('shows component list when storybook is available', async () => {
 
   expect(await screen.findByText('Button')).toBeInTheDocument();
   expect(screen.getByText('Badge')).toBeInTheDocument();
-  expect(screen.getByText('2 stories')).toBeInTheDocument();
-  expect(screen.getByText('1 story')).toBeInTheDocument();
 });
 
 test('shows "no stories found" when entries is empty', async () => {
@@ -87,29 +85,37 @@ test('shows "no stories found" when entries is empty', async () => {
 });
 
 describe('expand/collapse', () => {
-  test('clicking a component expands to show its story names', async () => {
+  test('components start expanded by default', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BUTTON_SECONDARY.id]: BUTTON_SECONDARY },
     });
     renderDrawTab();
-    const buttonRow = await screen.findByRole('button', { name: /button/i });
+    await screen.findByRole('button', { name: /button/i });
 
-    expect(screen.queryByText('Primary')).not.toBeInTheDocument();
-    fireEvent.click(buttonRow);
-    expect(screen.getByText('Primary')).toBeInTheDocument();
-    expect(screen.getByText('Secondary')).toBeInTheDocument();
+    // Groups are expanded by default — loading preview should be visible
+    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
   });
 
-  test('clicking an expanded component collapses it', async () => {
+  test('clicking a component collapses it', async () => {
+    setupFetch({
+      entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY },
+    });
+    renderDrawTab();
+    const buttonRow = await screen.findByRole('button', { name: /button/i });
+
+    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
+    fireEvent.click(buttonRow);
+    expect(screen.queryByText('Loading preview…')).not.toBeInTheDocument();
+  });
+
+  test('clicking a collapsed component re-expands it', async () => {
     setupFetch({ entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY } });
     renderDrawTab();
     const buttonRow = await screen.findByRole('button', { name: /button/i });
 
-    fireEvent.click(buttonRow);
-    expect(screen.getByText('Primary')).toBeInTheDocument();
-
-    fireEvent.click(buttonRow);
-    expect(screen.queryByText('Primary')).not.toBeInTheDocument();
+    fireEvent.click(buttonRow); // collapse
+    fireEvent.click(buttonRow); // expand
+    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
   });
 
   test('multiple components can be expanded independently', async () => {
@@ -117,36 +123,16 @@ describe('expand/collapse', () => {
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BADGE_BLUE.id]: BADGE_BLUE },
     });
     renderDrawTab();
-    const buttonRow = await screen.findByRole('button', { name: /button/i });
-    const badgeRow = screen.getByRole('button', { name: /badge/i });
+    await screen.findByRole('button', { name: /button/i });
 
-    fireEvent.click(buttonRow);
-    fireEvent.click(badgeRow);
-    expect(screen.getByText('Primary')).toBeInTheDocument();
-    expect(screen.getByText('Blue')).toBeInTheDocument();
+    // Both should be expanded by default showing loading previews
+    const previews = screen.getAllByText('Loading preview…');
+    expect(previews.length).toBe(2);
   });
 });
 
-describe('props display', () => {
-  test('shows prop names and control types from server argTypes', async () => {
-    setupFetch({
-      entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY },
-      argTypes: {
-        Button: {
-          variant: { control: 'select', options: ['primary', 'secondary'] },
-          children: { control: 'text' },
-        },
-      },
-    });
-    renderDrawTab();
-    fireEvent.click(await screen.findByRole('button', { name: /button/i }));
-
-    expect(screen.getByText('Props')).toBeInTheDocument();
-    expect(screen.getByText('variant')).toBeInTheDocument();
-    expect(screen.getByText('children')).toBeInTheDocument();
-  });
-
-  test('shows select options for select controls', async () => {
+describe('probe iframe', () => {
+  test('starts probing with a hidden iframe for the first story', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY },
       argTypes: {
@@ -156,17 +142,23 @@ describe('props display', () => {
       },
     });
     renderDrawTab();
-    fireEvent.click(await screen.findByRole('button', { name: /button/i }));
+    await screen.findByRole('button', { name: /button/i });
 
-    expect(screen.getByText('(primary, secondary)')).toBeInTheDocument();
+    // Probe creates a hidden iframe in the DOM for the first story
+    const iframe = document.querySelector('iframe[src*="components-button--primary"]');
+    expect(iframe).toBeTruthy();
   });
 
-  test('omits Props section when no argTypes are available', async () => {
-    setupFetch({ entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY }, argTypes: {} });
+  test('shows loading message while probing', async () => {
+    setupFetch({
+      entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY },
+      argTypes: {},
+    });
     renderDrawTab();
-    fireEvent.click(await screen.findByRole('button', { name: /button/i }));
+    await screen.findByRole('button', { name: /button/i });
 
-    expect(screen.queryByText('Props')).not.toBeInTheDocument();
+    // While probing (iframe hasn't responded yet), show loading
+    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
   });
 });
 

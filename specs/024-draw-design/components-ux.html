@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>024 · Components UX Variations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS (Bitovi dark theme) ───────────────────────── */
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --orange-hover: #C73D26;
+      --teal:         #00848B;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --green:        #2E7229;
+
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    /* ─── BASE ─────────────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1e1e1e;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px;
+    }
+
+    .page-header {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 32px;
+      line-height: 1.5;
+      max-width: 700px;
+    }
+
+    .variations {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      max-width: 320px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 320px;
+      line-height: 1.5;
+      margin-bottom: 2px;
+    }
+
+    /* ─── SHARED PANEL CHROME ──────────────────────────────── */
+    .panel {
+      width: 320px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+
+    .panel-body {
+      padding: 8px;
+    }
+
+    /* ─── FAKE PREVIEW THUMBNAILS ──────────────────────────── */
+    .preview-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 999px;
+      color: white;
+    }
+    .preview-badge.red    { background: #ef4444; }
+    .preview-badge.blue   { background: #3b82f6; }
+    .preview-badge.green  { background: #22c55e; }
+
+    .preview-button {
+      display: inline-block;
+      padding: 8px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: white;
+      cursor: default;
+    }
+    .preview-button.primary   { background: #6366f1; }
+    .preview-button.secondary { background: var(--surface-hi); color: var(--text); }
+
+    .preview-card {
+      background: white;
+      border-radius: 8px;
+      padding: 14px;
+      color: #1a1a1a;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .preview-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-card h4 .mini-tag {
+      font-size: 10px;
+      background: #dbeafe;
+      color: #2563eb;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .preview-card p { color: #64748b; font-size: 11px; }
+
+    .preview-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 4px;
+      color: white;
+      background: #f59e0b;
+    }
+
+    /* ─── SEARCH BAR ───────────────────────────────────────── */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      margin-bottom: 6px;
+    }
+    .search-bar svg { flex-shrink: 0; color: var(--muted); }
+    .search-bar input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      outline: none;
+      width: 100%;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+
+
+    /* ==========================================================
+       VARIATION A — Compact Tile Grid
+       Quick scan + click + insert. Props hidden until gear icon.
+       ========================================================== */
+
+    .va-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .va-tile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+      position: relative;
+    }
+
+    .va-tile:hover {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    .va-tile.armed {
+      background: var(--teal-dim);
+      border-color: var(--teal);
+      box-shadow: 0 0 0 1px var(--teal);
+    }
+
+    /* Scaled thumbnail — the inner content renders at its natural size,
+       then the whole thumb is scaled down via transform: scale().
+       The wrapper clips it to the visible thumb box.
+       In production: set adaptive-iframe width to (56px / scale), e.g.
+       scale=0.35 → width: 160px; transform: scale(0.35); transform-origin: top left */
+    .va-tile .thumb {
+      width: 56px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 4px;
+      flex-shrink: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* The inner element renders at natural size then scales down to fit */
+    .va-tile .thumb .thumb-inner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: calc(56px / 0.35);   /* = ~160px */
+      height: calc(40px / 0.35);  /* = ~114px */
+      transform: scale(0.35);
+      transform-origin: top left;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 6px;
+    }
+
+    .va-tile.armed .thumb {
+      background: rgba(0, 132, 139, 0.08);
+    }
+
+    .va-tile .tile-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .va-tile .tile-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .va-tile .tile-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .va-tile .tile-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+    .va-tile:hover .tile-actions,
+    .va-tile.armed .tile-actions { opacity: 1; }
+
+    .va-tile .action-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+    .va-tile .action-btn:hover {
+      background: var(--surface-hi);
+      color: var(--text);
+    }
+
+    .va-tile .insert-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--teal);
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--teal-dim);
+      white-space: nowrap;
+      display: none;
+    }
+    .va-tile.armed .insert-badge { display: inline-block; }
+
+    /* Inline props drawer (hidden by default) */
+    .va-props-drawer {
+      display: none;
+      padding: 8px 10px 10px;
+      background: var(--surface);
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin: -2px 0 2px;
+      border: 1.5px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    .va-props-drawer.open { display: block; }
+
+    .va-props-drawer .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+    }
+    .va-props-drawer .prop-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 60px;
+      flex-shrink: 0;
+    }
+    .va-props-drawer .prop-control {
+      flex: 1;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+    }
+    .va-props-drawer select.prop-control {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+
+    /* ==========================================================
+       VARIATION B — Big Preview Cards
+       Each component is a large clickable card with full preview.
+       Click = armed. Props via popover/gear only.
+       ========================================================== */
+
+    .vb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .vb-card {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+      position: relative;
+    }
+
+    .vb-card:hover {
+      border-color: #555;
+    }
+
+    .vb-card.armed {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 2px var(--teal), 0 0 12px rgba(0, 132, 139, 0.2);
+    }
+
+    .vb-card .card-preview {
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 56px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vb-card.armed .card-preview {
+      background: rgba(0, 132, 139, 0.06);
+    }
+
+    .vb-card .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .vb-card .card-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      transition: color var(--t-fast);
+    }
+    /* When armed, replace name text with placement hint via CSS */
+    .vb-card .card-name .name-label { display: inline; }
+    .vb-card .card-name .name-hint  { display: none; font-weight: 500; color: var(--teal); }
+    .vb-card.armed .card-name .name-label { display: none; }
+    .vb-card.armed .card-name .name-hint  { display: inline; }
+
+    .vb-card .card-gear {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-fast), color var(--t-fast);
+      opacity: 0;
+    }
+    .vb-card:hover .card-gear { opacity: 1; }
+    .vb-card .card-gear:hover {
+      background: var(--surface-hi);
+      color: var(--text);
+    }
+    .vb-card .card-gear.active {
+      opacity: 1;
+      background: var(--surface-hi);
+      color: var(--text);
+    }
+
+    /* Props drawer — expands below the card footer on gear click */
+    .vb-props-drawer {
+      display: none;
+      padding: 8px 10px 10px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .vb-props-drawer.open { display: block; }
+
+    .vb-props-drawer .props-header {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .vb-props-drawer .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+    }
+    .vb-props-drawer .prop-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 56px;
+      flex-shrink: 0;
+    }
+    .vb-props-drawer .prop-control {
+      flex: 1;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+    .vb-props-drawer select.prop-control {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+
+    /* ==========================================================
+       VARIATION C — Sidebar List + Click-to-Arm Flow
+       Compact name list on left; clicking one shows a preview +
+       a prominent "Insert" button. Props only via disclosure.
+       ========================================================== */
+
+    .vc-split {
+      display: flex;
+      height: 400px;
+    }
+
+    .vc-list {
+      width: 110px;
+      border-right: 1px solid var(--border);
+      padding: 6px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      overflow-y: auto;
+    }
+
+    .vc-list-item {
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-mid);
+      cursor: pointer;
+      border-radius: 0;
+      border-left: 2px solid transparent;
+      transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+    }
+    .vc-list-item:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+    .vc-list-item.active {
+      background: var(--teal-dim);
+      color: var(--teal);
+      border-left-color: var(--teal);
+      font-weight: 600;
+    }
+
+    .vc-detail {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+    }
+
+    .vc-detail .detail-preview {
+      width: 100%;
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+    }
+
+    .vc-detail .detail-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      align-self: flex-start;
+    }
+
+    .vc-insert-btn {
+      width: 100%;
+      padding: 10px 0;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--teal);
+      color: white;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--t-fast), box-shadow var(--t-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .vc-insert-btn:hover {
+      background: var(--teal-dark);
+      box-shadow: 0 2px 8px rgba(0, 132, 139, 0.3);
+    }
+    .vc-insert-btn.is-armed {
+      background: var(--orange);
+    }
+    .vc-insert-btn.is-armed:hover {
+      background: var(--orange-hover);
+    }
+
+    .vc-customize-toggle {
+      font-size: 10px;
+      color: var(--muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: var(--font-ui);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      align-self: flex-start;
+      transition: color var(--t-fast);
+    }
+    .vc-customize-toggle:hover { color: var(--text-mid); }
+
+    .vc-props-section {
+      width: 100%;
+      display: none;
+    }
+    .vc-props-section.open { display: block; }
+
+    .vc-props-section .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+    }
+    .vc-props-section .prop-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 60px;
+      flex-shrink: 0;
+    }
+    .vc-props-section .prop-control {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+    }
+
+
+    /* ─── INTERACTIVE LOGIC ────────────────────────────────── */
+    .va-tile[onclick]:active,
+    .vb-card[onclick]:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+
+<div class="page-header">Components Panel — UX Explorations</div>
+<p class="page-subtitle">
+  Three variations for the component browser. Goals: make it dead-simple to find a component, click it,
+  and insert it into the page. Hide customization controls by default. Eliminate the green "args" dot.
+  Make the armed/insert state much more obvious.
+</p>
+
+<div class="variations">
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIATION A — Compact Tile Rows
+     ════════════════════════════════════════════════════════════ -->
+<div class="col">
+  <div class="col-label">A · Compact Tile Rows</div>
+  <div class="col-description">
+    Each component is a single row with a small thumbnail. Click the row to arm it for insertion.
+    A gear icon reveals the props drawer inline. No chrome until you need it.
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-label">Components</span>
+    </div>
+    <div class="panel-body">
+      <div class="search-bar">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Search components…">
+      </div>
+
+      <!-- ↓ Thumbnails use CSS transform: scale(0.35) to shrink real-sized content.
+           In production: replace .thumb-inner with <adaptive-iframe> at natural width,
+           then scale the wrapper. The outer .thumb clips via overflow:hidden. -->
+      <div class="va-grid">
+        <!-- Badge — armed state -->
+        <div class="va-tile armed" onclick="this.classList.toggle('armed')">
+          <div class="thumb">
+            <div class="thumb-inner">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="tile-info">
+            <div class="tile-name">Badge</div>
+            <div class="tile-meta">3 variants</div>
+          </div>
+          <div class="tile-actions">
+            <span class="insert-badge">Armed ✓</span>
+            <button class="action-btn" title="Customize" onclick="event.stopPropagation(); this.closest('.va-tile').nextElementSibling.classList.toggle('open')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="va-props-drawer">
+          <div class="prop-row">
+            <span class="prop-label">color</span>
+            <select class="prop-control">
+              <option>red</option><option>blue</option><option>green</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <input class="prop-control" value="New">
+          </div>
+        </div>
+
+        <!-- Button — default state -->
+        <div class="va-tile" onclick="this.classList.toggle('armed')">
+          <div class="thumb">
+            <div class="thumb-inner">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="tile-info">
+            <div class="tile-name">Button</div>
+            <div class="tile-meta">2 variants</div>
+          </div>
+          <div class="tile-actions">
+            <span class="insert-badge">Armed ✓</span>
+            <button class="action-btn" title="Customize" onclick="event.stopPropagation()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card — scale demo: the card renders at full natural size and is scaled to fit the thumb -->
+        <div class="va-tile" onclick="this.classList.toggle('armed')">
+          <div class="thumb">
+            <div class="thumb-inner" style="padding: 4px; align-items: flex-start;">
+              <div class="preview-card" style="width: 140px;">
+                <h4 style="font-size:13px;">Card Title <span class="mini-tag">Tag</span></h4>
+                <p>Card description goes here.</p>
+              </div>
+            </div>
+          </div>
+          <div class="tile-info">
+            <div class="tile-name">Card</div>
+            <div class="tile-meta">1 variant</div>
+          </div>
+          <div class="tile-actions">
+            <span class="insert-badge">Armed ✓</span>
+            <button class="action-btn" title="Customize" onclick="event.stopPropagation()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tag -->
+        <div class="va-tile" onclick="this.classList.toggle('armed')">
+          <div class="thumb">
+            <div class="thumb-inner">
+              <span class="preview-tag">Design</span>
+            </div>
+          </div>
+          <div class="tile-info">
+            <div class="tile-name">Tag</div>
+            <div class="tile-meta">4 variants</div>
+          </div>
+          <div class="tile-actions">
+            <span class="insert-badge">Armed ✓</span>
+            <button class="action-btn" title="Customize" onclick="event.stopPropagation()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIATION B — Big Preview Cards
+     ════════════════════════════════════════════════════════════ -->
+<div class="col">
+  <div class="col-label">B · Preview Cards</div>
+  <div class="col-description">
+    Every component gets a generous preview. Click the whole card to arm it. Armed state is bold and
+    unmissable — teal glow + status text. Gear icon for customization appears on hover only.
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-label">Components</span>
+    </div>
+    <div class="panel-body">
+      <div class="search-bar">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="Search components…">
+      </div>
+
+      <div class="vb-list">
+        <!-- Badge -->
+        <div class="vb-card" onclick="document.querySelectorAll('.vb-card').forEach(c=>c.classList.remove('armed')); this.classList.add('armed')">
+          <div class="card-preview">
+            <span class="preview-badge red">New</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-name"><span class="name-label">Badge</span><span class="name-hint">Click the page to place</span></span>
+            <button class="card-gear" title="Customize props" onclick="event.stopPropagation(); var d=this.closest('.vb-card').querySelector('.vb-props-drawer'); d.classList.toggle('open'); this.classList.toggle('active')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+          <div class="vb-props-drawer">
+            <div class="props-header">Props</div>
+            <div class="prop-row">
+              <span class="prop-label">color</span>
+              <select class="prop-control" onclick="event.stopPropagation()">
+                <option>red</option><option>blue</option><option>green</option>
+              </select>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">children</span>
+              <input class="prop-control" value="New" onclick="event.stopPropagation()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Button — armed, props open for demo -->
+        <div class="vb-card armed" onclick="document.querySelectorAll('.vb-card').forEach(c=>c.classList.remove('armed')); this.classList.add('armed')">
+          <div class="card-preview">
+            <span class="preview-button primary">Click me</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-name"><span class="name-label">Button</span><span class="name-hint">Click the page to place</span></span>
+            <button class="card-gear active" title="Customize props" onclick="event.stopPropagation(); var d=this.closest('.vb-card').querySelector('.vb-props-drawer'); d.classList.toggle('open'); this.classList.toggle('active')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+          <div class="vb-props-drawer open">
+            <div class="props-header">Props</div>
+            <div class="prop-row">
+              <span class="prop-label">variant</span>
+              <select class="prop-control" onclick="event.stopPropagation()">
+                <option>primary</option><option>secondary</option><option>outline</option>
+              </select>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">children</span>
+              <input class="prop-control" value="Click me" onclick="event.stopPropagation()">
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">disabled</span>
+              <select class="prop-control" onclick="event.stopPropagation()">
+                <option>false</option><option>true</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card -->
+        <div class="vb-card" onclick="document.querySelectorAll('.vb-card').forEach(c=>c.classList.remove('armed')); this.classList.add('armed')">
+          <div class="card-preview">
+            <div class="preview-card">
+              <h4>Card Title <span class="mini-tag">Tag</span></h4>
+              <p>Card description goes here.</p>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="card-name"><span class="name-label">Card</span><span class="name-hint">Click the page to place</span></span>
+            <button class="card-gear" title="Customize props" onclick="event.stopPropagation(); var d=this.closest('.vb-card').querySelector('.vb-props-drawer'); d.classList.toggle('open'); this.classList.toggle('active')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+          <div class="vb-props-drawer">
+            <div class="props-header">Props</div>
+            <div class="prop-row">
+              <span class="prop-label">title</span>
+              <input class="prop-control" value="Card Title" onclick="event.stopPropagation()">
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">description</span>
+              <input class="prop-control" value="Card description goes here." onclick="event.stopPropagation()">
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">tag</span>
+              <input class="prop-control" value="Tag" onclick="event.stopPropagation()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tag -->
+        <div class="vb-card" onclick="document.querySelectorAll('.vb-card').forEach(c=>c.classList.remove('armed')); this.classList.add('armed')">
+          <div class="card-preview">
+            <span class="preview-tag">Design</span>
+          </div>
+          <div class="card-footer">
+            <span class="card-name"><span class="name-label">Tag</span><span class="name-hint">Click the page to place</span></span>
+            <button class="card-gear" title="Customize props" onclick="event.stopPropagation(); var d=this.closest('.vb-card').querySelector('.vb-props-drawer'); d.classList.toggle('open'); this.classList.toggle('active')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+          </div>
+          <div class="vb-props-drawer">
+            <div class="props-header">Props</div>
+            <div class="prop-row">
+              <span class="prop-label">color</span>
+              <select class="prop-control" onclick="event.stopPropagation()">
+                <option>blue</option><option>red</option><option>green</option><option>orange</option>
+              </select>
+            </div>
+            <div class="prop-row">
+              <span class="prop-label">children</span>
+              <input class="prop-control" value="Design" onclick="event.stopPropagation()">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     VARIATION C — Master/Detail Split
+     ════════════════════════════════════════════════════════════ -->
+<div class="col">
+  <div class="col-label">C · Master / Detail Split</div>
+  <div class="col-description">
+    Left rail is a pure name list — fastest scanning. Clicking a name loads the preview in the detail
+    area with an explicit "Insert" button. "Customize…" disclosure opens props only when needed.
+  </div>
+
+  <div class="panel" style="width: 340px;">
+    <div class="panel-head">
+      <span class="panel-label">Components</span>
+    </div>
+
+    <div class="vc-split">
+      <div class="vc-list">
+        <div class="vc-list-item">Badge</div>
+        <div class="vc-list-item active">Button</div>
+        <div class="vc-list-item">Card</div>
+        <div class="vc-list-item">Tag</div>
+      </div>
+
+      <div class="vc-detail">
+        <div class="detail-name">Button</div>
+        <div class="detail-preview">
+          <span class="preview-button primary">Click me</span>
+        </div>
+
+        <button class="vc-insert-btn" onclick="this.classList.toggle('is-armed'); this.textContent = this.classList.contains('is-armed') ? '✕  Cancel Placement' : '⊕  Insert into Page'">
+          ⊕  Insert into Page
+        </button>
+
+        <button class="vc-customize-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('.chevron').textContent = this.nextElementSibling.classList.contains('open') ? '▾' : '▸'">
+          <span class="chevron">▸</span> Customize props…
+        </button>
+        <div class="vc-props-section">
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option><option>secondary</option><option>outline</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <input class="prop-control" value="Click me">
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">disabled</span>
+            <select class="prop-control">
+              <option>false</option><option>true</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /variations -->
+
+
+<!-- ════════════════════════════════════════════════════════════
+     DESIGN NOTES
+     ════════════════════════════════════════════════════════════ -->
+<div style="margin-top: 48px; max-width: 820px;">
+  <div style="font-family: var(--font-display); font-size: 14px; font-weight: 600; margin-bottom: 8px;">Design Notes</div>
+  <table style="font-size: 11px; color: var(--text-mid); border-collapse: collapse; width: 100%;">
+    <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 6px 12px 6px 0; font-weight: 600; color: var(--text); white-space: nowrap; vertical-align: top;">Green dot removed</td>
+      <td style="padding: 6px 0;">All three variations drop the green "supports args" dot. Props existence is discoverable via the gear icon (A/B) or "Customize" disclosure (C) — no passive indicator needed.</td>
+    </tr>
+    <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 6px 12px 6px 0; font-weight: 600; color: var(--text); white-space: nowrap; vertical-align: top;">Props hidden by default</td>
+      <td style="padding: 6px 0;">None of the variations show Props/Args automatically. In A, clicking the gear icon opens an inline drawer. In B, the gear opens a popover. In C, "Customize props…" is a disclosure toggle. This keeps the primary flow — scan → click → insert — frictionless.</td>
+    </tr>
+    <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 6px 12px 6px 0; font-weight: 600; color: var(--text); white-space: nowrap; vertical-align: top;">Click → armed is now obvious</td>
+      <td style="padding: 6px 0;">
+        <strong>A:</strong> Teal border + background tint + "Armed ✓" badge text.<br>
+        <strong>B:</strong> Teal outer glow (box-shadow) + status text ("✓ Armed — click page to place") overlaid on the preview.<br>
+        <strong>C:</strong> Explicit "Insert into Page" button that toggles to orange "✕ Cancel Placement" — the strongest affordance.
+      </td>
+    </tr>
+    <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 6px 12px 6px 0; font-weight: 600; color: var(--text); white-space: nowrap; vertical-align: top;">Recommendation</td>
+      <td style="padding: 6px 0;">
+        <strong>Variation A</strong> is the best balance for a sidebar panel — compact enough to show many components, fast to scan,
+        and the inline props drawer is optional. A search bar at the top scales to larger projects. The "Armed ✓" pill provides
+        clear feedback without consuming space.
+      </td>
+    </tr>
+    <tr style="border-bottom: 1px solid var(--border);">
+      <td style="padding: 6px 12px 6px 0; font-weight: 600; color: var(--text); white-space: nowrap; vertical-align: top;">Shrinking previews<br>(iframe scale trick)</td>
+      <td style="padding: 6px 0;">
+        The thumbnails in Variation A use <code>transform: scale()</code> — the same technique that works with
+        <code>&lt;adaptive-iframe&gt;</code>. The component renders at its <em>natural</em> size inside a wider container,
+        then the whole container is scaled down visually. A clip wrapper hides the overflow:<br><br>
+        <pre style="font-family: var(--font-mono); font-size: 10px; background: var(--surface); border-radius: 4px; padding: 8px; white-space: pre-wrap; line-height: 1.6;">/* CSS */
+.thumb { width: 56px; height: 40px; overflow: hidden; position: relative; }
+adaptive-iframe {
+  position: absolute; top: 0; left: 0;
+  width: calc(56px / 0.35);   /* render at natural width */
+  transform: scale(0.35);
+  transform-origin: top left;
+  pointer-events: none;
+}</pre>
+        Scale factor = <code>thumb-width ÷ component-natural-width</code>. A 0.35 scale works well for sidebar
+        thumbnails; adjust per component type (buttons ~0.5, full cards ~0.3).
+        Note: <code>transform</code> does not affect layout — the parent container still needs an explicit fixed size.
+      </td>
+    </tr>
+  </table>
+</div>
+
+</body>
+</html>
