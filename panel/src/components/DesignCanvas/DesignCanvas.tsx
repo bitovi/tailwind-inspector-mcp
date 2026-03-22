@@ -2,7 +2,7 @@ import type { DesignCanvasProps } from './types';
 import { useFabricCanvas } from './useFabricCanvas';
 import { CanvasToolbar } from './CanvasToolbar';
 
-export function DesignCanvas({ onSubmit, onClose, backgroundImage }: DesignCanvasProps) {
+export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponent, onComponentPlaced }: DesignCanvasProps) {
   const {
     canvasElRef,
     containerRef,
@@ -19,7 +19,11 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage }: DesignCanva
     handleRedo,
     handleClear,
     handleSubmit,
-  } = useFabricCanvas({ onSubmit, backgroundImage });
+    ghostPos,
+    ghostSize,
+  } = useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onComponentPlaced });
+
+  const isArmed = !!armedComponent;
 
   return (
     <div className="flex flex-col h-full" data-testid="design-canvas">
@@ -41,10 +45,48 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage }: DesignCanva
 
       <div
         ref={containerRef}
-        className="bg-white cursor-crosshair overflow-hidden relative"
+        className={`bg-white overflow-hidden relative ${isArmed ? 'cursor-crosshair' : 'cursor-crosshair'}`}
         style={lockedHeight !== null ? { height: lockedHeight } : { flex: 1 }}
       >
         <canvas ref={canvasElRef} />
+        {/* Ghost HTML preview following cursor when a component is armed */}
+        {isArmed && ghostPos && armedComponent?.ghostHtml && (
+          <div
+            style={{
+              position: 'absolute',
+              left: ghostPos.x - (ghostSize?.width ?? 0) / 2,
+              top: ghostPos.y - (ghostSize?.height ?? 0) / 2,
+              pointerEvents: 'none',
+              opacity: 0.6,
+              outline: '2px dashed #00848B',
+              outlineOffset: 2,
+              zIndex: 10,
+            }}
+            dangerouslySetInnerHTML={{ __html: armedComponent.ghostHtml }}
+          />
+        )}
+        {/* Armed indicator banner */}
+        {isArmed && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(0, 132, 139, 0.9)',
+              color: '#fff',
+              fontSize: 11,
+              fontWeight: 600,
+              padding: '2px 10px',
+              borderRadius: 4,
+              pointerEvents: 'none',
+              zIndex: 20,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Click to place {armedComponent?.componentName}
+          </div>
+        )}
       </div>
     </div>
   );

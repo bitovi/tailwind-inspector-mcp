@@ -1,13 +1,17 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Canvas as FabricCanvas, PencilBrush, Rect, Circle, Line, Textbox, FabricImage, type TPointerEventInfo } from 'fabric';
-import type { DrawingTool } from './types';
+import type { DrawingTool, ArmedComponent } from './types';
+import type { CanvasComponent } from '../../../../shared/types';
+import { rasterizeHtml } from './rasterize';
 
 export interface UseFabricCanvasOptions {
-  onSubmit: (imageDataUrl: string, width: number, height: number) => void;
+  onSubmit: (imageDataUrl: string, width: number, height: number, canvasComponents?: CanvasComponent[]) => void;
   backgroundImage?: string;
+  armedComponent?: ArmedComponent | null;
+  onComponentPlaced?: () => void;
 }
 
-export function useFabricCanvas({ onSubmit, backgroundImage }: UseFabricCanvasOptions) {
+export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onComponentPlaced }: UseFabricCanvasOptions) {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,6 +27,9 @@ export function useFabricCanvas({ onSubmit, backgroundImage }: UseFabricCanvasOp
   const clipboardRef = useRef<any[]>([]);
   const pasteOffsetRef = useRef(0);
   const [lockedHeight, setLockedHeight] = useState<number | null>(null);
+  // Ghost position for armed-component preview overlay
+  const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
+  const [ghostSize, setGhostSize] = useState<{ width: number; height: number } | null>(null);
 
   // Initialize Fabric.js canvas
   useEffect(() => {
@@ -53,6 +60,48 @@ export function useFabricCanvas({ onSubmit, backgroundImage }: UseFabricCanvasOp
       canvas.dispose();
       fabricRef.current = null;
     };
+  }, []);
+
+  // Re-rasterize component images after resize/scale so they stay crisp
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const handleModified = async (opt: any) => {
+      const obj = opt.target;
+      const meta = obj?._componentMeta;
+      if (!meta?.ghostHtml || obj.type !== 'image') return;
+
+      const newWidth = Math.round((obj.width ?? 0) * (obj.scaleX ?? 1));
+      const newHeight = Math.round((obj.height ?? 0) * (obj.scaleY ?? 1));
+      if (newWidth < 4 || newHeight < 4) return;
+
+      try {
+        const { dataUrl, width: imgW, height: imgH } = await rasterizeHtml(
+          meta.ghostHtml,
+          newWidth,
+          newHeight,
+        );
+        const fresh = await FabricImage.fromURL(dataUrl);
+        fresh.set({
+          left: obj.left,
+          top: obj.top,
+          scaleX: newWidth / (fresh.width ?? imgW),
+          scaleY: newHeight / (fresh.height ?? imgH),
+        });
+        (fresh as any)._componentMeta = meta;
+        const idx = canvas.getObjects().indexOf(obj);
+        canvas.remove(obj);
+        canvas.insertAt(idx, fresh);
+        canvas.setActiveObject(fresh);
+        canvas.requestRenderAll();
+      } catch {
+        // Keep the scaled version on failure
+      }
+    };
+
+    canvas.on('object:modified', handleModified);
+    return () => { canvas.off('object:modified', handleModified); };
   }, []);
 
   // Load background image when provided (screenshot annotation flow)
@@ -340,7 +389,24 @@ export function useFabricCanvas({ onSubmit, backgroundImage }: UseFabricCanvasOp
     const canvas = fabricRef.current;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 1 });
-    onSubmit(dataUrl, canvas.getWidth(), canvas.getHeight());
+    // Extract component metadata from placed objects
+    const components: CanvasComponent[] = [];
+    for (const obj of canvas.getObjects()) {
+      const meta = (obj as any)._componentMeta;
+      if (meta) {
+        components.push({
+          componentName: meta.componentName,
+          componentPath: meta.componentPath,
+          storyId: meta.storyId,
+          args: meta.args,
+          x: Math.round(obj.left ?? 0),
+          y: Math.round(obj.top ?? 0),
+          width: Math.round((obj.width ?? 0) * (obj.scaleX ?? 1)),
+          height: Math.round((obj.height ?? 0) * (obj.scaleY ?? 1)),
+        });
+      }
+    }
+    onSubmit(dataUrl, canvas.getWidth(), canvas.getHeight(), components.length > 0 ? components : undefined);
   }, [onSubmit]);
 
   const handleDelete = useCallback(() => {
@@ -435,6 +501,129 @@ export function useFabricCanvas({ onSubmit, backgroundImage }: UseFabricCanvasOp
     return () => window.removeEventListener('keydown', handler);
   }, [handleDelete, handleUndo, handleRedo, handleCopy, handlePaste]);
 
+  // ── Component arm-and-place: ghost preview + click-to-drop ──
+
+  // Measure ghostHtml dimensions when armed
+  useEffect(() => {
+    if (!armedComponent?.ghostHtml) {
+      setGhostSize(null);
+      setGhostPos(null);
+      return;
+    }
+    const measurer = document.createElement('div');
+    measurer.style.cssText =
+      'position:fixed;left:-99999px;top:-99999px;visibility:hidden;pointer-events:none;';
+    measurer.innerHTML = armedComponent.ghostHtml;
+    document.body.appendChild(measurer);
+    setGhostSize({ width: measurer.offsetWidth || 100, height: measurer.offsetHeight || 40 });
+    document.body.removeChild(measurer);
+  }, [armedComponent]);
+
+  // Track mouse position over the canvas and handle click-to-drop
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !armedComponent) {
+      setGhostPos(null);
+      return;
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      setGhostPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    };
+
+    const handleMouseLeave = () => setGhostPos(null);
+    const handleMouseEnter = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      setGhostPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    };
+
+    const handleClick = async (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const canvas = fabricRef.current;
+      if (!canvas || !armedComponent.ghostHtml) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      try {
+        const { dataUrl, width, height } = await rasterizeHtml(armedComponent.ghostHtml);
+        const img = await FabricImage.fromURL(dataUrl);
+        img.set({
+          left: x - width / 2,
+          top: y - height / 2,
+          scaleX: 1,
+          scaleY: 1,
+        });
+        // Attach component metadata for extraction on submit
+        (img as any)._componentMeta = {
+          componentName: armedComponent.componentName,
+          componentPath: armedComponent.componentPath,
+          storyId: armedComponent.storyId,
+          args: armedComponent.args,
+          ghostHtml: armedComponent.ghostHtml,
+        };
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.requestRenderAll();
+        saveState();
+        setActiveTool('select');
+      } catch (err) {
+        console.error('[DesignCanvas] Failed to rasterize component:', err);
+        // Fallback: place a labeled placeholder rect
+        const w = ghostSize?.width ?? 100;
+        const h = ghostSize?.height ?? 40;
+        const placeholder = new Rect({
+          left: x - w / 2,
+          top: y - h / 2,
+          width: w,
+          height: h,
+          fill: 'rgba(0, 132, 139, 0.08)',
+          stroke: '#00848B',
+          strokeWidth: 2,
+          strokeDashArray: [4, 4],
+        });
+        (placeholder as any)._componentMeta = {
+          componentName: armedComponent.componentName,
+          componentPath: armedComponent.componentPath,
+          storyId: armedComponent.storyId,
+          args: armedComponent.args,
+          ghostHtml: armedComponent.ghostHtml,
+        };
+        const label = new Textbox(armedComponent.componentName, {
+          left: x - w / 2 + 4,
+          top: y - h / 2 + (h - 14) / 2,
+          fontSize: 12,
+          fill: '#00848B',
+          width: w - 8,
+          selectable: false,
+          evented: false,
+        });
+        canvas.add(placeholder, label);
+        canvas.setActiveObject(placeholder);
+        canvas.requestRenderAll();
+        saveState();
+        setActiveTool('select');
+      }
+
+      onComponentPlaced?.();
+    };
+
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('click', handleClick, { capture: true });
+
+    return () => {
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('mouseenter', handleMouseEnter);
+      container.removeEventListener('click', handleClick, { capture: true });
+    };
+  }, [armedComponent, ghostSize, saveState, onComponentPlaced]);
+
   return {
     canvasElRef,
     containerRef,
@@ -451,5 +640,7 @@ export function useFabricCanvas({ onSubmit, backgroundImage }: UseFabricCanvasOp
     handleRedo,
     handleClear,
     handleSubmit,
+    ghostPos,
+    ghostSize,
   };
 }

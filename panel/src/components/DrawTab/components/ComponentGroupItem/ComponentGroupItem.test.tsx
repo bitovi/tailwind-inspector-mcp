@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ComponentGroupItem } from './ComponentGroupItem';
 import type { ComponentGroup } from '../../types';
@@ -12,38 +12,35 @@ const group: ComponentGroup = {
   argTypes: {},
 };
 
-function renderItem(g: ComponentGroup = group) {
-  return render(<ComponentGroupItem group={g} />);
+function renderItem(g: ComponentGroup = group, isArmed = false) {
+  const onArm = vi.fn();
+  const onDisarm = vi.fn();
+  const result = render(
+    <ComponentGroupItem group={g} isArmed={isArmed} onArm={onArm} onDisarm={onDisarm} />
+  );
+  return { ...result, onArm, onDisarm };
 }
 
 test('renders group name', () => {
   renderItem();
-  expect(screen.getByRole('button', { name: /button/i })).toBeInTheDocument();
+  expect(screen.getByText('Button')).toBeInTheDocument();
 });
 
-test('starts expanded by default', () => {
+test('shows loading preview', () => {
   renderItem();
-  // Should show the loading preview immediately since expanded
   expect(screen.getByText('Loading preview…')).toBeInTheDocument();
 });
 
-describe('expand/collapse', () => {
-  test('clicking header collapses the content', () => {
-    renderItem();
-    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
+test('shows placement hint when armed', () => {
+  renderItem(group, true);
+  expect(screen.getByText('Click the page to place')).toBeInTheDocument();
+  expect(screen.queryByText('Button')).not.toBeInTheDocument();
+});
 
-    fireEvent.click(screen.getByRole('button', { name: /button/i }));
-    expect(screen.queryByText('Loading preview…')).not.toBeInTheDocument();
-  });
-
-  test('clicking again re-expands', () => {
-    renderItem();
-    const header = screen.getByRole('button', { name: /button/i });
-
-    fireEvent.click(header); // collapse
-    fireEvent.click(header); // re-expand
-    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
-  });
+test('shows group name when not armed', () => {
+  renderItem(group, false);
+  expect(screen.getByText('Button')).toBeInTheDocument();
+  expect(screen.queryByText('Click the page to place')).not.toBeInTheDocument();
 });
 
 test('creates a hidden probe iframe for the first story', () => {

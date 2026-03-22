@@ -9,14 +9,14 @@ import '../../../../../../overlay/src/adaptive-iframe';
 interface ComponentGroupItemProps {
   group: ComponentGroup;
   isArmed: boolean;
-  onArm: (ghostHtml: string) => void;
+  onArm: (ghostHtml: string, args?: Record<string, unknown>) => void;
   onDisarm: () => void;
 }
 
 export function ComponentGroupItem({ group, isArmed, onArm, onDisarm }: ComponentGroupItemProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
   const { bestStory, probing, argTypes, defaultArgs } = useStoryProbe(group.stories);
   const [args, setArgs] = useState<Record<string, unknown>>({});
+  const [showProps, setShowProps] = useState(false);
   const ghostRef = useRef<HTMLElement>(null);
   const initialLoadDone = useRef(false);
 
@@ -27,18 +27,13 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm }: Componen
     }
   }, [probing, defaultArgs]);
 
-  // Initial load: set the story URL once (Storybook will use its own default args).
-  // Also reset when collapsed so re-expanding a new <adaptive-iframe> gets its src.
+  // Set the story URL once when ready
   useEffect(() => {
-    if (!isExpanded) {
-      initialLoadDone.current = false;
-      return;
-    }
     if (!ghostRef.current || !bestStory || initialLoadDone.current) return;
     initialLoadDone.current = true;
     const initialUrl = buildArgsUrl(bestStory.id, {});
     ghostRef.current.setAttribute('src', initialUrl);
-  }, [bestStory, isExpanded]);
+  }, [bestStory]);
 
   // Subsequent args changes: send updateArgs to the existing iframe
   const handleArgsChange = useCallback((newArgs: Record<string, unknown>) => {
@@ -50,7 +45,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm }: Componen
     }
   }, [bestStory]);
 
-  // Click to arm/disarm: extract ghost HTML from the adaptive-iframe and notify parent
+  // Click card to arm/disarm
   const handleArmClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation(); // prevent DrawTab's document click listener from immediately disarming
     if (isArmed) {
@@ -59,60 +54,66 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm }: Componen
     }
     const el = ghostRef.current as unknown as AdaptiveIframe;
     const ghostHtml = el.getComponentHtml?.() ?? '';
-    onArm(ghostHtml);
-  }, [isArmed, onArm, onDisarm]);
+    onArm(ghostHtml, args);
+  }, [isArmed, onArm, onDisarm, args]);
 
   const hasArgs = Object.keys(argTypes).length > 0;
 
   return (
-    <li>
-      <button
-        className="w-full flex items-center justify-between px-2 py-1 rounded text-[11px] text-bv-text hover:bg-bv-surface-hi transition-colors"
-        onClick={() => setIsExpanded(prev => !prev)}
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="text-bv-muted text-[9px]">{isExpanded ? '▼' : '▶'}</span>
-          {group.name}
-        </span>
-        {hasArgs && (
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"
-            title="Supports args"
-          />
+    <li
+      className={`group rounded border overflow-hidden cursor-pointer transition-[border-color,box-shadow] ${
+        isArmed
+          ? 'border-bv-teal shadow-[0_0_0_2px_var(--color-bv-teal),0_0_12px_rgba(0,132,139,0.2)]'
+          : 'border-bv-border hover:border-[#555]'
+      }`}
+      onClick={handleArmClick}
+    >
+      {/* Preview area */}
+      <div className={`flex items-center justify-center min-h-14 overflow-hidden ${isArmed ? 'bg-[rgba(0,132,139,0.06)]' : 'bg-bv-surface'}`}>
+        {probing && (
+          <span className="text-[10px] text-bv-muted">Loading preview…</span>
         )}
-      </button>
-      {isExpanded && (
-        <div className="ml-2 mt-1 flex flex-col gap-2">
-          {probing && (
-            <div className="text-[10px] text-bv-muted px-1">Loading preview…</div>
-          )}
-          {!probing && bestStory && (
-            <>
-              <div
-                className={`rounded border overflow-hidden cursor-pointer transition-colors ${isArmed ? 'border-bv-teal ring-1 ring-bv-teal' : 'border-bv-border hover:border-bv-teal'}`}
-                onClick={handleArmClick}
-                title={isArmed ? 'Click to disarm' : 'Click to arm for placement'}
-              >
-                {/* @ts-expect-error — custom element not in JSX.IntrinsicElements */}
-                <adaptive-iframe ref={ghostRef} style={{ pointerEvents: 'none' }} />
-              </div>
-              {hasArgs && (
-                <div className="border-t border-bv-border pt-1.5">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted mb-1 px-1">
-                    Props
-                  </div>
-                  <ArgsForm
-                    argTypes={argTypes}
-                    args={args}
-                    onArgsChange={handleArgsChange}
-                  />
-                </div>
-              )}
-            </>
-          )}
-          {!probing && !bestStory && (
-            <div className="text-[10px] text-bv-muted px-1">No stories found.</div>
-          )}
+        {!probing && bestStory && (
+          // @ts-expect-error — custom element not in JSX.IntrinsicElements
+          <adaptive-iframe ref={ghostRef} style={{ pointerEvents: 'none' }} />
+        )}
+        {!probing && !bestStory && (
+          <span className="text-[10px] text-bv-muted">No stories found.</span>
+        )}
+      </div>
+
+      {/* Footer: name ↔ placement hint + optional gear */}
+      <div className="flex items-center justify-between px-2.5 py-1.5 border-t border-bv-border bg-bv-bg">
+        {isArmed ? (
+          <span className="text-[11px] font-medium text-bv-teal">Click the page to place</span>
+        ) : (
+          <span className="text-[11px] font-semibold text-bv-text">{group.name}</span>
+        )}
+        {hasArgs && (
+          <button
+            className={`w-5.5 h-5.5 rounded flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 ${
+              showProps ? 'opacity-100 bg-bv-surface-hi text-bv-text' : 'text-bv-muted hover:bg-bv-surface-hi hover:text-bv-text'
+            }`}
+            title="Customize props"
+            onClick={(e) => { e.stopPropagation(); setShowProps(prev => !prev); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Props drawer — hidden until gear is clicked */}
+      {showProps && hasArgs && (
+        <div className="px-2.5 py-2 border-t border-bv-border bg-bv-surface" onClick={(e) => e.stopPropagation()}>
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted mb-1.5">Props</div>
+          <ArgsForm
+            argTypes={argTypes}
+            args={args}
+            onArgsChange={handleArgsChange}
+          />
         </div>
       )}
     </li>

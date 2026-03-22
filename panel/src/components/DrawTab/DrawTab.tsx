@@ -7,13 +7,15 @@ export function DrawTab() {
   const { groups, loading, error } = useComponentGroups();
   const [armedGroup, setArmedGroup] = useState<string | null>(null);
 
-  const arm = useCallback((group: ComponentGroup, ghostHtml: string) => {
+  const arm = useCallback((group: ComponentGroup, ghostHtml: string, args?: Record<string, unknown>) => {
     setArmedGroup(group.name);
     sendTo('overlay', {
       type: 'COMPONENT_ARM',
       componentName: group.name,
       storyId: group.stories[0]?.id ?? '',
       ghostHtml,
+      componentPath: group.componentPath,
+      args,
     });
   }, []);
 
@@ -44,9 +46,6 @@ export function DrawTab() {
   return (
     <div className="p-3 flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
-        <div className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted">
-          Components
-        </div>
         {loading && (
           <div className="text-[11px] text-bv-muted">Loading components…</div>
         )}
@@ -60,13 +59,13 @@ export function DrawTab() {
           <div className="text-[11px] text-bv-muted">No stories found.</div>
         )}
         {!loading && !error && groups.length > 0 && (
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-2">
             {groups.map(group => (
               <ComponentGroupItem
                 key={group.name}
                 group={group}
                 isArmed={armedGroup === group.name}
-                onArm={(ghostHtml) => arm(group, ghostHtml)}
+                onArm={(ghostHtml: string, args?: Record<string, unknown>) => arm(group, ghostHtml, args)}
                 onDisarm={disarm}
               />
             ))}
@@ -129,6 +128,7 @@ function groupByComponent(
     stories,
     // Prefer server-loaded argTypes (from the actual story file) over index.json (which has none)
     argTypes: serverArgTypes[name] ?? mergeArgTypes(stories),
+    componentPath: stories[0]?.componentPath,
   }));
 }
 

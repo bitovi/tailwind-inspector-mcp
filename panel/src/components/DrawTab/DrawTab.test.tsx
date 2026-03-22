@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { DrawTab } from './DrawTab';
 
 const mockFetch = vi.fn();
@@ -84,48 +84,24 @@ test('shows "no stories found" when entries is empty', async () => {
   expect(await screen.findByText('No stories found.')).toBeInTheDocument();
 });
 
-describe('expand/collapse', () => {
-  test('components start expanded by default', async () => {
+describe('component cards', () => {
+  test('components show loading preview by default', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BUTTON_SECONDARY.id]: BUTTON_SECONDARY },
     });
     renderDrawTab();
-    await screen.findByRole('button', { name: /button/i });
+    await screen.findByText('Button');
 
-    // Groups are expanded by default — loading preview should be visible
     expect(screen.getByText('Loading preview…')).toBeInTheDocument();
   });
 
-  test('clicking a component collapses it', async () => {
-    setupFetch({
-      entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY },
-    });
-    renderDrawTab();
-    const buttonRow = await screen.findByRole('button', { name: /button/i });
-
-    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
-    fireEvent.click(buttonRow);
-    expect(screen.queryByText('Loading preview…')).not.toBeInTheDocument();
-  });
-
-  test('clicking a collapsed component re-expands it', async () => {
-    setupFetch({ entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY } });
-    renderDrawTab();
-    const buttonRow = await screen.findByRole('button', { name: /button/i });
-
-    fireEvent.click(buttonRow); // collapse
-    fireEvent.click(buttonRow); // expand
-    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
-  });
-
-  test('multiple components can be expanded independently', async () => {
+  test('multiple components each show loading preview', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BADGE_BLUE.id]: BADGE_BLUE },
     });
     renderDrawTab();
-    await screen.findByRole('button', { name: /button/i });
+    await screen.findByText('Button');
 
-    // Both should be expanded by default showing loading previews
     const previews = screen.getAllByText('Loading preview…');
     expect(previews.length).toBe(2);
   });
@@ -142,9 +118,8 @@ describe('probe iframe', () => {
       },
     });
     renderDrawTab();
-    await screen.findByRole('button', { name: /button/i });
+    await screen.findByText('Button');
 
-    // Probe creates a hidden iframe in the DOM for the first story
     const iframe = document.querySelector('iframe[src*="components-button--primary"]');
     expect(iframe).toBeTruthy();
   });
@@ -155,9 +130,8 @@ describe('probe iframe', () => {
       argTypes: {},
     });
     renderDrawTab();
-    await screen.findByRole('button', { name: /button/i });
+    await screen.findByText('Button');
 
-    // While probing (iframe hasn't responded yet), show loading
     expect(screen.getByText('Loading preview…')).toBeInTheDocument();
   });
 });

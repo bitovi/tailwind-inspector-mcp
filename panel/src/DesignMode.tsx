@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { connect, onMessage, onConnect, send } from './ws';
 import { DesignCanvas } from './components/DesignCanvas';
+import type { ArmedComponent } from './components/DesignCanvas';
+import type { CanvasComponent } from '../../shared/types';
 
 interface ElementContext {
   componentName: string;
@@ -17,6 +19,7 @@ interface ElementContext {
 
 export function DesignMode() {
   const [elementContext, setElementContext] = useState<ElementContext | null>(null);
+  const [armedComponent, setArmedComponent] = useState<ArmedComponent | null>(null);
 
   useEffect(() => {
     onConnect(() => {
@@ -33,13 +36,23 @@ export function DesignMode() {
           insertMode: msg.insertMode ?? 'after',
           screenshot: msg.screenshot,
         });
+      } else if (msg.type === 'COMPONENT_ARM') {
+        setArmedComponent({
+          componentName: msg.componentName,
+          storyId: msg.storyId,
+          ghostHtml: msg.ghostHtml,
+          componentPath: msg.componentPath,
+          args: msg.args,
+        });
+      } else if (msg.type === 'COMPONENT_DISARM' || msg.type === 'COMPONENT_DISARMED') {
+        setArmedComponent(null);
       }
     });
 
     connect();
   }, []);
 
-  const handleSubmit = (imageDataUrl: string, width: number, height: number) => {
+  const handleSubmit = useCallback((imageDataUrl: string, width: number, height: number, canvasComponents?: CanvasComponent[]) => {
     send({
       type: 'DESIGN_SUBMIT',
       image: imageDataUrl,
@@ -49,18 +62,31 @@ export function DesignMode() {
       insertMode: elementContext?.insertMode ?? 'after',
       canvasWidth: width,
       canvasHeight: height,
+      canvasComponents,
     });
-    // Canvas stays visible — overlay will replace iframe with static preview
-  };
+  }, [elementContext]);
 
   const handleClose = () => {
     send({ type: 'DESIGN_CLOSE' });
   };
 
+  const handleComponentPlaced = useCallback(() => {
+    setArmedComponent(null);
+    // Notify panel + overlay that the armed state should be cleared
+    send({ type: 'COMPONENT_DISARMED', to: 'panel' });
+    send({ type: 'COMPONENT_DISARM', to: 'overlay' });
+  }, []);
+
   return (
     <div className="h-screen w-screen flex flex-col">
       <div className="flex-1 overflow-hidden">
-        <DesignCanvas onSubmit={handleSubmit} onClose={handleClose} backgroundImage={elementContext?.screenshot} />
+        <DesignCanvas
+          onSubmit={handleSubmit}
+          onClose={handleClose}
+          backgroundImage={elementContext?.screenshot}
+          armedComponent={armedComponent}
+          onComponentPlaced={handleComponentPlaced}
+        />
       </div>
     </div>
   );

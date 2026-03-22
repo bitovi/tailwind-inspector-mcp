@@ -50,6 +50,10 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
         // Route messages with a "to" field to all clients of that role
         if (msg.to) {
           broadcastTo(msg.to, msg, ws);
+          // Dual-route component arm/disarm to design iframe too
+          if ((msg.type === "COMPONENT_ARM" || msg.type === "COMPONENT_DISARM") && msg.to === "overlay") {
+            broadcastTo("design", msg, ws);
+          }
           return;
         }
 
@@ -103,6 +107,7 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
             insertMode: msg.insertMode,
             canvasWidth: msg.canvasWidth,
             canvasHeight: msg.canvasHeight,
+            canvasComponents: msg.canvasComponents,
           };
           addPatch(patch);
           broadcastPatchUpdate();

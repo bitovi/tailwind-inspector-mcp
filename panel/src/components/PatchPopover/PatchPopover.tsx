@@ -3,6 +3,36 @@ import type { Patch, PatchSummary } from "../../../../shared/types";
 
 type PatchItem = Patch | PatchSummary;
 
+function describeComponentDrop(item: PatchItem): string {
+	const droppedName = item.component?.name ?? "component";
+	const dropped = `<${droppedName}>`;
+	const insertMode = "insertMode" in item ? item.insertMode : undefined;
+	// Priority: ghost chain target > React parent component > CSS selector fallback
+	const componentTargetName =
+		("targetComponentName" in item && item.targetComponentName) ||
+		("parentComponent" in item && item.parentComponent?.name) ||
+		null;
+	const rawTargetName = componentTargetName || (item.elementKey || null);
+	// Wrap component names with <>, but not CSS selector fallbacks
+	const wrappedTargetName = componentTargetName ? `<${rawTargetName}>` : rawTargetName;
+	// Prefix with "new " when the target itself is a pending (ghost) drop
+	const isNewTarget = "targetPatchId" in item && !!item.targetPatchId;
+	const targetName = wrappedTargetName && isNewTarget ? `new ${wrappedTargetName}` : wrappedTargetName;
+
+	switch (insertMode) {
+		case "after":
+			return targetName ? `Appended ${dropped} after ${targetName}` : `Appended ${dropped}`;
+		case "before":
+			return targetName ? `Prepended ${dropped} before ${targetName}` : `Prepended ${dropped}`;
+		case "last-child":
+			return targetName ? `Inserted ${dropped} bottom of ${targetName}` : `Inserted ${dropped}`;
+		case "first-child":
+			return targetName ? `Inserted ${dropped} top of ${targetName}` : `Inserted ${dropped}`;
+		default:
+			return targetName ? `Inserted ${dropped} in ${targetName}` : `Inserted ${dropped}`;
+	}
+}
+
 interface PatchPopoverProps {
 	label: string;
 	count: number;
@@ -135,8 +165,7 @@ export function PatchPopover({
 											)}
 											{isComponentDrop ? (
 												<div className="text-[11px] text-bv-text truncate">
-													<span className="mr-1">📦</span>
-													Drop {item.component?.name ?? 'component'}
+												{describeComponentDrop(item)}
 												</div>
 											) : isDesign ? (
 												<div className="text-[11px] text-bv-text">

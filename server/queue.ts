@@ -19,6 +19,10 @@ function toSummary(p: Patch): PatchSummary {
     errorMessage: p.errorMessage,
     message: p.message,
     image: p.image,
+    insertMode: p.insertMode,
+    parentComponent: p.parentComponent,
+    targetComponentName: p.targetComponentName,
+    targetPatchId: p.targetPatchId,
   };
 }
 

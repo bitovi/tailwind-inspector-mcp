@@ -3,6 +3,19 @@
 
 export type ContainerName = 'modal' | 'popover' | 'sidebar' | 'popup';
 
+/** A component placed on the Fabric.js design canvas */
+export interface CanvasComponent {
+  componentName: string;
+  componentPath?: string;       // e.g. './src/components/Button.tsx'
+  storyId?: string;
+  args?: Record<string, unknown>;
+  // Position/size on the canvas (px, relative to canvas top-left)
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export type PatchKind = 'class-change' | 'message' | 'design' | 'component-drop';
 
 export type PatchStatus = 'staged' | 'committed' | 'implementing' | 'implemented' | 'error';
@@ -30,9 +43,15 @@ export interface Patch {
   insertMode?: string;       // before | after | first-child | last-child
   canvasWidth?: number;
   canvasHeight?: number;
+  canvasComponents?: CanvasComponent[]; // Components placed on the design canvas
   // Component-drop fields (used when kind === 'component-drop'):
-  ghostHtml?: string;        // HTML of the dropped component
+  ghostHtml?: string;        // HTML of the dropped component (overlay preview only — stripped from MCP response)
   componentStoryId?: string; // Storybook story ID
+  componentPath?: string;    // Source file of the component, e.g. './src/components/Button.tsx'
+  componentArgs?: Record<string, unknown>; // Props the user configured before dropping
+  parentComponent?: { name: string }; // React component that contains the drop target
+  targetPatchId?: string;    // If target is a ghost from an earlier drop, references that patch
+  targetComponentName?: string; // Name of the ghost component being referenced
   // Commit reference:
   commitId?: string;         // Set when committed into a Commit
 }
@@ -60,6 +79,12 @@ export interface PatchSummary {
   errorMessage?: string;
   message?: string;
   image?: string;
+  canvasComponents?: CanvasComponent[];
+  // Component-drop display fields:
+  insertMode?: string;
+  parentComponent?: { name: string };
+  targetComponentName?: string;
+  targetPatchId?: string;
 }
 
 export interface CommitSummary {
@@ -273,6 +298,7 @@ export interface DesignSubmitMessage {
   insertMode: InsertMode;
   canvasWidth: number;
   canvasHeight: number;
+  canvasComponents?: CanvasComponent[];
 }
 
 /** Design iframe → Overlay: close the canvas wrapper */
@@ -296,6 +322,8 @@ export interface ComponentArmMessage {
   componentName: string;
   storyId: string;
   ghostHtml: string;
+  componentPath?: string;  // Source file path from Storybook index, e.g. './src/components/Button.tsx'
+  args?: Record<string, unknown>; // Current prop values from ArgsForm
 }
 
 /** Panel → Overlay: user cancelled the armed state (panel click or escape) */

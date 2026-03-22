@@ -28,16 +28,55 @@ const KEEPALIVE_INTERVAL_MS = 60_000;
 // Prompt builders for implement_next_change
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// JSX builder: converts componentArgs to a JSX string like <Button variant="primary">Click me</Button>
+// ---------------------------------------------------------------------------
+
+function buildJsx(componentName: string, args?: Record<string, unknown>): string {
+  if (!args || Object.keys(args).length === 0) return `<${componentName} />`;
+
+  const { children, ...rest } = args;
+  const props = Object.entries(rest)
+    .map(([key, value]) => {
+      if (typeof value === 'string') return `${key}="${value}"`;
+      if (typeof value === 'boolean') return value ? key : `${key}={false}`;
+      return `${key}={${JSON.stringify(value)}}`;
+    })
+    .join(' ');
+
+  const propsStr = props ? ` ${props}` : '';
+
+  if (children != null && children !== '') {
+    const childStr = typeof children === 'string' ? children : `{${JSON.stringify(children)}}`;
+    return `<${componentName}${propsStr}>${childStr}</${componentName}>`;
+  }
+  return `<${componentName}${propsStr} />`;
+}
+
 function buildCommitInstructions(commit: Commit, remainingCount: number): string {
   const classChanges = commit.patches.filter(p => p.kind === 'class-change');
   const messages = commit.patches.filter(p => p.kind === 'message');
   const designs = commit.patches.filter(p => p.kind === 'design');
+  const componentDrops = commit.patches.filter(p => p.kind === 'component-drop');
   const moreText = remainingCount > 0
     ? `${remainingCount} more commit${remainingCount === 1 ? '' : 's'} waiting in the queue after this one.`
     : 'This is the last commit in the queue. After implementing it, call `implement_next_change` again to wait for future changes.';
 
-  let patchList = '';
+  // Build a map from patch ID → step number for ghost-chain references
+  const patchStepMap = new Map<string, number>();
   let stepNum = 1;
+  for (const patch of commit.patches) {
+    patchStepMap.set(patch.id, stepNum);
+    stepNum++;
+  }
+
+  let patchList = '';
+  const hasMultipleDrops = componentDrops.length > 1;
+  if (hasMultipleDrops) {
+    patchList += `> ⚠️ **Apply component insertions IN ORDER** — later drops may reference components added by earlier steps.\n\n`;
+  }
+
+  stepNum = 1;
   for (const patch of commit.patches) {
     if (patch.kind === 'class-change') {
       const comp = patch.component?.name ?? 'unknown component';
@@ -66,6 +105,50 @@ ${patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
 - **Canvas size:** ${patch.canvasWidth ?? '?'}×${patch.canvasHeight ?? '?'}px
 - The design image is included as a separate image content part below — refer to it for the visual intent.
 ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
+${patch.canvasComponents && patch.canvasComponents.length > 0 ? `
+**Components to place (positions relative to canvas top-left):**
+
+| # | Component | Import | Props | Position | Size |
+|---|-----------|--------|-------|----------|------|
+${patch.canvasComponents.map((c: any, i: number) => {
+  const importPath = c.componentPath ? c.componentPath.replace(/\.tsx?$/, '') : '—';
+  const props = c.args ? Object.entries(c.args).map(([k, v]) => typeof v === 'string' ? `${k}="${v}"` : `${k}={${JSON.stringify(v)}}`).join(' ') : '—';
+  return `| ${i + 1} | \`${c.componentName}\` | \`${importPath}\` | ${props} | (${c.x}, ${c.y}) | ${c.width}×${c.height}px |`;
+}).join('\n')}
+
+⚠️ Import and render these React components at the indicated positions. Use the design image as a visual reference for the overall layout. Do NOT paste rendered HTML.
+` : ''}
+`;
+    } else if (patch.kind === 'component-drop') {
+      const comp = patch.component?.name ?? 'Component';
+      const importPath = patch.componentPath
+        ? patch.componentPath.replace(/\.tsx?$/, '')
+        : null;
+      const jsx = buildJsx(comp, patch.componentArgs);
+      const parentComp = patch.parentComponent?.name;
+      const insertMode = patch.insertMode ?? 'after';
+      const context = patch.context ?? '';
+
+      // Determine insertion target description
+      let targetDesc: string;
+      if (patch.targetPatchId && patch.targetComponentName) {
+        const refStep = patchStepMap.get(patch.targetPatchId);
+        targetDesc = refStep
+          ? `the \`<${patch.targetComponentName} />\` you added in **step ${refStep}**`
+          : `the \`<${patch.targetComponentName} />\` component (from an earlier drop)`;
+      } else {
+        const tag = patch.target?.tag ?? 'element';
+        const classes = patch.target?.classes ? ` class="${patch.target.classes}"` : '';
+        targetDesc = `\`<${tag}${classes}>\``;
+      }
+
+      patchList += `### ${stepNum}. Component drop \`${patch.id}\`
+- **Insert:** \`${jsx}\` **${insertMode}** ${targetDesc}
+${importPath ? `- **Import:** \`import { ${comp} } from '${importPath}'\`` : `- **Component:** \`${comp}\` (resolve import path manually)`}
+${parentComp ? `\n- **Parent component:** \`${parentComp}\` — edit this component's source file` : ''}
+${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
+⚠️ Do NOT paste rendered HTML. Import and render the React component with the props shown above.
+
 `;
     }
     stepNum++;
@@ -76,12 +159,29 @@ ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
   if (classChanges.length) summaryParts.push(`${classChanges.length} class change${classChanges.length === 1 ? '' : 's'}`);
   if (messages.length) summaryParts.push(`${messages.length} message${messages.length === 1 ? '' : 's'}`);
   if (designs.length) summaryParts.push(`${designs.length} design${designs.length === 1 ? '' : 's'}`);
+  if (componentDrops.length) summaryParts.push(`${componentDrops.length} component drop${componentDrops.length === 1 ? '' : 's'}`);
 
   const resultsPart = classChanges.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
-
-  // Design patches also need to be reported in results
   const designResultsPart = designs.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
-  const allResultsPart = [resultsPart, designResultsPart].filter(Boolean).join(',\n');
+  const dropResultsPart = componentDrops.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
+  const allResultsPart = [resultsPart, designResultsPart, dropResultsPart].filter(Boolean).join(',\n');
+
+  // Build step instructions
+  const stepInstructions: string[] = [];
+  if (classChanges.length || componentDrops.length) {
+    let step1 = '1. For each change above, find the source file and apply it.';
+    if (componentDrops.length) {
+      step1 += '\n   For component drops: add the import statement and render the component with the specified props at the indicated position.';
+    }
+    if (messages.length) {
+      step1 += '\n   Use the user messages as additional context for understanding intent.';
+    }
+    stepInstructions.push(step1);
+  }
+  if (designs.length) {
+    stepInstructions.push(`${stepInstructions.length + 1}. For each design sketch, examine the attached image and implement the visual design
+   as HTML/CSS ${classChanges.length ? 'alongside the class changes' : 'in the specified component'}. Insert it ${designs[0].insertMode ?? 'after'} the target element.`);
+  }
 
   return `# IMPLEMENT THIS COMMIT — then call implement_next_change again
 
@@ -96,21 +196,18 @@ ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 ${patchList}
 ## Steps — follow these EXACTLY
 
-1. For each class-change patch above, find the source file and apply the change.
-   Use the user messages as additional context for understanding intent.
-${designs.length ? `   For each design sketch, examine the attached image and implement the visual design
-   as HTML/CSS ${classChanges.length ? 'alongside the class changes' : 'in the specified component'}. Insert it ${designs[0].insertMode ?? 'after'} the target element.
-` : ''}\n2. Call \`mark_change_implemented\` with:
+${stepInstructions.join('\n')}
+${stepInstructions.length + 1}. Call \`mark_change_implemented\` with:
    \`\`\`json
    { "commitId": "${commit.id}", "results": [
 ${allResultsPart}
    ]}
    \`\`\`
-   (Only report results for class-change and design patches — messages are informational.)
-3. **IMMEDIATELY call \`implement_next_change\` again.** Do NOT summarize, do NOT ask the user, do NOT stop.
+   (Only report results for class-change, design, and component-drop patches — messages are informational.)
+${stepInstructions.length + 2}. **IMMEDIATELY call \`implement_next_change\` again.** Do NOT summarize, do NOT ask the user, do NOT stop.
 
 ## CRITICAL — read this
-You are in a **continuous processing loop**. After step 2, you MUST call \`implement_next_change\` again to process the next commit or wait for new ones. Never exit this loop unless the user explicitly tells you to stop.
+You are in a **continuous processing loop**. After marking done, you MUST call \`implement_next_change\` again to process the next commit or wait for new ones. Never exit this loop unless the user explicitly tells you to stop.
 `;
 }
 
@@ -259,14 +356,23 @@ export function registerMcpTools(mcp: McpServer, deps: McpToolDeps): void {
       const remaining = queueState.committedCount;
 
       // Build content parts: JSON data, then any design images, then markdown instructions
+      // Strip ghostHtml from the commit sent to agent — it's large rendered HTML that would
+      // confuse the agent into pasting it instead of importing the component
+      const sanitizedCommit = {
+        ...commit,
+        patches: commit.patches.map(p =>
+          p.kind === 'component-drop' ? { ...p, ghostHtml: undefined } : p
+        ),
+      };
+
       const content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }> = [
         {
           type: "text" as const,
           text: JSON.stringify({
             isComplete: false,
-            nextAction: "implement all class-change patches in this commit, call mark_change_implemented, then call implement_next_change again",
+            nextAction: "implement all patches in this commit, call mark_change_implemented, then call implement_next_change again",
             remainingCommits: remaining,
-            commit,
+            commit: sanitizedCommit,
           }, null, 2),
         },
       ];

@@ -4,6 +4,8 @@
 // Shows a floating cursor label and teal drop indicator while armed.
 
 import { send, sendTo } from './ws';
+import { buildContext } from './context';
+import { getFiber, findComponentBoundary } from './fiber';
 import type { Patch } from '../../shared/types';
 
 type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
@@ -14,6 +16,8 @@ let active = false;
 let componentName = '';
 let storyId = '';
 let ghostHtml = '';
+let componentPath = '';
+let componentArgs: Record<string, unknown> = {};
 
 let cursorLabelEl: HTMLElement | null = null;
 let indicatorEl: HTMLElement | null = null;
@@ -28,7 +32,7 @@ const TEAL = '#00848B';
 // ── Public API ───────────────────────────────────────────────────────────
 
 export function armInsert(
-  msg: { componentName: string; storyId: string; ghostHtml: string },
+  msg: { componentName: string; storyId: string; ghostHtml: string; componentPath?: string; args?: Record<string, unknown> },
   shadowHost: HTMLElement,
 ): void {
   if (active) cleanup();
@@ -36,6 +40,8 @@ export function armInsert(
   componentName = msg.componentName;
   storyId = msg.storyId;
   ghostHtml = msg.ghostHtml;
+  componentPath = msg.componentPath ?? '';
+  componentArgs = msg.args ?? {};
   overlayHost = shadowHost;
 
   // Crosshair cursor on the entire page
@@ -319,6 +325,31 @@ function onClick(e: MouseEvent): void {
   // Build a CSS selector for the target element
   const targetSelector = buildSelector(currentTarget);
 
+  // Detect if the drop target is a ghost from an earlier component-drop
+  const isGhostTarget = !!currentTarget.dataset.twDroppedComponent;
+  const ghostTargetPatchId = currentTarget.dataset.twDroppedPatchId;
+  const ghostTargetName = currentTarget.dataset.twDroppedComponent;
+
+  // Also detect when the drop target is a child element INSIDE a ghost
+  const ghostAncestor = !isGhostTarget ? findGhostAncestor(currentTarget) : null;
+  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
+  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
+
+  // Build rich context HTML (same as class-change and design patches)
+  const context = effectiveGhostName
+    ? `Place "${componentName}" ${currentPosition} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
+    : buildContext(currentTarget, '', '', new Map());
+
+  // Resolve the parent React component via fiber walking
+  let parentComponent: { name: string } | undefined;
+  const fiber = getFiber(currentTarget);
+  if (fiber) {
+    const boundary = findComponentBoundary(fiber);
+    if (boundary) {
+      parentComponent = { name: boundary.componentName };
+    }
+  }
+
   // Stage a component-drop patch
   const patch: Patch = {
     id: crypto.randomUUID(),
@@ -330,16 +361,25 @@ function onClick(e: MouseEvent): void {
     property: 'component-drop',
     timestamp: new Date().toISOString(),
     component: { name: componentName },
-    target: {
-      tag: currentTarget.tagName.toLowerCase(),
-      classes: currentTarget.className,
-      innerText: currentTarget.innerText.slice(0, 100),
-    },
+    target: isGhostTarget
+      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
+      : {
+          tag: currentTarget.tagName.toLowerCase(),
+          classes: currentTarget.className,
+          innerText: currentTarget.innerText.slice(0, 100),
+        },
     ghostHtml,
     componentStoryId: storyId,
+    componentPath: componentPath || undefined,
+    componentArgs: Object.keys(componentArgs).length > 0 ? componentArgs : undefined,
+    parentComponent,
     insertMode: currentPosition,
-    context: `Place "${componentName}" ${currentPosition} <${currentTarget.tagName.toLowerCase()}> element`,
+    context,
+    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
   };
+
+  // Stamp the ghost with the patch ID so subsequent drops can reference it
+  inserted.dataset.twDroppedPatchId = patch.id;
 
   send({ type: 'COMPONENT_DROPPED', patch });
   sendTo('panel', { type: 'COMPONENT_DISARMED' });
@@ -355,6 +395,15 @@ function onKeyDown(e: KeyboardEvent): void {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+function findGhostAncestor(el: HTMLElement): HTMLElement | null {
+  let current: HTMLElement | null = el.parentElement;
+  while (current && current !== document.body) {
+    if (current.dataset.twDroppedComponent) return current;
+    current = current.parentElement;
+  }
+  return null;
+}
 
 function buildSelector(el: HTMLElement): string {
   const tag = el.tagName.toLowerCase();

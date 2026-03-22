@@ -11,10 +11,12 @@ export interface StoryEntry {
   name: string;   // e.g. "Primary"
   args?: Record<string, unknown>;
   argTypes?: Record<string, ArgType>;
+  componentPath?: string; // e.g. "./src/components/Button.tsx" from Storybook index
 }
 
 export interface ComponentGroup {
   name: string;     // e.g. "Button"
   stories: StoryEntry[];
   argTypes: Record<string, ArgType>;
+  componentPath?: string; // resolved from first story's componentPath
 }

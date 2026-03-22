@@ -72,7 +72,7 @@ describe('DesignCanvas', () => {
     const onSubmit = vi.fn();
     render(<DesignCanvas onSubmit={onSubmit} />);
     await user.click(screen.getByText('✓ Add to Drafts'));
-    expect(onSubmit).toHaveBeenCalledWith('data:image/png;base64,mockdata', 400, 300);
+    expect(onSubmit).toHaveBeenCalledWith('data:image/png;base64,mockdata', 400, 300, undefined);
   });
 
   it('renders close button when onClose is provided', () => {
