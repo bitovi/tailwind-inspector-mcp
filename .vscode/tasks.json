@@ -30,8 +30,11 @@
     {
       "label": "Server (port 3333)",
       "type": "shell",
-      "command": "STORYBOOK_URL=http://localhost:6007 npx tsx watch ../server/index.ts",
-      "options": { "cwd": "${workspaceFolder}/test-app" },
+      "command": "npx tsx watch ../server/index.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/test-app",
+        "env": { "STORYBOOK_URL": "http://localhost:6007" }
+      },
       "isBackground": true,
       "problemMatcher": {
         "owner": "tsx",
@@ -69,8 +72,11 @@
     {
       "label": "Server v3 (port 3334)",
       "type": "shell",
-      "command": "PORT=3334 npx tsx watch ../server/index.ts",
-      "options": { "cwd": "${workspaceFolder}/test-app-v3" },
+      "command": "npx tsx watch ../server/index.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/test-app-v3",
+        "env": { "PORT": "3334" }
+      },
       "isBackground": true,
       "problemMatcher": {
         "owner": "tsx-v3",
