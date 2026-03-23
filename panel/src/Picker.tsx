@@ -404,7 +404,6 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
 		originalClass: string,
 		newClass: string,
 	) {
-
 		patchManager.stage(elementKey, property, originalClass, newClass);
 	}
 

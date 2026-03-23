@@ -23,6 +23,7 @@ export function ScaleScrubber({
 }: ScaleScrubberProps) {
 	const [open, setOpen] = useState(false);
 	const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+	const scrubIndexRef = useRef<number | null>(null);
 	const dragRef = useRef<{
 		startX: number;
 		startIndex: number;
@@ -88,6 +89,7 @@ export function ScaleScrubber({
 				0,
 				Math.min(values.length - 1, drag.startIndex + steps),
 			);
+			scrubIndexRef.current = idx;
 			setScrubIndex(idx);
 			onHover(values[idx]);
 		}
@@ -96,14 +98,16 @@ export function ScaleScrubber({
 	function handlePointerUp() {
 		const drag = dragRef.current;
 		if (!drag) return;
-		if (drag.didScrub && scrubIndex !== null) {
-			onClick(values[scrubIndex]);
+		const currentScrubIndex = scrubIndexRef.current;
+		if (drag.didScrub && currentScrubIndex !== null) {
+			onClick(values[currentScrubIndex]);
 		} else if (!drag.didScrub) {
 			setOpen((prev) => {
 				if (prev) onLeave();
 				return !prev;
 			});
 		}
+		scrubIndexRef.current = null;
 		setScrubIndex(null);
 		dragRef.current = null;
 	}

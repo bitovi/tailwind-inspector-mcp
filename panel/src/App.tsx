@@ -132,7 +132,7 @@ function InspectorApp() {
 			if (e.key === "Escape" && elementData) {
 				setElementData(null);
 				setSelectionId((prev) => prev + 1);
-				sendTo("overlay", { type: "CLEAR_HIGHLIGHTS" });
+				sendTo("overlay", { type: "CLEAR_HIGHLIGHTS", deselect: true });
 			}
 		};
 		document.addEventListener("keydown", handleKeyDown);

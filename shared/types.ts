@@ -128,6 +128,8 @@ export interface ElementSelectedMessage {
 export interface ClearHighlightsMessage {
   type: 'CLEAR_HIGHLIGHTS';
   to: 'overlay';
+  /** When true, also clears the selected element context (currentTargetEl, currentBoundary, etc). */
+  deselect?: boolean;
 }
 
 export interface SwitchContainerMessage {

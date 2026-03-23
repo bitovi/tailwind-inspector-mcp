@@ -1345,7 +1345,6 @@ async function handleCaptureScreenshot(): Promise<void> {
 		} = await captureRegion(currentEquivalentNodes));
 	} catch (err) {
 		showToast("Screenshot capture failed");
-		console.error("[overlay] captureRegion error:", err);
 		return;
 	}
 
@@ -1629,10 +1628,12 @@ function init(): void {
 		} else if (msg.type === "CLEAR_HIGHLIGHTS") {
 			revertPreview();
 			clearHighlights();
-			currentEquivalentNodes = [];
-			currentTargetEl = null;
-			currentBoundary = null;
-			cachedNearGroups = null;
+			if (msg.deselect) {
+				currentEquivalentNodes = [];
+				currentTargetEl = null;
+				currentBoundary = null;
+				cachedNearGroups = null;
+			}
 		} else if (msg.type === "SWITCH_CONTAINER") {
 			const newName = msg.container as ContainerName;
 			if (containers[newName] && newName !== activeContainer.name) {
