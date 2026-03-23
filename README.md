@@ -171,18 +171,19 @@ STORYBOOK_URL=http://localhost:7000 npx @bitovi/vybit
 
 ### 2. Use the VyBit Panel Inside Storybook
 
-You can embed the VyBit editor panel as a tab directly inside your Storybook UI. This requires installing the addon separately:
+You can embed the VyBit editor panel as a tab directly inside your Storybook UI. Because VyBit is typically run via `npx` in the MCP config (not installed locally), you need to add it as a dev dependency so Storybook can resolve the addon:
 
-1. Install the addon in your project:
-   ```bash
-   npm install --save-dev @bitovi/vybit-storybook-addon
-   ```
-2. Register it in `.storybook/main.ts`:
-   ```ts
-   export default {
-     addons: ['@bitovi/vybit-storybook-addon'],
-   };
-   ```
+```bash
+npm install --save-dev @bitovi/vybit
+```
+
+Then register the addon in `.storybook/main.ts`:
+
+```ts
+export default {
+  addons: ['@bitovi/vybit/storybook-addon'],
+};
+```
 
 The VyBit editor panel will now appear as a tab inside your Storybook.
 
