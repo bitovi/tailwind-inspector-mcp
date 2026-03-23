@@ -290,7 +290,7 @@ function SlotRow({
 
 	if (slot.scaleValues && slot.scaleValues.length > 0) {
 		return (
-			<div className={`cm-slot-row ${className}`}>
+			<div className={`cm-slot-row ${className}${isInherited ? " cm-inherited" : ""}`}>
 				{icon}
 				<MiniScrubber
 					placeholder={slot.placeholder}
