@@ -5,6 +5,8 @@ import type { ComponentGroup } from '../../types';
 
 const group: ComponentGroup = {
   name: 'Button',
+  fullTitle: 'Components/Button',
+  tags: [],
   stories: [
     { id: 'components-button--primary', title: 'Components/Button', name: 'Primary' },
     { id: 'components-button--secondary', title: 'Components/Button', name: 'Secondary' },

@@ -239,13 +239,15 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
               href={`/storybook/?path=/story/${group.stories[0].id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-semibold text-bv-text hover:text-bv-orange hover:underline transition-colors"
+              className="text-[11px] text-bv-text hover:text-bv-orange hover:underline transition-colors"
               onClick={(e) => { e.stopPropagation(); }}
             >
-              {group.name}
+              <ComponentTitle fullTitle={group.fullTitle} />
             </a>
           ) : (
-            <span className="text-[11px] font-semibold text-bv-text">{group.name}</span>
+            <span className="text-[11px] text-bv-text">
+              <ComponentTitle fullTitle={group.fullTitle} />
+            </span>
           )
         )}
         {hasArgs && (
@@ -276,5 +278,21 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
         </div>
       )}
     </li>
+  );
+}
+
+function ComponentTitle({ fullTitle }: { fullTitle: string }) {
+  const segments = fullTitle.split('/');
+  if (segments.length === 1) {
+    return <span className="font-semibold">{segments[0]}</span>;
+  }
+  const path = segments.slice(0, -1);
+  const name = segments.at(-1);
+  return (
+    <>
+      <span className="text-bv-muted font-normal">{path.join(' / ')}</span>
+      <span className="text-bv-muted font-normal"> / </span>
+      <span className="font-semibold">{name}</span>
+    </>
   );
 }

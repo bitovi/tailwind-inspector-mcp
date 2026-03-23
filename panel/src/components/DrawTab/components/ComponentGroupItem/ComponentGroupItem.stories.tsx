@@ -4,6 +4,8 @@ import type { ComponentGroup } from '../../types';
 
 const groupNoArgs: ComponentGroup = {
   name: 'Button',
+  fullTitle: 'Components/Button',
+  tags: [],
   stories: [
     { id: 'components-button--primary', title: 'Components/Button', name: 'Primary' },
     { id: 'components-button--secondary', title: 'Components/Button', name: 'Secondary' },
@@ -13,6 +15,8 @@ const groupNoArgs: ComponentGroup = {
 
 const groupWithArgs: ComponentGroup = {
   name: 'Badge',
+  fullTitle: 'Components/Badge',
+  tags: ['design-system'],
   stories: [
     { id: 'components-badge--blue', title: 'Components/Badge', name: 'Blue' },
     { id: 'components-badge--green', title: 'Components/Badge', name: 'Green' },

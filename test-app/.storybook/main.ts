@@ -1,8 +1,9 @@
 import type { StorybookConfig } from '@storybook/react-vite';
+import { join } from 'path';
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)'],
-  addons: ['@storybook/addon-essentials', '../storybook-addon'],
+  addons: ['@storybook/addon-essentials', join(__dirname, '../../storybook-addon')],
   framework: {
     name: '@storybook/react-vite',
     options: {},

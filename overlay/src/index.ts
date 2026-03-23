@@ -972,6 +972,10 @@ function getServerOrigin(): string {
 
 const SERVER_ORIGIN = getServerOrigin();
 
+// When running inside a Storybook iframe, the panel is already shown in
+// the Storybook addon tab — suppress the overlay's own panel container.
+const insideStorybook = !!(window as any).__STORYBOOK_PREVIEW__;
+
 async function fetchTailwindConfig(): Promise<any> {
 	if (tailwindConfigCache) return tailwindConfigCache;
 	try {
@@ -1038,10 +1042,12 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	// Show the element toolbar at the top-left of the selected element
 	showDrawButton(targetEl);
 
-	// Open the container if not already open
-	const panelUrl = `${SERVER_ORIGIN}/panel`;
-	if (!activeContainer.isOpen()) {
-		activeContainer.open(panelUrl);
+	// Open the container if not already open (skip in Storybook — panel lives in addon tab)
+	if (!insideStorybook) {
+		const panelUrl = `${SERVER_ORIGIN}/panel`;
+		if (!activeContainer.isOpen()) {
+			activeContainer.open(panelUrl);
+		}
 	}
 
 	// Send element data to Panel via WS
@@ -1075,16 +1081,23 @@ function toggleInspect(btn: HTMLButtonElement): void {
 	if (active) {
 		btn.classList.add("active");
 		sessionStorage.setItem(PANEL_OPEN_KEY, "1");
-		// Open the container — select mode is activated via the panel's SelectElementButton
-		const panelUrl = `${SERVER_ORIGIN}/panel`;
-		if (!activeContainer.isOpen()) {
-			activeContainer.open(panelUrl);
+		if (insideStorybook) {
+			// In Storybook the panel is already in the addon tab — go straight to select mode
+			setSelectMode(true);
+		} else {
+			// Open the container — select mode is activated via the panel's SelectElementButton
+			const panelUrl = `${SERVER_ORIGIN}/panel`;
+			if (!activeContainer.isOpen()) {
+				activeContainer.open(panelUrl);
+			}
 		}
 	} else {
 		btn.classList.remove("active");
 		sessionStorage.removeItem(PANEL_OPEN_KEY);
 		setSelectMode(false);
-		activeContainer.close();
+		if (!insideStorybook) {
+			activeContainer.close();
+		}
 		revertPreview();
 		clearHighlights();
 	}
@@ -1499,9 +1512,11 @@ function init(): void {
 		if (msg.type === "TOGGLE_SELECT_MODE") {
 			if (msg.active) {
 				setSelectMode(true);
-				// Ensure panel is open
-				const panelUrl = `${SERVER_ORIGIN}/panel`;
-				if (!activeContainer.isOpen()) activeContainer.open(panelUrl);
+				// Ensure panel is open (skip in Storybook — panel lives in addon tab)
+				if (!insideStorybook) {
+					const panelUrl = `${SERVER_ORIGIN}/panel`;
+					if (!activeContainer.isOpen()) activeContainer.open(panelUrl);
+				}
 			} else {
 				setSelectMode(false);
 			}
@@ -1593,11 +1608,15 @@ function init(): void {
 		} else if (msg.type === "SWITCH_CONTAINER") {
 			const newName = msg.container as ContainerName;
 			if (containers[newName] && newName !== activeContainer.name) {
-				const wasOpen = activeContainer.isOpen();
-				activeContainer.close();
-				activeContainer = containers[newName];
-				if (wasOpen) {
-					activeContainer.open(`${SERVER_ORIGIN}/panel`);
+				if (!insideStorybook) {
+					const wasOpen = activeContainer.isOpen();
+					activeContainer.close();
+					activeContainer = containers[newName];
+					if (wasOpen) {
+						activeContainer.open(`${SERVER_ORIGIN}/panel`);
+					}
+				} else {
+					activeContainer = containers[newName];
 				}
 			}
 		} else if (msg.type === "INSERT_DESIGN_CANVAS") {
@@ -1692,7 +1711,9 @@ function init(): void {
 	if (sessionStorage.getItem(PANEL_OPEN_KEY) === "1") {
 		active = true;
 		btn.classList.add("active");
-		activeContainer.open(`${SERVER_ORIGIN}/panel`);
+		if (!insideStorybook) {
+			activeContainer.open(`${SERVER_ORIGIN}/panel`);
+		}
 	}
 
 	window.addEventListener("overlay-ws-connected", () => {

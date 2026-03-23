@@ -135,13 +135,32 @@ function groupByComponent(
     if (!map.has(name)) map.set(name, []);
     map.get(name)!.push(entry);
   }
-  return Array.from(map.entries()).map(([name, stories]) => ({
-    name,
-    stories,
-    // Prefer server-loaded argTypes (from the actual story file) over index.json (which has none)
-    argTypes: serverArgTypes[name] ?? mergeArgTypes(stories),
-    componentPath: stories[0]?.componentPath,
-  }));
+  const groups = Array.from(map.entries()).map(([name, stories]) => {
+    // Collect unique tags across all stories in this group
+    const tagSet = new Set<string>();
+    for (const s of stories) {
+      for (const t of s.tags ?? []) tagSet.add(t);
+    }
+    return {
+      name,
+      fullTitle: stories[0]?.title ?? name,
+      tags: Array.from(tagSet),
+      stories,
+      // Prefer server-loaded argTypes (from the actual story file) over index.json (which has none)
+      argTypes: serverArgTypes[name] ?? mergeArgTypes(stories),
+      componentPath: stories[0]?.componentPath,
+    };
+  });
+
+  // Sort: design-system tagged groups first, then alphabetical by name
+  groups.sort((a, b) => {
+    const aDS = a.tags.includes('design-system') ? 0 : 1;
+    const bDS = b.tags.includes('design-system') ? 0 : 1;
+    if (aDS !== bDS) return aDS - bDS;
+    return a.name.localeCompare(b.name);
+  });
+
+  return groups;
 }
 
 function mergeArgTypes(stories: StoryEntry[]): ComponentGroup['argTypes'] {
