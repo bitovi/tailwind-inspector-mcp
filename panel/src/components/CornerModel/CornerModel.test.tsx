@@ -172,7 +172,9 @@ test("shows side slots when sides toggle is clicked", () => {
 
 test("auto-expands sides when side values are set", () => {
 	render(<CornerModel state={makeState({ t: "rounded-t-lg" })} />);
-	expect(screen.getByText("lg")).toBeInTheDocument();
+	// Side value "lg" visible, plus corners tl & tr inherit it via cascade
+	const lgElements = screen.getAllByText("lg");
+	expect(lgElements.length).toBeGreaterThanOrEqual(1);
 });
 
 test("corners inherit shorthand value when expanded", () => {
@@ -198,6 +200,37 @@ test("does not show Mixed when no corners differ", () => {
 	render(<CornerModel state={makeState({ all: "rounded-lg" })} />);
 	fireEvent.click(screen.getByLabelText("Expand individual corners"));
 	expect(screen.queryByText("Mixed")).not.toBeInTheDocument();
+});
+
+test("corners inherit side value via cascade", () => {
+	// rounded-l-3xl should make tl and bl show "3xl" as inherited
+	render(<CornerModel state={makeState({ l: "rounded-l-3xl" })} />);
+	const elements = screen.getAllByText("3xl");
+	// 1 for the side slot + 2 for tl and bl corners = 3
+	expect(elements.length).toBe(3);
+});
+
+test("side value overrides shorthand in corner cascade", () => {
+	// shorthand=lg, side t=xl → tl and tr should show "xl" (side wins), bl and br show "lg" (shorthand)
+	render(
+		<CornerModel
+			state={makeState({ all: "rounded-lg", t: "rounded-t-xl" })}
+		/>,
+	);
+	expect(screen.getByText("Mixed")).toBeInTheDocument();
+});
+
+test("explicit corner value wins over side in cascade", () => {
+	// side t=xl, corner tl=3xl → tl shows "3xl" explicitly, tr shows "xl" from side
+	render(
+		<CornerModel
+			state={makeState({ t: "rounded-t-xl", tl: "rounded-tl-3xl" })}
+		/>,
+	);
+	const xl3 = screen.getAllByText("3xl");
+	expect(xl3.length).toBe(1); // only tl
+	const xl = screen.getAllByText("xl");
+	expect(xl.length).toBeGreaterThanOrEqual(2); // side + tr inherited
 });
 
 test("calls onSlotClick for the all slot when no scaleValues", () => {

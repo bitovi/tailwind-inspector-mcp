@@ -64,8 +64,44 @@
   justify-content: flex-end;
 }
 
-/* ─── Sides 2×2 grid ──────────────────────────────────────── */
-.cm-sides-grid {
+/* ─── Sides section — spatial layout showing corner relationships ── */
+.cm-sides-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cm-sides-label {
+  font-size: 9px;
+  font-family: var(--font-mono, 'Roboto Mono', monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-mid);
+  opacity: 0.6;
+  padding: 0 2px;
+}
+
+.cm-sides-spatial {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Top/Bottom: full width row */
+.cm-side-top,
+.cm-side-bottom {
+  display: flex;
+}
+
+.cm-side-top .cm-slot-row,
+.cm-side-bottom .cm-slot-row {
+  flex: 1;
+}
+
+/* Middle: left + right side by side */
+.cm-side-middle {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;

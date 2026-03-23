@@ -98,7 +98,9 @@ const CORNER_ICONS: Record<CornerKey, React.ReactNode> = {
 	),
 };
 
+/* Side icons — each shows which 2 corners are controlled */
 const SIDE_ICONS: Record<SideKey, React.ReactNode> = {
+	/* t (top): tl-arc + tr-arc joined at top */
 	t: (
 		<svg
 			aria-hidden
@@ -109,20 +111,14 @@ const SIDE_ICONS: Record<SideKey, React.ReactNode> = {
 			className="shrink-0 text-bv-muted"
 		>
 			<path
-				d="M1 6H11"
+				d="M1 10V4C1 2.34 2.34 1 4 1H8C9.66 1 11 2.34 11 4V10"
 				stroke="currentColor"
 				strokeWidth="1.5"
 				strokeLinecap="round"
-			/>
-			<path
-				d="M1 2H11"
-				stroke="currentColor"
-				strokeWidth="1.5"
-				strokeLinecap="round"
-				opacity="0.4"
 			/>
 		</svg>
 	),
+	/* r (right): tr-arc + br-arc joined at right */
 	r: (
 		<svg
 			aria-hidden
@@ -133,20 +129,14 @@ const SIDE_ICONS: Record<SideKey, React.ReactNode> = {
 			className="shrink-0 text-bv-muted"
 		>
 			<path
-				d="M6 1V11"
+				d="M2 1H8C9.66 1 11 2.34 11 4V8C11 9.66 9.66 11 8 11H2"
 				stroke="currentColor"
 				strokeWidth="1.5"
 				strokeLinecap="round"
-			/>
-			<path
-				d="M10 1V11"
-				stroke="currentColor"
-				strokeWidth="1.5"
-				strokeLinecap="round"
-				opacity="0.4"
 			/>
 		</svg>
 	),
+	/* b (bottom): bl-arc + br-arc joined at bottom */
 	b: (
 		<svg
 			aria-hidden
@@ -157,20 +147,14 @@ const SIDE_ICONS: Record<SideKey, React.ReactNode> = {
 			className="shrink-0 text-bv-muted"
 		>
 			<path
-				d="M1 6H11"
+				d="M1 2V8C1 9.66 2.34 11 4 11H8C9.66 11 11 9.66 11 8V2"
 				stroke="currentColor"
 				strokeWidth="1.5"
 				strokeLinecap="round"
-			/>
-			<path
-				d="M1 10H11"
-				stroke="currentColor"
-				strokeWidth="1.5"
-				strokeLinecap="round"
-				opacity="0.4"
 			/>
 		</svg>
 	),
+	/* l (left): tl-arc + bl-arc joined at left */
 	l: (
 		<svg
 			aria-hidden
@@ -181,17 +165,10 @@ const SIDE_ICONS: Record<SideKey, React.ReactNode> = {
 			className="shrink-0 text-bv-muted"
 		>
 			<path
-				d="M6 1V11"
+				d="M10 1H4C2.34 1 1 2.34 1 4V8C1 9.66 2.34 11 4 11H10"
 				stroke="currentColor"
 				strokeWidth="1.5"
 				strokeLinecap="round"
-			/>
-			<path
-				d="M2 1V11"
-				stroke="currentColor"
-				strokeWidth="1.5"
-				strokeLinecap="round"
-				opacity="0.4"
 			/>
 		</svg>
 	),
@@ -388,20 +365,59 @@ export function CornerModel({
 
 	const effectiveFrozen = frozen || activeSlot !== null;
 
-	// Compute effective value for each corner (explicit or inherited from shorthand)
+	// ── CSS cascade: corner → side → shorthand (most specific wins) ──
+	// Which sides affect which corner
+	const CORNER_SIDES: Record<CornerKey, [SideKey, SideKey]> = {
+		tl: ["t", "l"],
+		tr: ["t", "r"],
+		bl: ["b", "l"],
+		br: ["b", "r"],
+	};
+
+	/** Get the inherited value for a corner slot, respecting the CSS cascade:
+	 *  1. Side-specific value (e.g. rounded-t-xl overrides shorthand for tl & tr)
+	 *  2. Shorthand value (e.g. rounded-lg applies to all corners)
+	 *  For side slots, only shorthand applies as inheritance. */
 	function getInheritedValue(key: CornerKey | SideKey): string | null {
+		if (key === "t" || key === "r" || key === "b" || key === "l") {
+			// Side slots only inherit from shorthand
+			if (state.shorthandValue == null) return null;
+			return deriveFromShorthand(state.shorthandValue, key);
+		}
+		// Corner slots: check sides first, then shorthand
+		const [side1, side2] = CORNER_SIDES[key as CornerKey];
+		const sideVal1 = slotMap.get(side1)?.value;
+		const sideVal2 = slotMap.get(side2)?.value;
+		// If a side has a value, derive the corner class from it
+		// (if both sides set, last in CSS wins — pick the first set one for display)
+		const sideValue = sideVal1 ?? sideVal2;
+		if (sideValue != null) {
+			// Extract the suffix from the side class and apply it to this corner
+			const suffix = truncateRounded(sideValue);
+			if (suffix === "—") return `rounded-${key}`;
+			return `rounded-${key}-${suffix}`;
+		}
 		if (state.shorthandValue == null) return null;
 		return deriveFromShorthand(state.shorthandValue, key);
 	}
 
-	// Determine if corners have mixed effective values
-	const cornerEffective = cornerKeys.map((k) => {
+	/** Resolve the effective display value for a corner, respecting the full cascade */
+	function resolveCornerDisplay(k: CornerKey): string | null {
 		const explicit = slotMap.get(k)?.value;
 		if (explicit != null) return truncateRounded(explicit);
+		// Check sides
+		const [side1, side2] = CORNER_SIDES[k];
+		const sideVal = slotMap.get(side1)?.value ?? slotMap.get(side2)?.value;
+		if (sideVal != null) return truncateRounded(sideVal);
+		// Shorthand
 		if (state.shorthandValue != null) return truncateRounded(state.shorthandValue);
 		return null;
-	});
-	const isMixed = hasCornerValues && cornerEffective.some((v) => v !== cornerEffective[0]);
+	}
+
+	// Determine if corners have mixed effective values (including side overrides)
+	const cornerEffective = cornerKeys.map(resolveCornerDisplay);
+	const hasAnyCornerOrSideValues = hasCornerValues || hasSideValues;
+	const isMixed = hasAnyCornerOrSideValues && cornerEffective.some((v) => v !== cornerEffective[0]);
 
 	// Ensure an 'all' slot always exists for the shorthand
 	const rawAllSlot: CornerSlotData = slotMap.get("all") ?? {
@@ -502,19 +518,49 @@ export function CornerModel({
 				</div>
 			)}
 
-			{/* ── Expanded: Side slots (t/r/b/l) ──────────────── */}
+			{/* ── Expanded: Side slots (t/r/b/l) — spatial layout ── */}
 			{cornersExpanded && sidesExpanded && (
-				<div className="cm-sides-grid">
-					{sideKeys.map((key) => (
-						<SlotRow
-							key={key}
-							slot={getSlot(key)}
-							icon={SIDE_ICONS[key]}
-							frozen={effectiveFrozen}
-							inheritedValue={getInheritedValue(key)}
-							{...slotCallbacks}
-						/>
-					))}
+				<div className="cm-sides-section">
+					<div className="cm-sides-label">Sides</div>
+					<div className="cm-sides-spatial">
+						{/* Top — full width */}
+						<div className="cm-side-top">
+							<SlotRow
+								slot={getSlot("t")}
+								icon={SIDE_ICONS.t}
+								frozen={effectiveFrozen}
+								inheritedValue={getInheritedValue("t")}
+								{...slotCallbacks}
+							/>
+						</div>
+						{/* Left + Right — side by side */}
+						<div className="cm-side-middle">
+							<SlotRow
+								slot={getSlot("l")}
+								icon={SIDE_ICONS.l}
+								frozen={effectiveFrozen}
+								inheritedValue={getInheritedValue("l")}
+								{...slotCallbacks}
+							/>
+							<SlotRow
+								slot={getSlot("r")}
+								icon={SIDE_ICONS.r}
+								frozen={effectiveFrozen}
+								inheritedValue={getInheritedValue("r")}
+								{...slotCallbacks}
+							/>
+						</div>
+						{/* Bottom — full width */}
+						<div className="cm-side-bottom">
+							<SlotRow
+								slot={getSlot("b")}
+								icon={SIDE_ICONS.b}
+								frozen={effectiveFrozen}
+								inheritedValue={getInheritedValue("b")}
+								{...slotCallbacks}
+							/>
+						</div>
+					</div>
 				</div>
 			)}
 		</div>
