@@ -182,7 +182,7 @@ const OVERLAY_CSS = `
     align-self: stretch;
   }
   /* Base style for all buttons inside the toolbar */
-  .draw-btn, .el-reselect-btn, .el-pick-btn, .el-add-btn {
+  .draw-btn, .el-reselect-btn, .el-pick-btn, .el-add-btn, .el-visibility-btn {
     background: transparent;
     border: none;
     border-radius: 0;
@@ -207,10 +207,15 @@ const OVERLAY_CSS = `
   .el-pick-btn svg { opacity: 0.7; flex-shrink: 0; }
   .el-add-btn { padding: 0 10px; font-size: 15px; font-weight: 400; }
   .el-reselect-btn { padding: 0 9px; }
+  .el-visibility-btn { padding: 0 8px; }
+  .el-visibility-btn.off { opacity: 0.45; }
+  .el-visibility-btn.off:hover { opacity: 0.8; }
   .draw-btn:hover, .el-reselect-btn:hover, .el-pick-btn:hover, .el-add-btn:hover,
+  .el-visibility-btn:hover,
   .el-pick-btn.open {
     background: rgba(255,255,255,0.12);
   }
+  .highlight-overlay.hidden { display: none; }
   /* ── Hover preview highlight (dashed, for group hover) ── */
   .highlight-preview {
     position: fixed;
@@ -472,7 +477,7 @@ const OVERLAY_CSS = `
 function highlightElement(el: HTMLElement): void {
 	const rect = el.getBoundingClientRect();
 	const overlay = document.createElement("div");
-	overlay.className = "highlight-overlay";
+	overlay.className = `highlight-overlay${highlightsVisible ? "" : " hidden"}`;
 	overlay.style.top = `${rect.top - 3}px`;
 	overlay.style.left = `${rect.left - 3}px`;
 	overlay.style.width = `${rect.width + 6}px`;
@@ -485,7 +490,11 @@ function clearHighlights(): void {
 		.querySelectorAll(".highlight-overlay")
 		.forEach((el) => el.remove());
 	removeDrawButton();
+	highlightsVisible = true;
 }
+
+// Whether selection highlight borders are visible (toggled by eye button)
+let highlightsVisible = true;
 
 // Element toolbar (wraps draw button + matching controls) shown on selected element
 let toolbarEl: HTMLElement | null = null;
@@ -581,6 +590,10 @@ const PENCIL_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="curren
 
 const CHEVRON_SVG = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
+const EYE_ON_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8,14c4.707,0,7.744-5.284,7.871-5.508c0.171-0.304,0.172-0.676,0.001-0.98C15.746,7.287,12.731,2,8,2C3.245,2,0.251,7.289,0.126,7.514c-0.169,0.303-0.168,0.672,0.002,0.975C0.254,8.713,3.269,14,8,14z M8,4c2.839,0,5.036,2.835,5.818,4C13.034,9.166,10.837,12,8,12c-2.841,0-5.038-2.838-5.819-4.001C2.958,6.835,5.146,4,8,4z"/><circle cx="8" cy="8" r="2"/></svg>`;
+
+const EYE_OFF_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M14.574,5.669l-1.424,1.424C13.428,7.44,13.656,7.757,13.819,8c-0.76,1.13-2.85,3.82-5.561,3.985L6.443,13.8C6.939,13.924,7.457,14,8,14c4.707,0,7.744-5.284,7.871-5.508c0.171-0.304,0.172-0.676,0.001-0.98C15.825,7.427,15.372,6.631,14.574,5.669z"/><path d="M0.293,15.707C0.488,15.902,0.744,16,1,16s0.512-0.098,0.707-0.293l14-14c0.391-0.391,0.391-1.023,0-1.414s-1.023-0.391-1.414,0l-2.745,2.745C10.515,2.431,9.331,2,8,2C3.245,2,0.251,7.289,0.126,7.514c-0.169,0.303-0.168,0.672,0.002,0.975c0.07,0.125,1.044,1.802,2.693,3.276l-2.529,2.529C-0.098,14.684-0.098,15.316,0.293,15.707z M2.181,7.999C2.958,6.835,5.146,4,8,4c0.742,0,1.437,0.201,2.078,0.508L8.512,6.074C8.348,6.029,8.178,6,8,6C6.895,6,6,6.895,6,8c0,0.178,0.029,0.348,0.074,0.512L4.24,10.346C3.285,9.51,2.559,8.562,2.181,7.999z"/></svg>`;
+
 const RESELECT_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg>`;
 
 async function positionWithFlip(
@@ -639,6 +652,24 @@ function showDrawButton(targetEl: HTMLElement): void {
 		} else {
 			showDrawPopover(drawBtn);
 		}
+	});
+
+	// Visibility toggle — show/hide selection borders
+	const visBtn = document.createElement("button");
+	visBtn.className = `el-visibility-btn${highlightsVisible ? "" : " off"}`;
+	visBtn.innerHTML = highlightsVisible ? EYE_ON_SVG : EYE_OFF_SVG;
+	visBtn.title = highlightsVisible ? "Hide selection borders" : "Show selection borders";
+	toolbar.appendChild(visBtn);
+
+	visBtn.addEventListener("click", (e) => {
+		e.stopPropagation();
+		highlightsVisible = !highlightsVisible;
+		visBtn.innerHTML = highlightsVisible ? EYE_ON_SVG : EYE_OFF_SVG;
+		visBtn.title = highlightsVisible ? "Hide selection borders" : "Show selection borders";
+		visBtn.classList.toggle("off", !highlightsVisible);
+		shadowRoot
+			.querySelectorAll(".highlight-overlay")
+			.forEach((el) => el.classList.toggle("hidden", !highlightsVisible));
 	});
 
 	// Separator
