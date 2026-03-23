@@ -59,10 +59,14 @@ export function ShadowLayerRow({
 	// Use resolved colorHex for the swatch (explicit, or theme default, or null)
 	const colorSwatchBg = layer.colorHex ?? layer.defaultColorCSS ?? null;
 
-	// Label for the hex display
-	const displayColorLabel = layer.colorHex
-		? layer.colorHex.replace("#", "").toUpperCase()
-		: layer.defaultColorCSS ?? null;
+	// Swatch opacity: use layer opacity when set, otherwise full
+	const swatchOpacity = layer.opacity !== null ? layer.opacity / 100 : 1;
+
+	// Label: show Tailwind color name (e.g. "blue-500") instead of raw hex
+	const colorName = layer.colorClass
+		? layer.colorClass.replace(/^(?:shadow|ring|inset-shadow|inset-ring|text-shadow)-/, "")
+		: null;
+	const displayColorLabel = colorName ?? (layer.defaultColorCSS ? "default" : null);
 
 	// Wrap size callbacks to translate display → full class
 	function handleSizeHover(displayVal: string) {
@@ -119,13 +123,13 @@ export function ShadowLayerRow({
 							className="w-[18px] h-[18px] rounded-[3px] border border-[rgba(255,255,255,0.15)]"
 							style={{
 								background: colorSwatchBg,
-								opacity: layer.opacity !== null ? layer.opacity / 100 : 1,
+								opacity: swatchOpacity,
 							}}
 						/>
 					) : colorSwatchBg ? (
 						<div
 							className="w-[18px] h-[18px] rounded-[3px] border border-dashed border-[rgba(255,255,255,0.15)]"
-							style={{ background: colorSwatchBg, opacity: 0.5 }}
+							style={{ background: colorSwatchBg, opacity: swatchOpacity * 0.5 }}
 						/>
 					) : (
 						<span className="w-1.5 h-1.5 rounded-full bg-bv-text-mid opacity-40" />
