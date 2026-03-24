@@ -340,12 +340,13 @@ function InspectorApp() {
 					</button>
 				</div>
 			)}
-			<div className="flex items-center justify-center px-3 py-1.5 border-t border-bv-border gap-3 text-[10px]">
+			<div className="flex items-center justify-center px-3 py-1.5 border-t border-bv-border gap-4 text-[10px]">
 				<PatchPopover
 					label="draft"
 					count={draft}
 					items={draftPatches}
 					activeColor="text-amber-400"
+					dotColor="bg-amber-400"
 					onDiscard={(id: string) => patchManager.discard(id)}
 					onCommitAll={() => patchManager.commitAll()}
 					onDiscardAll={() => patchManager.discardAll()}
@@ -355,18 +356,21 @@ function InspectorApp() {
 					count={committed}
 					items={committedCommits.flatMap((c) => c.patches)}
 					activeColor="text-bv-orange"
+					dotColor="bg-bv-orange"
 				/>
 				<PatchPopover
 					label="implementing"
 					count={implementing}
 					items={implementingCommits.flatMap((c) => c.patches)}
 					activeColor="text-blue-400"
+					dotColor="bg-blue-400"
 				/>
 				<PatchPopover
 					label="implemented"
 					count={implemented}
 					items={implementedCommits.flatMap((c) => c.patches)}
 					activeColor="text-bv-teal"
+					dotColor="bg-bv-teal"
 				/>
 			</div>
 		</div>
