@@ -45,6 +45,7 @@ interface ElementData {
 	tailwindConfig: any;
 	textContent?: string;
 	hasEditableText?: boolean;
+	computedStyles?: Record<string, string>;
 }
 
 export function App() {
@@ -129,6 +130,7 @@ function InspectorApp() {
 					tailwindConfig: msg.tailwindConfig,
 					textContent: msg.textContent,
 					hasEditableText: msg.hasEditableText,
+					computedStyles: msg.computedStyles,
 				});
 				setSelectionId((prev) => prev + 1);
 				setSelectModeActive(false);
@@ -551,6 +553,7 @@ function InspectorApp() {
 						parsedClasses={parsedClasses}
 						tailwindConfig={elementData.tailwindConfig}
 						patchManager={patchManager}
+						computedStyles={elementData.computedStyles}
 					/>
 				)}
 				{activeTab === "theme" && (

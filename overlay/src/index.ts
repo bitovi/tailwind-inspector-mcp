@@ -1284,6 +1284,54 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	const resolvedConfig = config ? resolveConfigCssVars(config) : config;
 	const textContent = getInnerText(targetEl);
 	const editableText = hasOnlyTextChildren(targetEl);
+
+	// Capture computed styles for sections that may have no explicit Tailwind classes
+	const cs = getComputedStyle(targetEl);
+	const computedStyles: Record<string, string> = {
+		// Margin
+		marginTop: cs.marginTop,
+		marginRight: cs.marginRight,
+		marginBottom: cs.marginBottom,
+		marginLeft: cs.marginLeft,
+		// Padding
+		paddingTop: cs.paddingTop,
+		paddingRight: cs.paddingRight,
+		paddingBottom: cs.paddingBottom,
+		paddingLeft: cs.paddingLeft,
+		// Sizing
+		width: cs.width,
+		height: cs.height,
+		minWidth: cs.minWidth,
+		maxWidth: cs.maxWidth,
+		minHeight: cs.minHeight,
+		maxHeight: cs.maxHeight,
+		// Layout
+		display: cs.display,
+		position: cs.position,
+		// Flexbox
+		flexDirection: cs.flexDirection,
+		flexWrap: cs.flexWrap,
+		justifyContent: cs.justifyContent,
+		alignItems: cs.alignItems,
+		gap: cs.gap,
+		// Typography
+		fontSize: cs.fontSize,
+		fontWeight: cs.fontWeight,
+		lineHeight: cs.lineHeight,
+		letterSpacing: cs.letterSpacing,
+		color: cs.color,
+		// Borders
+		borderTopWidth: cs.borderTopWidth,
+		borderRightWidth: cs.borderRightWidth,
+		borderBottomWidth: cs.borderBottomWidth,
+		borderLeftWidth: cs.borderLeftWidth,
+		borderRadius: cs.borderRadius,
+		// Effects
+		opacity: cs.opacity,
+		// Background
+		backgroundColor: cs.backgroundColor,
+	};
+
 	sendTo("panel", {
 		type: "ELEMENT_SELECTED",
 		componentName,
@@ -1292,6 +1340,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 		tailwindConfig: resolvedConfig,
 		textContent: textContent || undefined,
 		hasEditableText: editableText || undefined,
+		computedStyles,
 	});
 }
 

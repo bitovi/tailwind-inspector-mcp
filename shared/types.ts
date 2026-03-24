@@ -133,6 +133,8 @@ export interface ElementSelectedMessage {
   textContent?: string;
   /** True when the element contains only text nodes (no child elements), safe for contentEditable */
   hasEditableText?: boolean;
+  /** Computed CSS property values from the live DOM (e.g. { marginTop: '0px', width: '320px' }) */
+  computedStyles?: Record<string, string>;
 }
 
 export interface ClearHighlightsMessage {

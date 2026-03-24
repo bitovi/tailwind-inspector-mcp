@@ -9,6 +9,13 @@ export interface AvailableProperty {
   prefix: string;
 }
 
+export interface ComputedValue {
+  /** CSS property display label, e.g. "margin-top" */
+  label: string;
+  /** Resolved computed value, e.g. "0px", "16px" */
+  value: string;
+}
+
 export interface PropertySectionProps {
   /** Section label displayed in uppercase, e.g. "Typography" */
   label: string;
@@ -20,6 +27,8 @@ export interface PropertySectionProps {
   isEmpty?: boolean;
   /** Number of matched classes in this section — shown as a badge when collapsed */
   classCount?: number;
+  /** Computed CSS values to show as ghost chips when section has no explicit classes */
+  computedValues?: ComputedValue[];
   /** Chip content rendered inside the section */
   children?: ReactNode;
 }

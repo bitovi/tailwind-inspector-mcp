@@ -128,8 +128,10 @@ export function custom(fn: Segment): Segment {
 export interface ParsedToken {
   /** Canonical property name, e.g. 'p', 'border', 'display', 'rounded' */
   property: string;
-  /** Original full class string, e.g. 'border-t-2' */
+  /** Original full class string, e.g. 'border-t-2' or 'hover:shadow-md' */
   fullClass: string;
+  /** Variant modifier prefix, e.g. 'hover', 'focus', 'sm:hover' (without trailing colon) */
+  modifier?: string;
   /** Docs section grouping, e.g. 'spacing', 'layout', 'borders' */
   section?: string;
   /** Side modifier: 't' | 'r' | 'b' | 'l' | 'x' | 'y' | 's' | 'e' | 'bs' | 'be' */
@@ -319,15 +321,44 @@ export function parseToken(cls: string, parsers: Parser[]): ParsedToken | null {
 }
 
 /**
+ * Regex matching known Tailwind variant prefixes.
+ * Strips modifiers like hover:, focus:, sm:, dark:, md:hover:, etc.
+ * Returns the modifier chain (without trailing colon) and the base class.
+ */
+const MODIFIER_RE = /^((?:(?:hover|focus|focus-within|focus-visible|active|visited|target|first|last|only|odd|even|first-of-type|last-of-type|only-of-type|empty|disabled|enabled|checked|indeterminate|default|required|valid|invalid|in-range|out-of-range|placeholder-shown|autofill|read-only|open|not-[^:]+|has-[^:]+|is-[^:]+|where-[^:]+|group-hover|group-focus|peer-hover|peer-focus|data-[^:]+|aria-[^:]+|supports-[^:]+|motion-safe|motion-reduce|contrast-more|contrast-less|forced-colors|print|portrait|landscape|dark|rtl|ltr|sm|md|lg|xl|2xl|max-sm|max-md|max-lg|max-xl|max-2xl|min-[^:]+|max-[^:]+):)+)/;
+
+/**
+ * Strip variant modifiers from a class and return [modifier, baseClass].
+ * e.g. 'hover:shadow-md' → ['hover', 'shadow-md']
+ *      'sm:hover:p-4'    → ['sm:hover', 'p-4']
+ *      'p-4'             → [undefined, 'p-4']
+ */
+export function stripModifier(cls: string): [string | undefined, string] {
+  const m = MODIFIER_RE.exec(cls);
+  if (!m) return [undefined, cls];
+  // m[1] is the full modifier chain with trailing colon, e.g. 'hover:' or 'sm:hover:'
+  const modifierChain = m[1].slice(0, -1); // remove trailing colon
+  const base = cls.slice(m[1].length);
+  return [modifierChain, base];
+}
+
+/**
  * Parse all classes in a class string.
+ * Variant modifiers (hover:, sm:, etc.) are stripped before parsing
+ * and stored on the resulting token's `modifier` field.
  * Unrecognized classes (null from parseToken) are omitted.
  */
 export function parseTokens(classString: string, parsers: Parser[]): ParsedToken[] {
   const classes = classString.trim().split(/\s+/).filter(Boolean);
   const results: ParsedToken[] = [];
   for (const cls of classes) {
-    const token = parseToken(cls, parsers);
-    if (token) results.push(token);
+    const [modifier, base] = stripModifier(cls);
+    const token = parseToken(base, parsers);
+    if (token) {
+      token.fullClass = cls; // preserve original class with modifier
+      if (modifier) token.modifier = modifier;
+      results.push(token);
+    }
   }
   return results;
 }
@@ -540,5 +571,34 @@ export const TAILWIND_PARSERS: Parser[] = [
     makeParser('overflow-x', keyword('value', ['auto', 'hidden', 'clip', 'visible', 'scroll'])),
     makeParser('overflow-y', keyword('value', ['auto', 'hidden', 'clip', 'visible', 'scroll'])),
     makeParser('overflow', keyword('value', ['auto', 'hidden', 'clip', 'visible', 'scroll'])),
+  ]),
+
+  // ─── TRANSITIONS & ANIMATION ─────────────────────────────
+  ...withSection('effects', [
+    makeParser('transition', oneOf(
+      nothing(),
+      keyword('value', ['all', 'colors', 'opacity', 'shadow', 'transform', 'none']),
+    )),
+    makeParser('duration', scale('duration')),
+    makeParser('ease', keyword('value', ['linear', 'in', 'out', 'in-out'])),
+    makeParser('delay', scale('duration')),
+    makeParser('animate', keyword('value', ['none', 'spin', 'ping', 'pulse', 'bounce'])),
+  ]),
+
+  // ─── INTERACTIVITY ───────────────────────────────────────
+  ...withSection('effects', [
+    makeParser('cursor', keyword('value', [
+      'auto', 'default', 'pointer', 'wait', 'text', 'move', 'help',
+      'not-allowed', 'none', 'context-menu', 'progress', 'cell',
+      'crosshair', 'vertical-text', 'alias', 'copy', 'no-drop',
+      'grab', 'grabbing', 'all-scroll', 'col-resize', 'row-resize',
+      'n-resize', 'e-resize', 's-resize', 'w-resize', 'ne-resize',
+      'nw-resize', 'se-resize', 'sw-resize', 'ew-resize', 'ns-resize',
+      'nesw-resize', 'nwse-resize', 'zoom-in', 'zoom-out',
+    ])),
+    makeParser('select', keyword('value', ['none', 'text', 'all', 'auto'])),
+    makeParser('pointer-events', keyword('value', ['none', 'auto'])),
+    makeParser('will-change', keyword('value', ['auto', 'scroll', 'contents', 'transform'])),
+    makeParser('appearance', keyword('value', ['none', 'auto'])),
   ]),
 ];

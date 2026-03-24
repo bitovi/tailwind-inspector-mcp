@@ -282,7 +282,63 @@ interface PickerProps {
 	parsedClasses: ParsedToken[];
 	tailwindConfig: any;
 	patchManager: PatchManager;
+	computedStyles?: Record<string, string>;
 }
+
+/** Maps section names to computed CSS properties to display as ghost values */
+const SECTION_COMPUTED_PROPS: Record<string, { label: string; key: string }[]> = {
+	margin: [
+		{ label: "margin-top", key: "marginTop" },
+		{ label: "margin-right", key: "marginRight" },
+		{ label: "margin-bottom", key: "marginBottom" },
+		{ label: "margin-left", key: "marginLeft" },
+	],
+	padding: [
+		{ label: "padding-top", key: "paddingTop" },
+		{ label: "padding-right", key: "paddingRight" },
+		{ label: "padding-bottom", key: "paddingBottom" },
+		{ label: "padding-left", key: "paddingLeft" },
+	],
+	sizing: [
+		{ label: "width", key: "width" },
+		{ label: "height", key: "height" },
+		{ label: "min-w", key: "minWidth" },
+		{ label: "max-w", key: "maxWidth" },
+		{ label: "min-h", key: "minHeight" },
+		{ label: "max-h", key: "maxHeight" },
+	],
+	layout: [
+		{ label: "display", key: "display" },
+		{ label: "position", key: "position" },
+	],
+	flexbox: [
+		{ label: "flex-direction", key: "flexDirection" },
+		{ label: "flex-wrap", key: "flexWrap" },
+		{ label: "justify-content", key: "justifyContent" },
+		{ label: "align-items", key: "alignItems" },
+		{ label: "gap", key: "gap" },
+	],
+	typography: [
+		{ label: "font-size", key: "fontSize" },
+		{ label: "font-weight", key: "fontWeight" },
+		{ label: "line-height", key: "lineHeight" },
+		{ label: "letter-spacing", key: "letterSpacing" },
+		{ label: "color", key: "color" },
+	],
+	borders: [
+		{ label: "border-top", key: "borderTopWidth" },
+		{ label: "border-right", key: "borderRightWidth" },
+		{ label: "border-bottom", key: "borderBottomWidth" },
+		{ label: "border-left", key: "borderLeftWidth" },
+		{ label: "border-radius", key: "borderRadius" },
+	],
+	effects: [
+		{ label: "opacity", key: "opacity" },
+	],
+	color: [
+		{ label: "background", key: "backgroundColor" },
+	],
+};
 
 export function Picker({
 	componentName,
@@ -291,6 +347,7 @@ export function Picker({
 	parsedClasses,
 	tailwindConfig,
 	patchManager,
+	computedStyles,
 }: PickerProps) {
 	const [selectedClass, setSelectedClass] = useState<ParsedToken | null>(null);
 	// Local overrides for CornerModel slots staged this session.
@@ -886,6 +943,12 @@ export function Picker({
 							sectionPendingPrefixes.length +
 							sectionStagedPrefixes.length;
 
+				const sectionComputedValues = isEmpty && computedStyles && SECTION_COMPUTED_PROPS[section]
+					? SECTION_COMPUTED_PROPS[section]
+						.map((p) => ({ label: p.label, value: computedStyles[p.key] ?? "" }))
+						.filter((cv) => cv.value !== "" && cv.value !== "0px" && cv.value !== "normal" && cv.value !== "none" && cv.value !== "auto" && cv.value !== "static" && cv.value !== "rgba(0, 0, 0, 0)")
+					: undefined;
+
 				return (
 					<PropertySection
 						key={section}
@@ -894,6 +957,7 @@ export function Picker({
 						onAddProperty={handleAddProperty}
 						isEmpty={isEmpty}
 						classCount={classCount}
+						computedValues={sectionComputedValues}
 					>
 						{/* Composite: CornerModel handles radius in 'borders' section */}
 						{section === "borders" && (
@@ -1212,6 +1276,20 @@ export function Picker({
 
 						{/* Existing classes on the element */}
 						{classes.map((cls) => {
+							// Modifier/variant classes (hover:, sm:, etc.) are shown as read-only chips
+							if (cls.modifier) {
+								return (
+									<div
+										key={cls.fullClass}
+										className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono border border-transparent bg-bv-surface text-bv-muted opacity-60"
+										title={`Variant: ${cls.modifier}`}
+									>
+										<span className="text-[9px] text-bv-teal/60 font-semibold">{cls.modifier}:</span>
+										{cls.fullClass.slice(cls.modifier.length + 1)}
+									</div>
+								);
+							}
+
 							// Skip flex-container group classes when dedicated controls are shown above
 							if (isFlexParent) {
 								const grp = ENUM_GROUPS[cls.fullClass];

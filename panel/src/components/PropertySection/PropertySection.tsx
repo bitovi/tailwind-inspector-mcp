@@ -8,6 +8,7 @@ export function PropertySection({
 	onAddProperty,
 	isEmpty = false,
 	classCount = 0,
+	computedValues,
 	children,
 }: PropertySectionProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -117,9 +118,23 @@ export function PropertySection({
 				}`}
 			>
 				{isEmpty ? (
-					<div className="text-[10px] text-bv-muted italic mt-2">
-						No {label.toLowerCase()} classes — click + to add
-					</div>
+					computedValues && computedValues.length > 0 ? (
+						<div className="flex flex-wrap gap-1 mt-2.5">
+							{computedValues.map((cv) => (
+								<span
+									key={cv.label}
+									className="px-2 py-0.5 rounded text-[10px] font-mono border border-dashed border-bv-border text-bv-muted italic"
+									title={`Computed: ${cv.label}: ${cv.value}`}
+								>
+									{cv.label}: {cv.value}
+								</span>
+							))}
+						</div>
+					) : (
+						<div className="text-[10px] text-bv-muted italic mt-2">
+							No {label.toLowerCase()} classes — click + to add
+						</div>
+					)
 				) : (
 					<div className="flex flex-wrap gap-1 mt-2.5">{children}</div>
 				)}

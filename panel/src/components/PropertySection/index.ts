@@ -1,2 +1,2 @@
 export { PropertySection } from './PropertySection';
-export type { PropertySectionProps, AvailableProperty } from './types';
+export type { PropertySectionProps, AvailableProperty, ComputedValue } from './types';
