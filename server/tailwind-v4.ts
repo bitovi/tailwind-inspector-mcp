@@ -1,8 +1,8 @@
 // Tailwind v4 adapter — uses compile() / build() from the target project's tailwindcss v4.
 
-import { existsSync, readFileSync, readdirSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { createRequire } from "module";
-import { dirname, resolve, join } from "path";
+import { dirname, join, resolve } from "path";
 import { pathToFileURL } from "url";
 import {
 	extractShadowDefaults,
@@ -54,7 +54,9 @@ function makeLoadStylesheet(cwd: string) {
 				if (existsSync(candidate)) {
 					resolved = candidate;
 				} else {
-					throw new Error(`Cannot resolve stylesheet: ${id} from ${base || cwd}`);
+					throw new Error(
+						`Cannot resolve stylesheet: ${id} from ${base || cwd}`,
+					);
 				}
 			}
 		}
@@ -90,7 +92,6 @@ function findProjectCssEntry(cwd: string): string | null {
 			const content = readFileSync(fullPath, "utf8");
 			// Check if it imports tailwindcss (v4 style) or has @theme blocks
 			if (content.includes("tailwindcss") || content.includes("@theme")) {
-
 				return fullPath;
 			}
 		}
@@ -100,16 +101,17 @@ function findProjectCssEntry(cwd: string): string | null {
 	const srcDir = join(cwd, "src");
 	if (existsSync(srcDir)) {
 		try {
-			const files = readdirSync(srcDir).filter(f => f.endsWith(".css"));
+			const files = readdirSync(srcDir).filter((f) => f.endsWith(".css"));
 			for (const file of files) {
 				const fullPath = join(srcDir, file);
 				const content = readFileSync(fullPath, "utf8");
 				if (content.includes("tailwindcss") || content.includes("@theme")) {
-
 					return fullPath;
 				}
 			}
-		} catch { /* ignore read errors */ }
+		} catch {
+			/* ignore read errors */
+		}
 	}
 
 	return null;
