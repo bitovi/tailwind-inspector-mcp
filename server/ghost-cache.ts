@@ -75,7 +75,7 @@ function flushToDisk(): void {
     const data: CacheFile = { entries: Array.from(cache.values()) };
     fs.writeFileSync(filePath, JSON.stringify(data), "utf-8");
   } catch (err) {
-    console.error("[ghost-cache] Failed to write cache:", err);
+    // ignore write errors
   }
 }
 

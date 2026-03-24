@@ -28,7 +28,6 @@ export async function applyPreview(
   // document.head so the class has styles even if purged from the user's build.
   if (newClass) {
     try {
-      console.log('[vybit-patcher] Fetching CSS for class:', newClass, 'from', `${serverOrigin}/css`);
       const res = await fetch(`${serverOrigin}/css`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,18 +40,13 @@ export async function applyPreview(
         console.error('[vybit-patcher] CSS fetch FAILED:', res.status, errBody);
       } else {
         const { css } = await res.json() as { css: string };
-        console.log('[vybit-patcher] CSS received for', newClass, ':', css ? `${css.length} chars` : '(empty)');
-        console.log('[vybit-patcher] CSS content:', css || '(none)');
         if (gen !== previewGeneration) return;
         if (!previewStyleEl) {
           previewStyleEl = document.createElement('style');
           previewStyleEl.setAttribute('data-tw-preview', '');
           document.head.appendChild(previewStyleEl);
-          console.log('[vybit-patcher] Created <style data-tw-preview> in document.head');
         }
         previewStyleEl.textContent = css;
-        console.log('[vybit-patcher] Style element in DOM:', document.head.contains(previewStyleEl),
-          'textContent length:', previewStyleEl.textContent?.length);
       }
     } catch (err) {
       console.error('[vybit-patcher] CSS fetch error:', err);
@@ -74,13 +68,6 @@ export async function applyPreview(
   for (const node of elements) {
     if (oldClass) node.classList.remove(oldClass);
     if (newClass) node.classList.add(newClass);
-  }
-  console.log('[vybit-patcher] Applied class swap:', oldClass, '→', newClass, 'on', elements.length, 'elements');
-  if (elements[0]) {
-    console.log('[vybit-patcher] Element className after swap:', elements[0].className);
-    const computed = window.getComputedStyle(elements[0]);
-    if (newClass.startsWith('bg-')) console.log('[vybit-patcher] Computed background:', computed.backgroundColor);
-    if (newClass.startsWith('p-') || newClass.startsWith('px-') || newClass.startsWith('py-')) console.log('[vybit-patcher] Computed padding:', computed.padding);
   }
 }
 
@@ -105,7 +92,6 @@ export async function applyPreviewBatch(
   const newClasses = pairs.map(p => p.newClass).filter(Boolean);
   if (newClasses.length > 0) {
     try {
-      console.log('[vybit-patcher] Fetching CSS for batch:', newClasses, 'from', `${serverOrigin}/css`);
       const res = await fetch(`${serverOrigin}/css`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,18 +103,13 @@ export async function applyPreviewBatch(
         console.error('[vybit-patcher] CSS batch fetch FAILED:', res.status, errBody);
       } else {
         const { css } = await res.json() as { css: string };
-        console.log('[vybit-patcher] CSS batch received:', css ? `${css.length} chars` : '(empty)');
-        console.log('[vybit-patcher] CSS batch content:', css || '(none)');
         if (gen !== previewGeneration) return;
         if (!previewStyleEl) {
           previewStyleEl = document.createElement('style');
           previewStyleEl.setAttribute('data-tw-preview', '');
           document.head.appendChild(previewStyleEl);
-          console.log('[vybit-patcher] Created <style data-tw-preview> in document.head');
         }
         previewStyleEl.textContent = css;
-        console.log('[vybit-patcher] Style element in DOM:', document.head.contains(previewStyleEl),
-          'textContent length:', previewStyleEl.textContent?.length);
       }
     } catch (err) {
       console.error('[vybit-patcher] CSS batch fetch error:', err);

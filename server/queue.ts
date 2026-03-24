@@ -112,7 +112,6 @@ export function reclaimImplementingCommits(): number {
   let count = 0;
   for (const commit of commits) {
     if (commit.status === 'implementing') {
-      console.log(`[queue] Reclaiming orphaned implementing commit ${commit.id} → committed`);
       commit.status = 'committed';
       for (const p of commit.patches) {
         if (p.status === 'implementing') p.status = 'committed';

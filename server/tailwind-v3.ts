@@ -407,8 +407,24 @@ export class TailwindV3Adapter implements TailwindAdapter {
 						pathToFileURL(req.resolve("tailwindcss/resolveConfig")).href
 					)
 				).default;
-				const userConfig = (await import(pathToFileURL(configPath).href))
-					.default;
+
+				// Inject a global `require` so ESM config files that call require()
+				// (e.g. `plugins: [require('tailwindcss-animate')]`) don't fail.
+				const hadRequire = "require" in globalThis;
+				const prevRequire = (globalThis as any).require;
+				(globalThis as any).require = req;
+				let userConfig: any;
+				try {
+					userConfig = (await import(pathToFileURL(configPath).href))
+						.default;
+				} finally {
+					if (hadRequire) {
+						(globalThis as any).require = prevRequire;
+					} else {
+						delete (globalThis as any).require;
+					}
+				}
+
 				const full = resolveConfig(userConfig);
 				const theme = full.theme ?? {};
 

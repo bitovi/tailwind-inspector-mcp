@@ -971,15 +971,15 @@ function getServerOrigin(): string {
 }
 
 const SERVER_ORIGIN = getServerOrigin();
-console.log('[vybit-overlay] SERVER_ORIGIN =', SERVER_ORIGIN);
 
 // When running inside a Storybook iframe, the panel is already shown in
 // the Storybook addon tab — suppress the overlay's own panel container.
 const insideStorybook = !!(window as any).__STORYBOOK_PREVIEW__;
-console.log('[vybit-overlay] insideStorybook =', insideStorybook);
 
 async function fetchTailwindConfig(): Promise<any> {
-	if (tailwindConfigCache) return tailwindConfigCache;
+	if (tailwindConfigCache) {
+		return tailwindConfigCache;
+	}
 	try {
 		const res = await fetch(`${SERVER_ORIGIN}/tailwind-config`);
 		tailwindConfigCache = await res.json();
@@ -990,11 +990,71 @@ async function fetchTailwindConfig(): Promise<any> {
 	}
 }
 
+/**
+ * Resolve CSS variable references in the tailwind config's color values.
+ * Since the overlay runs in the target app's DOM, it can use getComputedStyle
+ * to resolve `var(--destructive)` → actual color value.
+ */
+function resolveConfigCssVars(config: any): any {
+	if (!config || !config.colors) return config;
+
+	const resolved = { ...config, colors: resolveColorObject(config.colors) };
+	return resolved;
+}
+
+function resolveColorObject(obj: any): any {
+	if (typeof obj === 'string') {
+		return resolveCssVar(obj);
+	}
+	if (obj && typeof obj === 'object') {
+		const result: Record<string, any> = {};
+		for (const key of Object.keys(obj)) {
+			result[key] = resolveColorObject(obj[key]);
+		}
+		return result;
+	}
+	return obj;
+}
+
+function resolveCssVar(value: string): string {
+	if (!value.startsWith('var(')) return value;
+	// Extract the variable name from var(--name) or var(--name, fallback)
+	const match = value.match(/^var\(\s*(--[^,)]+)/);
+	if (!match) return value;
+	const computed = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim();
+	if (!computed) return value;
+
+	// The resolved value might be a fully valid CSS color (hex, rgb, hsl) — try it directly
+	const directColor = normalizeToHex(computed);
+	if (directColor) return directColor;
+
+	// shadcn/ui pattern: the config has `var(--destructive)` and --destructive is bare HSL
+	// channels like "0 84.2% 60.2%". Try wrapping in hsl().
+	const hslColor = normalizeToHex(`hsl(${computed})`);
+	if (hslColor) return hslColor;
+
+	return computed;
+}
+
+/** Use the browser to normalize any CSS color string to a hex code, or return null. */
+function normalizeToHex(cssColor: string): string | null {
+	const el = document.createElement('div');
+	el.style.color = cssColor;
+	if (!el.style.color) return null; // browser rejected it
+	document.body.appendChild(el);
+	const rgb = getComputedStyle(el).color;
+	document.body.removeChild(el);
+	// rgb is like "rgb(239, 68, 68)" — convert to hex
+	const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+	if (!m) return null;
+	const hex = '#' + [m[1], m[2], m[3]].map(n => Number(n).toString(16).padStart(2, '0')).join('');
+	return hex;
+}
+
 async function clickHandler(e: MouseEvent): Promise<void> {
-	console.log('[vybit-overlay] clickHandler fired on', (e.target as Element)?.tagName, (e.target as Element)?.className);
 	// Ignore clicks on our own shadow DOM UI
 	const composed = e.composedPath();
-	if (composed.some((el) => el === shadowHost)) { console.log('[vybit-overlay] click ignored — shadow host'); return; }
+	if (composed.some((el) => el === shadowHost)) { return; }
 
 	// Ignore clicks inside an active design canvas wrapper
 	if (
@@ -1054,17 +1114,18 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	}
 
 	// Send element data to Panel via WS
+	// Resolve CSS variable color values using the live DOM context
+	const resolvedConfig = config ? resolveConfigCssVars(config) : config;
 	sendTo("panel", {
 		type: "ELEMENT_SELECTED",
 		componentName,
 		instanceCount: result.exactMatch.length,
 		classes: classString,
-		tailwindConfig: config,
+		tailwindConfig: resolvedConfig,
 	});
 }
 
 function setSelectMode(on: boolean): void {
-	console.log('[vybit-overlay] setSelectMode', on);
 	if (on) {
 		document.documentElement.style.cursor = "crosshair";
 		document.addEventListener("click", clickHandler, { capture: true });
@@ -1081,7 +1142,6 @@ function setSelectMode(on: boolean): void {
 const PANEL_OPEN_KEY = "tw-inspector-panel-open";
 
 function toggleInspect(btn: HTMLButtonElement): void {
-	console.log('[vybit-overlay] toggleInspect, active will be', !active);
 	active = !active;
 	if (active) {
 		btn.classList.add("active");
@@ -1474,7 +1534,6 @@ function getDefaultContainer(): ContainerName {
 }
 
 function init(): void {
-	console.log('[vybit-overlay] init() called');
 	shadowHost = document.createElement("div");
 	shadowHost.id = "tw-visual-editor-host";
 	shadowHost.style.cssText =
@@ -1530,7 +1589,6 @@ function init(): void {
 
 	// Handle messages from Panel via WS
 	onMessage((msg: any) => {
-		console.log('[vybit-overlay] WS message received:', msg.type);
 		if (msg.type === "TOGGLE_SELECT_MODE") {
 			if (msg.active) {
 				setSelectMode(true);
@@ -1546,23 +1604,17 @@ function init(): void {
 			msg.type === "PATCH_PREVIEW" &&
 			currentEquivalentNodes.length > 0
 		) {
-			console.log('[vybit-overlay] PATCH_PREVIEW:', msg.oldClass, '→', msg.newClass, 'nodes:', currentEquivalentNodes.length);
 			applyPreview(
 				currentEquivalentNodes,
 				msg.oldClass,
 				msg.newClass,
 				SERVER_ORIGIN,
 			);
-		} else if (msg.type === "PATCH_PREVIEW" && currentEquivalentNodes.length === 0) {
-			console.warn('[vybit-overlay] PATCH_PREVIEW DROPPED — no selected elements! oldClass:', msg.oldClass, 'newClass:', msg.newClass);
 		} else if (
 			msg.type === "PATCH_PREVIEW_BATCH" &&
 			currentEquivalentNodes.length > 0
 		) {
-			console.log('[vybit-overlay] PATCH_PREVIEW_BATCH:', msg.pairs, 'nodes:', currentEquivalentNodes.length);
 			applyPreviewBatch(currentEquivalentNodes, msg.pairs, SERVER_ORIGIN);
-		} else if (msg.type === "PATCH_PREVIEW_BATCH" && currentEquivalentNodes.length === 0) {
-			console.warn('[vybit-overlay] PATCH_PREVIEW_BATCH DROPPED — no selected elements!', msg.pairs);
 		} else if (msg.type === "PATCH_REVERT") {
 			revertPreview();
 		} else if (msg.type === "PATCH_REVERT_STAGED" && currentEquivalentNodes.length > 0) {

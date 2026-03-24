@@ -32,7 +32,6 @@ async function getAdapter(): Promise<TailwindAdapter> {
     const { TailwindV4Adapter } = await import("./tailwind-v4.js");
     adapterCache = new TailwindV4Adapter();
   }
-  console.error(`[tailwind] Using Tailwind v${version} adapter`);
   return adapterCache;
 }
 

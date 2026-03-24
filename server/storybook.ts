@@ -62,13 +62,12 @@ export async function loadStoryArgTypes(
           result[componentName] = meta.argTypes;
         }
       } catch (err) {
-        console.error(`[storybook] Failed to import ${importPath}:`, err);
+        // ignore import errors
       }
     }
 
     return result;
   } catch (err) {
-    console.error('[storybook] loadStoryArgTypes failed:', err);
     return {};
   }
 }
@@ -81,19 +80,16 @@ export async function loadStoryArgTypes(
  */
 export async function detectStorybookUrl(): Promise<string | null> {
   if (process.env.STORYBOOK_URL) {
-    console.error(`[storybook] Using STORYBOOK_URL=${process.env.STORYBOOK_URL} (from env)`);
     return process.env.STORYBOOK_URL;
   }
 
   for (const port of SCAN_PORTS) {
     const url = `http://localhost:${port}`;
     if (await probeStorybookUrl(url)) {
-      console.error(`[storybook] Auto-detected at ${url}`);
       return url;
     }
   }
 
-  console.error('[storybook] Not detected — Draw tab will show "Start Storybook" prompt');
   return null;
 }
 

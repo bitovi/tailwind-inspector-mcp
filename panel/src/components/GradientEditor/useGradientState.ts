@@ -324,18 +324,33 @@ export function useGradientState(props: GradientEditorProps) {
 }
 
 export function resolveColorHex(colorName: string, colors: Record<string, any>): string {
+  console.log(`[resolveColorHex] Looking up colorName="${colorName}", available top-level keys:`, Object.keys(colors).join(', '));
+
   // Handle direct colors like 'black', 'white', 'transparent'
-  if (typeof colors[colorName] === 'string') return colors[colorName];
+  if (typeof colors[colorName] === 'string') {
+    console.log(`[resolveColorHex] Found direct match: colors["${colorName}"] = "${colors[colorName]}"`);
+    return colors[colorName];
+  }
+
+  // Handle object with DEFAULT key (e.g. destructive: { DEFAULT: '#ef4444', foreground: '...' })
+  // `bg-destructive` maps to colors.destructive.DEFAULT in Tailwind
+  if (colors[colorName] && typeof colors[colorName] === 'object' && typeof colors[colorName].DEFAULT === 'string') {
+    console.log(`[resolveColorHex] Found DEFAULT match: colors["${colorName}"].DEFAULT = "${colors[colorName].DEFAULT}"`);
+    return colors[colorName].DEFAULT;
+  }
 
   // Handle hue-shade like 'blue-500'
   const dashIdx = colorName.lastIndexOf('-');
   if (dashIdx > 0) {
     const hue = colorName.slice(0, dashIdx);
     const shade = colorName.slice(dashIdx + 1);
+    console.log(`[resolveColorHex] Trying hue="${hue}" shade="${shade}", colors["${hue}"] =`, typeof colors[hue], colors[hue] ? Object.keys(colors[hue]).slice(0, 5).join(', ') : 'undefined');
     if (colors[hue] && typeof colors[hue][shade] === 'string') {
+      console.log(`[resolveColorHex] Found hue-shade match: colors["${hue}"]["${shade}"] = "${colors[hue][shade]}"`);
       return colors[hue][shade];
     }
   }
 
+  console.warn(`[resolveColorHex] FALLBACK #888888 for colorName="${colorName}" — color not found in config`);
   return '#888888';
 }
