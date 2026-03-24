@@ -1371,10 +1371,14 @@ function toggleInspect(btn: HTMLButtonElement): void {
 			// In Storybook the panel is already in the addon tab — go straight to select mode
 			setSelectMode(true);
 		} else {
-			// Open the container — select mode is activated via the panel's SelectElementButton
+			// Open the container
 			const panelUrl = `${SERVER_ORIGIN}/panel`;
 			if (!activeContainer.isOpen()) {
 				activeContainer.open(panelUrl);
+			}
+			// Auto-enter select mode so user can immediately click an element
+			if (!currentTargetEl) {
+				setSelectMode(true);
 			}
 		}
 		// Restore element toolbar if an element was previously selected
