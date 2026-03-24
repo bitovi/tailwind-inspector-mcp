@@ -5,6 +5,7 @@ import {
 	TAILWIND_PARSERS,
 } from "../../overlay/src/tailwind/grammar";
 import { ContainerSwitcher } from "./components/ContainerSwitcher";
+import { CanvasTab } from "./components/CanvasTab";
 import { DrawTab } from "./components/DrawTab";
 import { MessageTab } from "./components/MessageTab";
 import { PatchPopover } from "./components/PatchPopover";
@@ -19,6 +20,7 @@ import {
 	onConnect,
 	onDisconnect,
 	onMessage,
+	send,
 	sendTo,
 } from "./ws";
 
@@ -33,6 +35,7 @@ const appMode = urlParams.get("mode");
 const TABS: Tab[] = [
 	{ id: "design", label: "Design" },
 	{ id: "theme", label: "Theme" },
+	{ id: "canvas", label: "Canvas" },
 	{ id: "draw", label: "Components" },
 	{ id: "message", label: "Message" },
 ];
@@ -99,6 +102,32 @@ function InspectorApp() {
 			patchManager.stageMessage(description, "theme-config");
 		},
 		[patchManager],
+	);
+
+	const handleStageDesign = useCallback(
+		(data: {
+			image: string;
+			width: number;
+			height: number;
+			canvasType: 'page' | 'component' | 'composition';
+			canvasName: string;
+			canvasContent: string;
+		}) => {
+			send({
+				type: 'DESIGN_SUBMIT',
+				image: data.image,
+				componentName: data.canvasName || `New ${data.canvasType}`,
+				target: { tag: '', classes: '', innerText: '' },
+				context: `Canvas wireframe: ${data.canvasType}${data.canvasName ? ` — ${data.canvasName}` : ''}`,
+				insertMode: 'after',
+				canvasWidth: data.width,
+				canvasHeight: data.height,
+				canvasType: data.canvasType,
+				canvasName: data.canvasName,
+				canvasContent: data.canvasContent,
+			});
+		},
+		[],
 	);
 
 	useEffect(() => {
@@ -410,6 +439,8 @@ function InspectorApp() {
 							tailwindConfig={themeConfig}
 							onStageThemeChange={handleStageThemeChange}
 						/>
+					) : activeTab === "canvas" ? (
+						<CanvasTab onStageDesign={handleStageDesign} />
 					) : activeTab === "draw" ? (
 						<DrawTab />
 					) : activeTab === "message" ? (
@@ -567,6 +598,9 @@ function InspectorApp() {
 					/>
 				)}
 				{activeTab === "draw" && <DrawTab />}
+				{activeTab === "canvas" && (
+					<CanvasTab onStageDesign={handleStageDesign} />
+				)}
 				{activeTab === "message" && (
 					<MessageTab
 						draft={draftPatches}

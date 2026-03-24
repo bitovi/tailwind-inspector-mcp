@@ -32,4 +32,5 @@ export interface DesignCanvasProps {
   backgroundImage?: string;  // base64 PNG data URL — locked background for screenshot annotation
   armedComponent?: ArmedComponent | null;
   onComponentPlaced?: () => void;  // called after a component is dropped on the canvas
+  hideActions?: boolean;     // hide submit/close buttons from the toolbar
 }

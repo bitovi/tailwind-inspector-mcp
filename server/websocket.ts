@@ -108,6 +108,9 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
             canvasWidth: msg.canvasWidth,
             canvasHeight: msg.canvasHeight,
             canvasComponents: msg.canvasComponents,
+            canvasType: msg.canvasType,
+            canvasName: msg.canvasName,
+            canvasContent: msg.canvasContent,
           };
           addPatch(patch);
           broadcastPatchUpdate();

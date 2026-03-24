@@ -56,6 +56,10 @@ export interface Patch {
   canvasWidth?: number;
   canvasHeight?: number;
   canvasComponents?: CanvasComponent[]; // Components placed on the design canvas
+  // Canvas tab fields (standalone wireframe):
+  canvasType?: 'page' | 'component' | 'composition'; // what the wireframe represents
+  canvasName?: string;       // route path or component name
+  canvasContent?: string;    // free-form content / copy for the wireframe
   // Component-drop fields (used when kind === 'component-drop'):
   ghostHtml?: string;        // HTML of the dropped component (overlay preview only — stripped from MCP response)
   componentStoryId?: string; // Storybook story ID
@@ -95,6 +99,10 @@ export interface PatchSummary {
   message?: string;
   image?: string;
   canvasComponents?: CanvasComponent[];
+  // Canvas tab display fields:
+  canvasType?: 'page' | 'component' | 'composition';
+  canvasName?: string;
+  canvasContent?: string;
   // Component-drop display fields:
   insertMode?: string;
   parentComponent?: { name: string };
@@ -325,6 +333,10 @@ export interface DesignSubmitMessage {
   canvasWidth: number;
   canvasHeight: number;
   canvasComponents?: CanvasComponent[];
+  // Canvas tab standalone fields:
+  canvasType?: 'page' | 'component' | 'composition';
+  canvasName?: string;
+  canvasContent?: string;
 }
 
 /** Design iframe → Overlay: close the canvas wrapper */

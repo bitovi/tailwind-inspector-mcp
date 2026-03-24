@@ -2,7 +2,7 @@ import type { DesignCanvasProps } from './types';
 import { useFabricCanvas } from './useFabricCanvas';
 import { CanvasToolbar } from './CanvasToolbar';
 
-export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponent, onComponentPlaced }: DesignCanvasProps) {
+export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponent, onComponentPlaced, hideActions }: DesignCanvasProps) {
   const {
     canvasElRef,
     containerRef,
@@ -41,6 +41,7 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponen
         onClear={handleClear}
         onSubmit={handleSubmit}
         onClose={onClose}
+        hideActions={hideActions}
       />
 
       <div

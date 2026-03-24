@@ -40,6 +40,7 @@ interface CanvasToolbarProps {
   onClear: () => void;
   onSubmit?: () => void;
   onClose?: () => void;
+  hideActions?: boolean;
 }
 
 const TOOLS: { id: DrawingTool; label: string; icon: ReactNode }[] = [
@@ -67,6 +68,7 @@ export function CanvasToolbar({
   onClear,
   onSubmit,
   onClose,
+  hideActions,
 }: CanvasToolbarProps) {
   const [showFillPalette, setShowFillPalette] = useState(false);
   const [showStrokePalette, setShowStrokePalette] = useState(false);
@@ -203,7 +205,7 @@ export function CanvasToolbar({
         <TrashIcon />
       </button>
 
-      {onClose && (
+      {!hideActions && onClose && (
         <button
           onClick={onClose}
           className="ml-auto px-2.5 py-0.5 rounded border border-bv-border bg-bv-bg text-bv-muted text-[10px] font-medium cursor-pointer hover:bg-bv-orange/10 hover:border-bv-orange hover:text-bv-orange transition-all"
@@ -211,7 +213,7 @@ export function CanvasToolbar({
           ✕ Close
         </button>
       )}
-      {onSubmit && (
+      {!hideActions && onSubmit && (
         <button
           onClick={onSubmit}
           className="px-2.5 py-0.5 rounded border border-bv-teal bg-bv-teal text-white text-[10px] font-medium cursor-pointer hover:bg-bv-teal/80 transition-all"
