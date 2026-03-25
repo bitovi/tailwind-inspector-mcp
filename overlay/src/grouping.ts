@@ -5,6 +5,7 @@ import {
   getFiber,
   findComponentBoundary,
   getRootFiber,
+  getRootFiberFrom,
   findAllInstances,
   getDOMNode,
 } from './fiber';
@@ -96,12 +97,13 @@ export function findExactMatches(
   const fiber = getFiber(clickedEl);
   const boundary = fiber ? findComponentBoundary(fiber) : null;
   const componentName = boundary?.componentName ?? null;
+  console.log('[grouping] findExactMatches — fiber:', !!fiber, 'boundary:', boundary?.componentName ?? '(none)', 'tag:', tag);
 
   let exactMatches: HTMLElement[];
 
   if (boundary) {
     // React scoped: collect all DOM nodes from all component instances, filter to exact match
-    const rootFiber = getRootFiber();
+    const rootFiber = getRootFiberFrom(boundary.componentFiber) ?? getRootFiber();
     const allNodes = rootFiber
       ? collectComponentDOMNodes(rootFiber, boundary.componentType, tag)
       : [];
@@ -163,12 +165,13 @@ export function computeNearGroups(
 
   if (boundary) {
     // React scoped
-    const rootFiber = getRootFiber();
+    const rootFiber = getRootFiberFrom(boundary.componentFiber) ?? getRootFiber();
     candidates = rootFiber
       ? collectComponentDOMNodes(rootFiber, boundary.componentType, tag)
       : [];
     // Remove exact matches
     candidates = candidates.filter((n) => !exactMatchSet.has(n));
+    console.log('[grouping] React path — component:', boundary.componentName, 'tag:', tag, 'candidates:', candidates.length, candidates.map(n => n.className.split(' ')[0]));
   } else {
     // Page-wide scan: one query per class (O(N) instead of O(N²)).
     // Unions all matching elements, then diff-filters post-query.
@@ -187,6 +190,7 @@ export function computeNearGroups(
       }
       if (candidates.length >= MAX_CANDIDATES) break;
     }
+    console.log('[grouping] Non-React path — tag:', tag, 'candidates:', candidates.length);
   }
 
   // Group by diff signature
@@ -196,6 +200,7 @@ export function computeNearGroups(
     const candidateClasses = new Set(parseClassList(typeof el.className === 'string' ? el.className : ''));
     const { added, removed } = classDiff(refSet, candidateClasses);
     const totalDiff = added.length + removed.length;
+    console.log('[grouping] candidate diff:', totalDiff, 'added:', added.length, 'removed:', removed.length, 'class0:', el.className.split(' ')[0]);
     if (totalDiff === 0 || totalDiff > MAX_DIFF) continue;
 
     const key = `+${added.join(',')}|-${removed.join(',')}`;

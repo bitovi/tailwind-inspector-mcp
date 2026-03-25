@@ -239,6 +239,57 @@ const justify = resolvePropertyState('justify-content', justifyToken);
 
 ---
 
+## Dependent Visual State — Cross-Property Effects
+
+When one property's effective value drives how a **different** control renders or behaves, always derive that visual state from `resolvePropertyState().effectiveClass`, never from the raw `parsedClasses` token.
+
+**Why it matters:** `parsedClasses` reflects the element's original DOM state at selection time. When a user stages a patch (e.g., changing `flex-row` → `flex-col`), the raw token doesn't update — only `resolvePropertyState` returns the effective value that includes staged patches.
+
+### Pattern 1: One property drives another control's rendering
+
+Example: flex-direction determines the axis orientation of justify/align diagrams.
+
+```ts
+// ✅ Correct: derive from resolvePropertyState
+const flexDir = resolvePropertyState('flex-direction', flexDirToken);
+const effectiveFlexDir = flexDir.effectiveClass
+  ? (DIR_TO_CSS[flexDir.effectiveClass] ?? 'row') : 'row';
+
+<FlexJustifySelect flexDirection={effectiveFlexDir} ... />
+<FlexAlignSelect   flexDirection={effectiveFlexDir} ... />
+```
+
+```ts
+// ❌ Wrong: reads raw token, ignores staged patches
+const currentDir = flexDirToken?.fullClass ?? null;
+const cssFd = currentDir ? (DIR_TO_CSS[currentDir] ?? 'row') : 'row';
+```
+
+### Pattern 2: Conditional rendering depends on effective property state
+
+Example: flex controls should hide when `flex` display is staged for removal.
+
+```ts
+// ✅ Correct: use resolvePropertyState for the display token
+const displayToken = parsedClasses.find(c => c.fullClass === 'flex' || c.fullClass === 'inline-flex');
+const displayState = resolvePropertyState('display', displayToken);
+const effectiveDisplayIsFlex = displayState.effectiveClass === 'flex'
+  || displayState.effectiveClass === 'inline-flex';
+
+const isFlexParent = effectiveDisplayIsFlex || hasNonDisplayFlexClass || isFlexParentFromPending;
+```
+
+```ts
+// ❌ Wrong: only checks original parsedClasses, doesn't see staged removal
+const isFlexParent = parsedClasses.some(c => c.fullClass === 'flex');
+```
+
+### Rule of thumb
+
+Any time you write `someToken?.fullClass` or `parsedClasses.some(...)` to derive state that feeds into a **different** control's props or conditional rendering, ask: *"Should this reflect staged patches?"* If yes, route through `resolvePropertyState` first.
+
+---
+
 ## Checklist for New Preview Controls
 
 - [ ] Accept `onHover: (fullClass: string) => void` and `onLeave: () => void` props

@@ -886,20 +886,24 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
         // pending/staged. Source of truth: controlGroup: 'flex-container' in propertyRules.ts.
         const flexContainerPropertyKeys = CONTROL_GROUP_PROPERTY_KEYS.get('flex-container') ?? new Set<string>();
         const flexContainerRuleKeys = CONTROL_GROUP_RULE_KEYS.get('flex-container') ?? new Set<string>();
-        const isFlexParentFromClasses = parsedClasses.some(c => {
-          // flex/inline-flex share propertyKey 'display' with non-flex display values,
-          // so detect them by class name rather than propertyKey
-          if (c.fullClass === 'flex' || c.fullClass === 'inline-flex') return true;
+        // Account for staged patches that add or remove flex display
+        const displayToken = parsedClasses.find(c => c.fullClass === 'flex' || c.fullClass === 'inline-flex');
+        const displayState = resolvePropertyState('display', displayToken);
+        const effectiveDisplayIsFlex = displayState.effectiveClass === 'flex' || displayState.effectiveClass === 'inline-flex';
+        // Non-display flex-container classes (gap, flex-wrap, etc.) independently indicate flex context
+        const hasNonDisplayFlexClass = parsedClasses.some(c => {
+          if (c.fullClass === 'flex' || c.fullClass === 'inline-flex') return false;
           const g = ENUM_GROUPS[c.fullClass];
           if (g && g.propertyKey !== 'display' && flexContainerPropertyKeys.has(g.propertyKey)) return true;
-          // Scalar group members (gap, gap-x, gap-y) don't appear in ENUM_GROUPS
           if (flexContainerPropertyKeys.has(c.property)) return true;
           return false;
         });
         const isFlexParentFromPending = [...flexContainerRuleKeys].some(
           key => pendingPrefixes.has(key) || stagedPendingPrefixes.has(key.replace(/-$/, ''))
         );
-        const isFlexParent = section === 'flexbox' && (isFlexParentFromClasses || isFlexParentFromPending);
+        const isFlexParent = section === 'flexbox' && (
+          effectiveDisplayIsFlex || hasNonDisplayFlexClass || isFlexParentFromPending
+        );
         const filteredAddableProps = isFlexParent
           ? addableProps.filter(p => !flexContainerRuleKeys.has(p.prefix))
           : addableProps;
@@ -1003,10 +1007,8 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
                 'flex-row-reverse': 'row-reverse',
                 'flex-col-reverse': 'column-reverse',
               };
-              const currentDir = flexDirToken?.fullClass ?? null;
-              const cssFd = currentDir ? (DIR_TO_CSS[currentDir] ?? 'row') : 'row';
-
               const flexDir  = resolvePropertyState('flex-direction', flexDirToken);
+              const effectiveFlexDir = flexDir.effectiveClass ? (DIR_TO_CSS[flexDir.effectiveClass] ?? 'row') : 'row';
               const flexWrap = resolvePropertyState('flex-wrap', wrapToken);
               const justify  = resolvePropertyState('justify-content', justifyToken);
               const align    = resolvePropertyState('align-items', alignToken);
@@ -1046,7 +1048,7 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
                     currentValue={justifyToken?.fullClass ?? null}
                     lockedValue={justify.effectiveClass !== justify.originalClass ? justify.effectiveClass : null}
                     locked={false}
-                    flexDirection={cssFd}
+                    flexDirection={effectiveFlexDir}
                     onHover={(v) => handlePreview(justify.effectiveClass, v)}
                     onLeave={handleRevert}
                     onClick={(v) => handleStage('justify-content', justify.originalClass, v)}
@@ -1057,7 +1059,7 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
                     currentValue={alignToken?.fullClass ?? null}
                     lockedValue={align.effectiveClass !== align.originalClass ? align.effectiveClass : null}
                     locked={false}
-                    flexDirection={cssFd}
+                    flexDirection={effectiveFlexDir}
                     onHover={(v) => handlePreview(align.effectiveClass, v)}
                     onLeave={handleRevert}
                     onClick={(v) => handleStage('align-items', align.originalClass, v)}

@@ -17,26 +17,59 @@ export function getFiber(domNode: Element): any | null {
   return key ? (domNode as any)[key] : null;
 }
 
-/** Walk .return up the fiber tree to find the nearest function/class component */
+const REACT_FORWARD_REF = Symbol.for('react.forward_ref');
+const REACT_MEMO = Symbol.for('react.memo');
+
+/** Walk .return up the fiber tree to find the nearest function/class component.
+ *  Handles plain functions, forwardRef, and memo wrappers. */
 export function findComponentBoundary(fiber: any): ComponentInfo | null {
   let current = fiber.return;
   while (current) {
-    if (typeof current.type === 'function') {
+    const t = current.type;
+    if (typeof t === 'function') {
       return {
-        componentType: current.type,
-        componentName:
-          current.type.displayName || current.type.name || 'Unknown',
+        componentType: t,
+        componentName: t.displayName || t.name || 'Unknown',
         componentFiber: current,
       };
+    }
+    // forwardRef: { $$typeof: Symbol(react.forward_ref), render: fn }
+    if (t && t.$$typeof === REACT_FORWARD_REF) {
+      const name = t.displayName || t.render?.displayName || t.render?.name || 'Unknown';
+      return { componentType: t, componentName: name, componentFiber: current };
+    }
+    // memo: { $$typeof: Symbol(react.memo), type: fn | forwardRef }
+    if (t && t.$$typeof === REACT_MEMO) {
+      const inner = t.type;
+      const name =
+        t.displayName ||
+        (typeof inner === 'function' ? inner.displayName || inner.name : null) ||
+        (inner?.$$typeof === REACT_FORWARD_REF ? inner.displayName || inner.render?.name : null) ||
+        'Unknown';
+      return { componentType: t, componentName: name, componentFiber: current };
     }
     current = current.return;
   }
   return null;
 }
 
-/** Find the root fiber from common root container elements */
+/**
+ * Walk up a fiber's .return chain to reach the HostRoot (tag === 3).
+ * This is reliable regardless of DOM container IDs (works in Storybook, Next.js, Vite, etc.)
+ */
+export function getRootFiberFrom(fiber: any): any | null {
+  let current = fiber;
+  while (current) {
+    if (current.tag === 3) return current; // HostRoot
+    if (!current.return) return current;   // topmost fiber if no HostRoot found
+    current = current.return;
+  }
+  return null;
+}
+
+/** Find the root fiber — tries DOM container IDs first, falls back to document scan */
 export function getRootFiber(): any | null {
-  const candidateIds = ['root', 'app', '__next'];
+  const candidateIds = ['root', 'app', '__next', 'storybook-root', 'sb-root'];
   for (const id of candidateIds) {
     const el = document.getElementById(id);
     if (!el) continue;
