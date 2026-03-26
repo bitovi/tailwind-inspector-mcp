@@ -99,6 +99,12 @@ export function MessageTab({
     <div className="p-3 flex flex-col gap-3">
       {/* Compose area */}
       <div className="flex flex-col gap-2">
+        {!currentElementKey && (
+          <div className="flex items-center gap-1.5 px-2 py-1.5 bg-bv-surface rounded border border-bv-border text-[11px] text-bv-text-mid">
+            <span>👆</span>
+            <span>Click an element in the page to add a message</span>
+          </div>
+        )}
         <textarea
           ref={textareaRef}
           className="w-full min-h-[80px] p-2 bg-bv-bg border border-bv-border rounded text-[13px] font-[family-name:var(--font-ui)] text-bv-text placeholder:text-bv-muted resize-y focus:outline-none focus:border-bv-teal"

@@ -401,10 +401,40 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
   const handleSubmit = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 1 });
+
+    // Calculate bounding box of all objects to crop whitespace
+    const objects = canvas.getObjects();
+    let cropOpts: { left: number; top: number; width: number; height: number } | undefined;
+    if (objects.length > 0 && !hasBackgroundRef.current) {
+      const padding = 10;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const obj of objects) {
+        const bound = obj.getBoundingRect();
+        minX = Math.min(minX, bound.left);
+        minY = Math.min(minY, bound.top);
+        maxX = Math.max(maxX, bound.left + bound.width);
+        maxY = Math.max(maxY, bound.top + bound.height);
+      }
+      const cw = canvas.getWidth();
+      const ch = canvas.getHeight();
+      const cropLeft = Math.max(0, Math.floor(minX - padding));
+      const cropTop = Math.max(0, Math.floor(minY - padding));
+      const cropWidth = Math.min(cw - cropLeft, Math.ceil(maxX - minX + padding * 2));
+      const cropHeight = Math.min(ch - cropTop, Math.ceil(maxY - minY + padding * 2));
+      if (cropWidth > 0 && cropHeight > 0) {
+        cropOpts = { left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight };
+      }
+    }
+
+    const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 1, ...cropOpts });
+    const exportWidth = cropOpts?.width ?? canvas.getWidth();
+    const exportHeight = cropOpts?.height ?? canvas.getHeight();
+
     // Extract component metadata from placed objects
     const components: CanvasComponent[] = [];
-    for (const obj of canvas.getObjects()) {
+    const offsetX = cropOpts?.left ?? 0;
+    const offsetY = cropOpts?.top ?? 0;
+    for (const obj of objects) {
       const meta = (obj as any)._componentMeta;
       if (meta) {
         components.push({
@@ -412,14 +442,14 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
           componentPath: meta.componentPath,
           storyId: meta.storyId,
           args: meta.args,
-          x: Math.round(obj.left ?? 0),
-          y: Math.round(obj.top ?? 0),
+          x: Math.round((obj.left ?? 0) - offsetX),
+          y: Math.round((obj.top ?? 0) - offsetY),
           width: Math.round((obj.width ?? 0) * (obj.scaleX ?? 1)),
           height: Math.round((obj.height ?? 0) * (obj.scaleY ?? 1)),
         });
       }
     }
-    onSubmit(dataUrl, canvas.getWidth(), canvas.getHeight(), components.length > 0 ? components : undefined);
+    onSubmit(dataUrl, exportWidth, exportHeight, components.length > 0 ? components : undefined);
   }, [onSubmit]);
 
   const handleDelete = useCallback(() => {

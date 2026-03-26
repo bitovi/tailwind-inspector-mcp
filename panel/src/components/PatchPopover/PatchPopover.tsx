@@ -182,7 +182,7 @@ export function PatchPopover({
 														<img
 															src={item.image as string}
 															alt="Design drawing"
-															className="w-full max-h-16 object-contain rounded border border-bv-border bg-white"
+															className="max-w-full max-h-16 object-contain rounded border border-bv-border bg-white"
 														/>
 													)}
 												</div>

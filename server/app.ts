@@ -8,14 +8,16 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 
 import { getByStatus, getQueueUpdate, clearAll } from "./queue.js";
 import { resolveTailwindConfig, generateCssForClasses, getTailwindVersion } from "./tailwind.js";
-import { loadStoryArgTypes } from "./storybook.js";
+import { loadStoryArgTypes, detectStorybookUrl, probeStorybookUrl } from "./storybook.js";
 import { loadCache, getAllCachedGhosts, setCachedGhost, invalidateAll as invalidateGhostCache } from "./ghost-cache.js";
 import type { PatchStatus } from "../shared/types.js";
+import type { RequestHandler } from "express";
 
 const VALID_STATUSES = new Set<string>(['staged', 'committed', 'implementing', 'implemented', 'error']);
 
-export function createApp(packageRoot: string, storybookUrl: string | null = null): express.Express {
+export function createApp(packageRoot: string, initialStorybookUrl: string | null = null): express.Express {
   const app = express();
+  let storybookUrl = initialStorybookUrl;
   app.use(cors());
 
   // Load ghost cache from disk on startup
@@ -108,34 +110,70 @@ export function createApp(packageRoot: string, storybookUrl: string | null = nul
     res.json({ ok: true });
   });
 
-  // --- Storybook proxy ---
-  if (storybookUrl) {
-    // Vite's dev server serves assets at many root-absolute path prefixes:
-    //   /@vite/client, /@react-refresh, /@id/..., /node_modules/.cache/..., /src/...
-    // Rather than enumerate them all, proxy everything that isn't ours.
-    const OWN_PATHS = new Set(['/panel', '/overlay.js', '/api', '/patches', '/css', '/tailwind-config']);
-    const isOwnPath = (p: string) =>
-      OWN_PATHS.has(p) ||
-      [...OWN_PATHS].some(own => p.startsWith(own + '/')) ||
-      p === '/';
+  // --- Storybook proxy (dynamic — supports late attach) ---
+  const OWN_PATHS = new Set(['/panel', '/overlay.js', '/api', '/patches', '/css', '/tailwind-config']);
+  const isOwnPath = (p: string) =>
+    OWN_PATHS.has(p) ||
+    [...OWN_PATHS].some(own => p.startsWith(own + '/')) ||
+    p === '/';
 
-    app.use('/storybook', createProxyMiddleware({
-      target: storybookUrl,
+  let sbProxy: RequestHandler | null = null;
+  let sbAssetProxy: RequestHandler | null = null;
+
+  function installStorybookProxy(url: string) {
+    sbProxy = createProxyMiddleware({
+      target: url,
       changeOrigin: true,
       pathRewrite: { '^/storybook': '' },
-    }));
-
-    app.use(createProxyMiddleware({
-      target: storybookUrl,
+    });
+    sbAssetProxy = createProxyMiddleware({
+      target: url,
       changeOrigin: true,
       pathFilter: (pathname) => !isOwnPath(pathname),
-    }));
-
-    console.error(`[storybook] Proxying /storybook + Vite asset paths → ${storybookUrl}`);
+    });
+    console.error(`[storybook] Proxying /storybook + Vite asset paths → ${url}`);
   }
+
+  if (storybookUrl) installStorybookProxy(storybookUrl);
+
+  // Dynamic proxy routes — delegate to current proxy middleware
+  app.use('/storybook', (req, res, next) => {
+    if (sbProxy) return sbProxy(req, res, next);
+    next();
+  });
+
+  // Catch-all asset proxy (must be registered after /api, /panel, etc.)
+  // Deferred to the end via a late-bind wrapper stored here and mounted later.
+  const assetProxyHandler: RequestHandler = (req, res, next) => {
+    if (sbAssetProxy) return sbAssetProxy(req, res, next);
+    next();
+  };
 
   app.get('/api/storybook-status', (_req, res) => {
     res.json({ url: storybookUrl ? '/storybook' : null, directUrl: storybookUrl ?? null });
+  });
+
+  // --- Storybook reconnect ---
+  app.post('/api/storybook-reconnect', express.json(), async (req, res) => {
+    const { port } = req.body as { port?: number };
+    let foundUrl: string | null = null;
+
+    if (port != null) {
+      const url = `http://localhost:${port}`;
+      if (await probeStorybookUrl(url)) {
+        foundUrl = url;
+      }
+    } else {
+      foundUrl = await detectStorybookUrl();
+    }
+
+    if (foundUrl) {
+      storybookUrl = foundUrl;
+      installStorybookProxy(foundUrl);
+      res.json({ ok: true, url: '/storybook', directUrl: foundUrl });
+    } else {
+      res.json({ ok: false });
+    }
   });
 
   app.get('/api/storybook-argtypes', async (_req, res) => {
@@ -201,6 +239,9 @@ export function createApp(packageRoot: string, storybookUrl: string | null = nul
       });
     });
   }
+
+  // Storybook asset proxy — must come after all other routes
+  app.use(assetProxyHandler);
 
   return app;
 }

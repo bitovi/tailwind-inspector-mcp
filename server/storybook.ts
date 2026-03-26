@@ -93,7 +93,7 @@ export async function detectStorybookUrl(): Promise<string | null> {
   return null;
 }
 
-async function probeStorybookUrl(baseUrl: string): Promise<boolean> {
+export async function probeStorybookUrl(baseUrl: string): Promise<boolean> {
   try {
     const res = await fetch(`${baseUrl}/index.json`, { signal: AbortSignal.timeout(500) });
     if (!res.ok) return false;

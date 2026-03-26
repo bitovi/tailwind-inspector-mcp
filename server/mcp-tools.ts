@@ -259,6 +259,9 @@ function waitForCommitted(
         resolve(next);
       }
     });
+
+    // Notify the panel that an agent is now waiting
+    broadcastPatchUpdate();
   });
 }
 

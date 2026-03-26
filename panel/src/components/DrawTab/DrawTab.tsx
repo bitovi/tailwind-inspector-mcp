@@ -5,7 +5,7 @@ import { sendTo, onMessage } from '../../ws';
 import { useGhostCache } from '../../hooks/useGhostCache';
 
 export function DrawTab() {
-  const { groups, loading, error } = useComponentGroups();
+  const { groups, loading, error, refetch } = useComponentGroups();
   const [armedGroup, setArmedGroup] = useState<string | null>(null);
   const { getCachedGhost, submitToCache } = useGhostCache();
 
@@ -52,10 +52,7 @@ export function DrawTab() {
           <div className="text-[11px] text-bv-muted">Loading components…</div>
         )}
         {!loading && error && (
-          <div className="text-[11px] text-bv-text-mid leading-relaxed">
-            <span className="block mb-0.5">Storybook not detected.</span>
-            <span className="text-bv-muted">Start Storybook on port 6006–6010 to browse components.</span>
-          </div>
+          <StorybookConnect onConnected={refetch} />
         )}
         {!loading && !error && groups.length === 0 && (
           <div className="text-[11px] text-bv-muted">No stories found.</div>
@@ -86,10 +83,87 @@ export function DrawTab() {
   );
 }
 
+function StorybookConnect({ onConnected }: { onConnected: () => void }) {
+  const [port, setPort] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const reconnect = async (customPort?: number) => {
+    setScanning(true);
+    setFailed(false);
+    try {
+      const body = customPort != null ? { port: customPort } : {};
+      const res = await fetch('/api/storybook-reconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json() as { ok: boolean };
+      if (data.ok) {
+        onConnected();
+      } else {
+        setFailed(true);
+      }
+    } catch {
+      setFailed(true);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="text-[11px] text-bv-text-mid leading-relaxed flex flex-col gap-2">
+      <span>Storybook not detected.</span>
+      <button
+        onClick={() => reconnect()}
+        disabled={scanning}
+        className="self-start px-2.5 py-1 rounded bg-bv-surface-hi text-bv-text text-[11px] border border-bv-border hover:border-bv-teal disabled:opacity-50 transition-colors"
+      >
+        {scanning ? 'Scanning…' : 'Scan for Storybook'}
+      </button>
+      <div className="flex items-center gap-1.5">
+        <span className="text-bv-muted">or port:</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="6006"
+          value={port}
+          onChange={e => { setPort(e.target.value); setFailed(false); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && port) reconnect(Number(port));
+          }}
+          className="w-16 px-1.5 py-0.5 rounded bg-bv-surface text-bv-text text-[11px] border border-bv-border focus:border-bv-teal outline-none"
+        />
+        <button
+          onClick={() => port && reconnect(Number(port))}
+          disabled={!port || scanning}
+          className="px-2 py-0.5 rounded bg-bv-surface-hi text-bv-text text-[11px] border border-bv-border hover:border-bv-teal disabled:opacity-50 transition-colors"
+        >
+          Connect
+        </button>
+      </div>
+      {failed && (
+        <span className="text-bv-orange text-[10px]">
+          No Storybook found{port ? ` on port ${port}` : ''}. Is it running?
+        </span>
+      )}
+    </div>
+  );
+}
+
 function useComponentGroups() {
   const [groups, setGroups] = useState<ComponentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [fetchKey, setFetchKey] = useState(0);
+
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    setGroups([]);
+    setFetchKey(k => k + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,9 +191,9 @@ function useComponentGroups() {
     })();
 
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchKey]);
 
-  return { groups, loading, error };
+  return { groups, loading, error, refetch };
 }
 
 function groupByComponent(

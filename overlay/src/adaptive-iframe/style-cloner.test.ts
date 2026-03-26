@@ -4,19 +4,36 @@ import {
   extractStyles,
   applyStylesToHost,
   injectChildStyles,
-  STYLE_PROPERTIES,
   CHILD_STYLE_PROPERTIES,
 } from './style-cloner';
 
-function mockElement(styles: Record<string, string>): Element {
-  const el = document.createElement('div');
-  // Override getComputedStyle for this element
-  vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-    getPropertyValue(prop: string) {
-      return styles[prop] ?? '';
-    },
-  } as CSSStyleDeclaration);
-  return el;
+/**
+ * Mock getComputedStyle so that the given element returns `styles`,
+ * while any other element (i.e. the baseline) returns empty strings.
+ * The mock is iterable (like real CSSStyleDeclaration) so the
+ * baseline-comparison loop in extractStyles/injectChildStyles works.
+ */
+function mockComputedStyleFor(
+  el: Element,
+  styles: Record<string, string>,
+): void {
+  const props = Object.keys(styles);
+  const emptyDecl = {
+    getPropertyValue: () => '',
+    length: 0,
+  } as unknown as CSSStyleDeclaration;
+
+  vi.spyOn(window, 'getComputedStyle').mockImplementation((target: Element) => {
+    if (target === el) {
+      return {
+        getPropertyValue(prop: string) { return styles[prop] ?? ''; },
+        length: props.length,
+        ...Object.fromEntries(props.map((p, i) => [i, p])),
+      } as unknown as CSSStyleDeclaration;
+    }
+    // Baseline or other elements — return defaults (all empty)
+    return emptyDecl;
+  });
 }
 
 describe('extractStyles', () => {
@@ -24,37 +41,59 @@ describe('extractStyles', () => {
     vi.restoreAllMocks();
   });
 
-  test('reads all STYLE_PROPERTIES from computed style', () => {
-    const expected: Record<string, string> = {};
-    for (const prop of STYLE_PROPERTIES) {
-      expected[prop] = `value-of-${prop}`;
-    }
-    const el = mockElement(expected);
+  test('returns only non-default properties', () => {
+    const el = document.createElement('button');
+    const styles = {
+      display: 'inline-flex',
+      color: 'rgb(255, 0, 0)',
+      'font-size': '14px',
+      'align-items': 'center',
+      gap: '8px',
+    };
+    mockComputedStyleFor(el, styles);
 
     const result = extractStyles(el);
 
-    for (const prop of STYLE_PROPERTIES) {
-      expect(result[prop]).toBe(`value-of-${prop}`);
+    for (const [prop, value] of Object.entries(styles)) {
+      expect(result[prop]).toBe(value);
     }
   });
 
-  test('returns empty strings for properties not set', () => {
-    const el = mockElement({});
+  test('skips properties that match the baseline', () => {
+    const el = document.createElement('div');
+    const props = ['display', 'color'];
+    // Mock: both source and baseline return the same values
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(() => ({
+      getPropertyValue(prop: string) {
+        return prop === 'display' ? 'block' : '';
+      },
+      length: props.length,
+      ...Object.fromEntries(props.map((p, i) => [i, p])),
+    } as unknown as CSSStyleDeclaration));
+
     const result = extractStyles(el);
 
-    for (const prop of STYLE_PROPERTIES) {
-      expect(result[prop]).toBe('');
-    }
+    // display=block is the default for a div, so it should be skipped
+    expect(result).toEqual({});
+  });
+
+  test('returns empty object when no computed properties', () => {
+    const el = document.createElement('div');
+    mockComputedStyleFor(el, {});
+    const result = extractStyles(el);
+    expect(Object.keys(result)).toHaveLength(0);
   });
 
   test('includes display, width, height, color, font-size', () => {
-    const el = mockElement({
+    const el = document.createElement('div');
+    const styles = {
       display: 'flex',
       width: '200px',
       height: '100px',
       color: 'rgb(0, 0, 0)',
       'font-size': '16px',
-    });
+    };
+    mockComputedStyleFor(el, styles);
 
     const result = extractStyles(el);
     expect(result['display']).toBe('flex');
@@ -62,6 +101,17 @@ describe('extractStyles', () => {
     expect(result['height']).toBe('100px');
     expect(result['color']).toBe('rgb(0, 0, 0)');
     expect(result['font-size']).toBe('16px');
+  });
+
+  test('creates baseline with same tag as source element', () => {
+    const el = document.createElement('button');
+    const createSpy = vi.spyOn(document, 'createElement');
+    mockComputedStyleFor(el, { display: 'inline-flex' });
+
+    extractStyles(el);
+
+    // Should have been called to create a baseline 'button' element
+    expect(createSpy).toHaveBeenCalledWith('button');
   });
 });
 
@@ -117,7 +167,7 @@ describe('injectChildStyles', () => {
     vi.restoreAllMocks();
   });
 
-  test('applies computed styles to cloned element', () => {
+  test('applies non-default computed styles to cloned element', () => {
     const source = document.createElement('span');
     source.textContent = 'hello';
     document.body.appendChild(source);
@@ -125,22 +175,19 @@ describe('injectChildStyles', () => {
     const clone = document.createElement('span');
     clone.textContent = 'hello';
 
-    // Mock getComputedStyle for the source
     const mockStyles: Record<string, string> = {
       color: 'rgb(255, 0, 0)',
       'font-size': '14px',
       display: 'inline',
     };
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      getPropertyValue(prop: string) {
-        return mockStyles[prop] ?? '';
-      },
-    } as CSSStyleDeclaration);
+    mockComputedStyleFor(source, mockStyles);
 
     injectChildStyles(source, clone);
 
     expect(clone.style.getPropertyValue('color')).toBe('rgb(255, 0, 0)');
     expect(clone.style.getPropertyValue('font-size')).toBe('14px');
+    // display: 'inline' is the default for <span>, but our mock returns ''
+    // for the baseline, so it shows as non-default here
     expect(clone.style.getPropertyValue('display')).toBe('inline');
 
     document.body.removeChild(source);
@@ -157,16 +204,46 @@ describe('injectChildStyles', () => {
     cloneChild.textContent = 'child';
     clone.appendChild(cloneChild);
 
-    const mockStyles: Record<string, string> = { color: 'blue' };
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-      getPropertyValue(prop: string) {
-        return mockStyles[prop] ?? '';
-      },
-    } as CSSStyleDeclaration);
+    // Mock: both source and sourceChild return color: blue (non-default)
+    const props = ['color'];
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((target: Element) => {
+      if (target === source || target === sourceChild) {
+        return {
+          getPropertyValue: (p: string) => p === 'color' ? 'blue' : '',
+          length: props.length,
+          ...Object.fromEntries(props.map((p, i) => [i, p])),
+        } as unknown as CSSStyleDeclaration;
+      }
+      return {
+        getPropertyValue: () => '',
+        length: 0,
+      } as unknown as CSSStyleDeclaration;
+    });
 
     injectChildStyles(source, clone);
 
     expect(cloneChild.style.getPropertyValue('color')).toBe('blue');
+  });
+
+  test('skips width and height on children', () => {
+    const source = document.createElement('div');
+    document.body.appendChild(source);
+    const clone = document.createElement('div');
+
+    const mockStyles: Record<string, string> = {
+      width: '200px',
+      height: '100px',
+      color: 'rgb(255, 0, 0)',
+    };
+    mockComputedStyleFor(source, mockStyles);
+
+    injectChildStyles(source, clone);
+
+    expect(clone.style.getPropertyValue('width')).toBe('');
+    expect(clone.style.getPropertyValue('height')).toBe('');
+    expect(clone.style.getPropertyValue('color')).toBe('rgb(255, 0, 0)');
+
+    document.body.removeChild(source);
   });
 
   test('handles null source gracefully', () => {
