@@ -30,6 +30,7 @@ vi.mock('fabric', () => {
     add = vi.fn();
     remove = vi.fn();
     setActiveObject = vi.fn();
+    setCursor = vi.fn();
     findTarget = vi.fn();
     getScenePoint = vi.fn(() => ({ x: 0, y: 0 }));
   }
