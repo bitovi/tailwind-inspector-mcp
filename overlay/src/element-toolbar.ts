@@ -134,6 +134,21 @@ export async function positionBothMenus(
 
 export { positionWithFlip };
 
+/** Clear selection, previews, highlights, and all cached state. */
+export function clearSelection(): void {
+	cancelInsert();
+	clearLockedInsert();
+	revertPreview();
+	clearHighlights();
+	state.currentEquivalentNodes = [];
+	state.currentTargetEl = null;
+	state.currentBoundary = null;
+	state.cachedNearGroups = null;
+	state.cachedExactMatches = null;
+	state.manuallyAddedNodes = new Set<HTMLElement>();
+	state.addMode = false;
+}
+
 export function showDrawButton(targetEl: HTMLElement): void {
 	removeDrawButton();
 
@@ -159,20 +174,10 @@ export function showDrawButton(targetEl: HTMLElement): void {
 		selectBtn.style.cssText = 'color: #5fd4da; border-radius: 0;';
 		selectBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
-			cancelInsert();
-			clearLockedInsert();
-			revertPreview();
-			clearHighlights();
-			state.currentEquivalentNodes = [];
-			state.currentTargetEl = null;
-			state.currentBoundary = null;
-			state.cachedNearGroups = null;
-			state.cachedExactMatches = null;
-			state.manuallyAddedNodes = new Set<HTMLElement>();
-			state.addMode = false;
-			// Toggle off: already in select mode, deactivate
-			setSelectMode(false);
-			sendTo("panel", { type: "MODE_CHANGED", mode: null });
+			clearSelection();
+			// Re-enter select mode: deselect current element, reactivate crosshair
+			setSelectMode(true);
+			sendTo("panel", { type: "DESELECT_ELEMENT" });
 		});
 		selectGroup.appendChild(selectBtn);
 
@@ -211,17 +216,8 @@ export function showDrawButton(targetEl: HTMLElement): void {
 		selectBtn.style.cssText = 'opacity: 0.4;';
 		selectBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
-			cancelInsert();
-			clearLockedInsert();
-			revertPreview();
-			clearHighlights();
-			state.currentEquivalentNodes = [];
-			state.currentTargetEl = null;
-			state.currentBoundary = null;
-			state.cachedNearGroups = null;
-			state.cachedExactMatches = null;
-			state.manuallyAddedNodes = new Set<HTMLElement>();
-			state.addMode = false;
+			clearSelection();
+			// Switch to select mode
 			state.currentMode = 'select';
 			state.currentTab = resolveTab();
 			sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
@@ -241,23 +237,15 @@ export function showDrawButton(targetEl: HTMLElement): void {
 	}
 	insertBtn.addEventListener("click", (e) => {
 		e.stopPropagation();
-		cancelInsert();
-		clearLockedInsert();
-		revertPreview();
-		clearHighlights();
+		clearSelection();
 		setSelectMode(false);
-		state.currentEquivalentNodes = [];
-		state.currentTargetEl = null;
-		state.currentBoundary = null;
-		state.cachedNearGroups = null;
-		state.cachedExactMatches = null;
-		state.manuallyAddedNodes = new Set<HTMLElement>();
-		state.addMode = false;
 		if (state.currentMode === 'insert') {
-			// Toggle off: already in insert mode, deactivate
-			sendTo("panel", { type: "MODE_CHANGED", mode: null });
+			// Already in insert mode: deselect element, restart browse for new insertion point
+			sendTo("panel", { type: "DESELECT_ELEMENT" });
+			startBrowse(state.shadowHost, onBrowseLocked);
 			return;
 		}
+		// Switch to insert mode
 		state.currentMode = 'insert';
 		if (state.tabPreference === 'design') state.tabPreference = 'component';
 		state.currentTab = resolveTab();

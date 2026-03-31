@@ -22,7 +22,7 @@ import {
 import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler } from "./element-highlight";
-import { showDrawButton, positionWithFlip, positionBothMenus, initToolbar } from "./element-toolbar";
+import { showDrawButton, positionWithFlip, positionBothMenus, initToolbar, clearSelection } from "./element-toolbar";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
 import { createNavigationInterceptor } from "./recording/navigation-interceptor";
@@ -502,15 +502,7 @@ function init(): void {
 			}
 			if (state.currentTargetEl) {
 				// Deselect element, stay in current mode
-				revertPreview();
-				clearHighlights();
-				state.currentEquivalentNodes = [];
-				state.currentTargetEl = null;
-				state.currentBoundary = null;
-				state.cachedNearGroups = null;
-				state.cachedExactMatches = null;
-				state.manuallyAddedNodes = new Set<HTMLElement>();
-				state.addMode = false;
+				clearSelection();
 				// Re-enter selection/browse mode (don't send RESET_SELECTION — that nukes the panel to landing)
 				if (state.currentMode === 'select') {
 					setSelectMode(true);
