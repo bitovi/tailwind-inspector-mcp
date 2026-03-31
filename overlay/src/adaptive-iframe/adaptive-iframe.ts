@@ -75,9 +75,9 @@ export class AdaptiveIframe extends HTMLElement {
       top: '0',
       width: '800px',
       height: '600px',
-      opacity: '1',
+      opacity: '0',
       pointerEvents: 'none',
-      border: '3px solid red',
+      border: 'none',
       zIndex: '-999999',
     });
     this.hiddenIframe.addEventListener('load', () => this.onIframeLoad());

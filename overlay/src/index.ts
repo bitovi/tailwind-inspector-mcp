@@ -436,6 +436,14 @@ function getDefaultContainer(): ContainerName {
 }
 
 function init(): void {
+	// Storybook preview iframes (viewMode=story) must not run the overlay —
+	// they are either the visible story frame (no overlay needed) or hidden
+	// ghost frames used for component extraction (overlay would send spurious
+	// RESET_SELECTION messages). Ghost frames also get ?vybit-ghost=1 as
+	// belt-and-suspenders.
+	const params = new URLSearchParams(location.search);
+	if (params.get('viewMode') === 'story' || params.get('vybit-ghost') === '1') return;
+
 	state.shadowHost = document.createElement("div");
 	state.shadowHost.id = "tw-visual-editor-host";
 	state.shadowHost.style.cssText = css(SHADOW_HOST);

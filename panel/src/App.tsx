@@ -168,12 +168,7 @@ function InspectorApp() {
 				setTextEditing(false);
 				setInsertPoint(null);
 				setSelectModeActive(false);
-				setMode((prev) => {
-					if (prev !== null) {
-						return null;
-					}
-					return prev;
-				});
+				setMode(null);
 			} else if (msg.type === "ELEMENT_SELECTED") {
 				setElementData({
 					componentName: msg.componentName,
