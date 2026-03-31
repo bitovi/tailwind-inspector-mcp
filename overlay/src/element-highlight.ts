@@ -1,7 +1,7 @@
 // Element highlight & hover preview utilities.
 // Extracted from index.ts — operates on shared overlay state.
 
-import { findComponentBoundary, getFiber } from "./fiber";
+import { detectComponent } from "./framework-detect";
 import { state } from "./overlay-state";
 
 export function highlightElement(el: HTMLElement): void {
@@ -95,8 +95,7 @@ export function mouseMoveHandler(e: MouseEvent): void {
 		return;
 	}
 
-	const fiber = getFiber(target);
-	const boundary = fiber ? findComponentBoundary(fiber) : null;
+	const boundary = detectComponent(target);
 	const label = boundary?.componentName ?? target.tagName.toLowerCase();
 
 	showHoverPreview(target, label);

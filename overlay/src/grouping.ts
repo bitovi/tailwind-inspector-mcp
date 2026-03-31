@@ -12,6 +12,12 @@ import {
   resolvePathToDOM,
   buildPathLabel,
 } from './fiber';
+import { detectComponent } from './framework-detect';
+import {
+  isAngularElement,
+  findAllAngularInstances,
+  collectAngularComponentDOMNodes,
+} from './angular-detect';
 
 export interface ElementGroup {
   label: string;         // e.g. "+e" or "-a +f"
@@ -96,18 +102,32 @@ export function findExactMatches(
   const classes = parseClassList(typeof clickedEl.className === 'string' ? clickedEl.className : '');
   const tag = clickedEl.tagName;
 
-  // Determine React component scope
-  const fiber = getFiber(clickedEl);
-  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  // Determine component scope (React, Angular, or none)
+  const boundary = detectComponent(clickedEl);
   const componentName = boundary?.componentName ?? null;
+
+  // React-specific: check if we have a fiber for deep tree walking
+  const fiber = getFiber(clickedEl);
+  const reactBoundary = fiber ? findComponentBoundary(fiber) : null;
+
   let exactMatches: HTMLElement[];
 
-  if (boundary) {
+  if (reactBoundary) {
     // React scoped: collect all DOM nodes from all component instances, filter to exact match
-    const rootFiber = getRootFiberFrom(boundary.componentFiber) ?? getRootFiber();
+    const rootFiber = getRootFiberFrom(reactBoundary.componentFiber) ?? getRootFiber();
     const allNodes = rootFiber
-      ? collectComponentDOMNodes(rootFiber, boundary.componentType, tag)
+      ? collectComponentDOMNodes(rootFiber, reactBoundary.componentType, tag)
       : [];
+    exactMatches = allNodes.filter(
+      (n) => n.tagName === tag && n.className === clickedEl.className,
+    );
+  } else if (boundary && isAngularElement(clickedEl)) {
+    // Angular scoped: find all instances of this component, collect matching DOM nodes
+    const instances = findAllAngularInstances(boundary.componentType);
+    const allNodes: HTMLElement[] = [];
+    for (const host of instances) {
+      allNodes.push(...collectAngularComponentDOMNodes(host, tag));
+    }
     exactMatches = allNodes.filter(
       (n) => n.tagName === tag && n.className === clickedEl.className,
     );
@@ -159,20 +179,30 @@ export function computeNearGroups(
   if (classes.length === 0) return [];
 
   // Determine scope
+  const boundary = detectComponent(clickedEl);
   const fiber = getFiber(clickedEl);
-  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  const reactBoundary = fiber ? findComponentBoundary(fiber) : null;
 
   let candidates: HTMLElement[];
 
-  if (boundary) {
+  if (reactBoundary) {
     // React scoped
-    const rootFiber = getRootFiberFrom(boundary.componentFiber) ?? getRootFiber();
+    const rootFiber = getRootFiberFrom(reactBoundary.componentFiber) ?? getRootFiber();
     candidates = rootFiber
-      ? collectComponentDOMNodes(rootFiber, boundary.componentType, tag)
+      ? collectComponentDOMNodes(rootFiber, reactBoundary.componentType, tag)
       : [];
     // Remove exact matches
     candidates = candidates.filter((n) => !exactMatchSet.has(n));
-    console.log('[grouping] React path — component:', boundary.componentName, 'tag:', tag, 'candidates:', candidates.length, candidates.map(n => n.className.split(' ')[0]));
+    console.log('[grouping] React path — component:', reactBoundary.componentName, 'tag:', tag, 'candidates:', candidates.length, candidates.map(n => n.className.split(' ')[0]));
+  } else if (boundary && isAngularElement(clickedEl)) {
+    // Angular scoped
+    const instances = findAllAngularInstances(boundary.componentType);
+    const allNodes: HTMLElement[] = [];
+    for (const host of instances) {
+      allNodes.push(...collectAngularComponentDOMNodes(host, tag));
+    }
+    candidates = allNodes.filter((n) => !exactMatchSet.has(n));
+    console.log('[grouping] Angular path — component:', boundary.componentName, 'tag:', tag, 'candidates:', candidates.length);
   } else {
     // Page-wide scan: one query per class (O(N) instead of O(N²)).
     // Unions all matching elements, then diff-filters post-query.
@@ -277,31 +307,63 @@ export interface PathMatchResult {
 
 /**
  * Find all elements at the same structural position (child-index path) across
- * all instances of the same React component. Returns null for non-React elements.
+ * all instances of the same component.
+ *
+ * React: uses fiber tree DFS + path resolution.
+ * Angular: uses DOM-based tag+className matching within component instances.
+ * Returns null for non-framework elements.
  */
 export function findSamePathElements(
   clickedEl: HTMLElement,
 ): PathMatchResult | null {
+  // Try React path first (fiber-based exact path matching)
   const fiber = getFiber(clickedEl);
-  if (!fiber) return null;
+  if (fiber) {
+    const boundary = findComponentBoundary(fiber);
+    if (!boundary) return null;
 
-  const boundary = findComponentBoundary(fiber);
-  if (!boundary) return null;
+    const { label, path } = buildPathLabel(fiber, boundary);
 
-  const { label, path } = buildPathLabel(fiber, boundary);
+    const rootFiber = getRootFiberFrom(boundary.componentFiber) ?? getRootFiber();
+    if (!rootFiber) return null;
 
-  const rootFiber = getRootFiberFrom(boundary.componentFiber) ?? getRootFiber();
-  if (!rootFiber) return null;
+    const instances = findAllInstances(rootFiber, boundary.componentType);
+    const elements: HTMLElement[] = [];
 
-  const instances = findAllInstances(rootFiber, boundary.componentType);
-  const elements: HTMLElement[] = [];
-
-  for (const inst of instances) {
-    const node = resolvePathToDOM(inst, path);
-    if (node && !elements.includes(node)) {
-      elements.push(node);
+    for (const inst of instances) {
+      const node = resolvePathToDOM(inst, path);
+      if (node && !elements.includes(node)) {
+        elements.push(node);
+      }
     }
+
+    return elements.length > 0 ? { elements, label } : null;
   }
 
-  return elements.length > 0 ? { elements, label } : null;
+  // Try Angular path (DOM-based matching within component instances)
+  if (isAngularElement(clickedEl)) {
+    const boundary = detectComponent(clickedEl);
+    if (!boundary) return null;
+
+    const instances = findAllAngularInstances(boundary.componentType);
+    if (instances.length < 2) return null;
+
+    const tag = clickedEl.tagName;
+    const elements: HTMLElement[] = [];
+
+    for (const host of instances) {
+      const nodes = collectAngularComponentDOMNodes(host, tag);
+      const match = nodes.find(
+        (n) => n.tagName === clickedEl.tagName && n.className === clickedEl.className,
+      );
+      if (match && !elements.includes(match)) {
+        elements.push(match);
+      }
+    }
+
+    const label = `${boundary.componentName} > ${tag.toLowerCase()}`;
+    return elements.length > 0 ? { elements, label } : null;
+  }
+
+  return null;
 }

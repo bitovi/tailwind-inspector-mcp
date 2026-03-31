@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>038 · Voice Messages — Overlay Message Row</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --teal:         #00848B;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --red:          #ef4444;
+      --red-dim:      rgba(239, 68, 68, 0.12);
+      --yellow:       #fbbf24;
+      --green:        #2E7229;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px 40px 120px;
+    }
+
+    .page-header { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 40px; line-height: 1.7; max-width: 800px; }
+    .page-subtitle strong { color: var(--text-mid); }
+
+    .section-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--teal); margin-bottom: 4px; }
+    .section-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; max-width: 700px; }
+
+    hr.divider { border: none; border-top: 1px solid #333; margin: 48px 0 32px; }
+
+    .variations { display: flex; gap: 48px; flex-wrap: wrap; align-items: flex-start; }
+
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .col-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-mono); color: var(--muted); max-width: 460px; }
+
+    /* ─── MOCK PAGE BACKGROUND ───────────────────────────── */
+    .mock-page {
+      width: 560px;
+      background: #f8f9fa;
+      border-radius: var(--radius-lg);
+      padding: 32px 24px 48px;
+      position: relative;
+      min-height: 320px;
+    }
+
+    .mock-page .mock-heading {
+      font-family: var(--font-display);
+      font-size: 18px; font-weight: 700;
+      color: #1a1a1a; margin-bottom: 8px;
+    }
+    .mock-page .mock-text {
+      font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 16px;
+    }
+    .mock-page .mock-card {
+      background: white; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: 16px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .mock-page .mock-card-title {
+      font-family: var(--font-display);
+      font-size: 14px; font-weight: 600; color: #1a1a1a;
+    }
+    .mock-page .mock-card-body {
+      font-size: 12px; color: #777; line-height: 1.5;
+    }
+
+    /* ─── SELECTION OUTLINE ──────────────────────────────── */
+    .selected-element {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    /* ─── OVERLAY: ELEMENT TOOLBAR ───────────────────────── */
+    .element-toolbar {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 2px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+      font-family: var(--font-ui);
+    }
+
+    .tb {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 500;
+      transition: all 120ms ease-out;
+      background: transparent;
+      color: var(--muted);
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .tb:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .tb.active { background: var(--teal-dark); color: #5fd4da; }
+    .tb svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    .tb-divider {
+      width: 1px; height: 16px;
+      background: #3a3a3a;
+      margin: 0 2px; flex-shrink: 0;
+    }
+
+    /* ─── OVERLAY: MESSAGE ROW ───────────────────────────── */
+    .msg-row {
+      position: absolute;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 3px 4px 3px 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+      font-family: var(--font-ui);
+    }
+
+    .msg-row textarea {
+      width: 260px;
+      border: none;
+      background: #2a2a2a;
+      color: #e5e5e5;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 4px 8px;
+      border-radius: 5px;
+      outline: none;
+      resize: none;
+      overflow: hidden;
+      height: 26px;
+    }
+    .msg-row textarea::placeholder { color: #888; }
+
+    .msg-send {
+      width: 24px; height: 24px;
+      border-radius: 5px;
+      border: none;
+      background: var(--teal);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .msg-send:hover { background: #009da5; }
+    .msg-send svg { width: 12px; height: 12px; }
+
+    /* ─── NEW: MIC BUTTON ────────────────────────────────── */
+    .mic-btn {
+      width: 24px; height: 24px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: #888;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 120ms ease-out;
+      position: relative;
+    }
+    .mic-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .mic-btn svg { width: 13px; height: 13px; }
+
+    .mic-btn.listening {
+      background: var(--orange);
+      color: white;
+      animation: mic-pulse 1.5s ease-in-out infinite;
+    }
+
+    .mic-btn.error {
+      color: var(--orange);
+    }
+
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 83, 45, 0.4); }
+      50% { box-shadow: 0 0 0 4px rgba(245, 83, 45, 0); }
+    }
+
+    /* ─── TOAST ──────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1a;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+      display: none;
+      z-index: 10000;
+    }
+    .toast.visible { display: block; animation: toast-in 200ms ease-out; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ─── TRANSCRIPT PREVIEW ─────────────────────────────── */
+    .msg-row textarea.has-transcript {
+      color: #e5e5e5;
+    }
+    .msg-row textarea.interim {
+      color: var(--text-mid);
+      font-style: italic;
+    }
+
+    /* ─── ANNOTATIONS ────────────────────────────────────── */
+    .annotation {
+      position: absolute;
+      font-size: 9px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .annotation.teal { color: var(--teal); }
+    .annotation.orange { color: var(--orange); }
+
+    /* ─── STATE DIAGRAM ──────────────────────────────────── */
+    .state-diagram {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      min-width: 80px;
+      text-align: center;
+    }
+    .state-box.active { border-color: var(--teal); background: var(--teal-dim); color: var(--teal); }
+    .state-box .state-label { font-size: 9px; color: var(--muted); font-weight: 400; font-family: var(--font-mono); }
+    .state-arrow {
+      font-size: 18px; color: var(--muted); flex-shrink: 0;
+    }
+    .state-arrow-label {
+      font-size: 9px; color: var(--text-mid); text-align: center;
+      font-family: var(--font-mono);
+    }
+    .state-arrow-group {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+
+    /* ─── API SUPPORT TABLE ──────────────────────────────── */
+    .support-table {
+      border-collapse: collapse;
+      font-size: 12px;
+      color: var(--text);
+      max-width: 600px;
+    }
+    .support-table th {
+      text-align: left; padding: 8px 16px;
+      color: var(--teal); font-family: var(--font-display);
+      border-bottom: 2px solid var(--border);
+    }
+    .support-table td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .support-table .yes { color: var(--teal); font-weight: 600; }
+    .support-table .no { color: var(--red); font-weight: 600; }
+    .support-table .browser { font-weight: 500; }
+
+  </style>
+</head>
+<body>
+
+<!-- SVG icon definitions -->
+<svg style="display:none">
+  <defs>
+    <symbol id="ico-mic" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></symbol>
+    <symbol id="ico-send" viewBox="0 0 16 16"><path fill="currentColor" d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></symbol>
+    <symbol id="ico-select" viewBox="0 0 16 16"><path fill="currentColor" d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path fill="currentColor" d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></symbol>
+    <symbol id="ico-draw" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></symbol>
+    <symbol id="ico-text" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7V4h16v3M9 20h6M12 4v16"/></symbol>
+  </defs>
+</svg>
+
+
+<h1 class="page-header">038 · Voice Messages — Overlay Message Row</h1>
+<p class="page-subtitle">
+  Add a <strong>microphone button</strong> to the overlay's inline message row. Uses the browser's
+  built-in <strong>Web Speech API</strong> (<code>SpeechRecognition</code> / <code>webkitSpeechRecognition</code>)
+  — no server-side transcription, no API keys. Interim results stream into the textarea
+  as the user speaks. The button only renders in browsers that support the API.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SECTION 1 — State Diagram                                  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<div class="section-title">Mic Button State Machine</div>
+<p class="section-subtitle">
+  Three states: <strong>idle</strong> (default), <strong>listening</strong> (recording + transcribing),
+  and <strong>error</strong> (mic blocked or API failure). The button is completely hidden if the
+  browser doesn't support <code>SpeechRecognition</code>.
+</p>
+
+<div class="state-diagram">
+  <div class="state-box active">
+    idle
+    <span class="state-label">🎤 muted</span>
+  </div>
+  <div class="state-arrow-group">
+    <span class="state-arrow-label">click</span>
+    <span class="state-arrow">→</span>
+  </div>
+  <div class="state-box" style="border-color: var(--orange); background: rgba(245,83,45,0.08); color: var(--orange);">
+    listening
+    <span class="state-label">● pulse</span>
+  </div>
+  <div class="state-arrow-group">
+    <span class="state-arrow-label">onend / click</span>
+    <span class="state-arrow">→</span>
+  </div>
+  <div class="state-box active">
+    idle
+    <span class="state-label">text in textarea</span>
+  </div>
+</div>
+
+<div class="state-diagram" style="margin-bottom: 40px;">
+  <div class="state-box active">
+    idle
+    <span class="state-label">🎤 muted</span>
+  </div>
+  <div class="state-arrow-group">
+    <span class="state-arrow-label">click</span>
+    <span class="state-arrow">→</span>
+  </div>
+  <div class="state-box" style="border-color: var(--orange); background: rgba(245,83,45,0.08); color: var(--orange);">
+    listening
+    <span class="state-label">● pulse</span>
+  </div>
+  <div class="state-arrow-group">
+    <span class="state-arrow-label">onerror</span>
+    <span class="state-arrow">→</span>
+  </div>
+  <div class="state-box" style="border-color: var(--orange); color: var(--orange);">
+    error
+    <span class="state-label">🎤 orange + toast</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SECTION 2 — Idle State                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+
+<div class="section-title">Variation A — Idle State</div>
+<p class="section-subtitle">
+  The mic button sits between the textarea and the send button. Muted color in idle state,
+  highlights on hover. The textarea and send button are unchanged from the current design.
+</p>
+
+<div class="variations">
+  <div class="col">
+    <span class="col-label">Default · no text entered</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <!-- Element toolbar -->
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active" title="Design">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb" title="Draw">
+          <svg><use href="#ico-draw"/></svg>
+        </button>
+        <button class="tb" title="Text">
+          <svg><use href="#ico-text"/></svg>
+        </button>
+      </div>
+
+      <!-- Message row — IDLE STATE -->
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea placeholder="add your message" rows="1"></textarea>
+        <button class="mic-btn" title="Record voice message">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send" title="Send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation teal" style="bottom: -16px; right: 0;">← NEW mic button</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <span class="col-label">Hover state on mic button</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <!-- Element toolbar -->
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active" title="Design">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb" title="Draw">
+          <svg><use href="#ico-draw"/></svg>
+        </button>
+        <button class="tb" title="Text">
+          <svg><use href="#ico-text"/></svg>
+        </button>
+      </div>
+
+      <!-- Message row — HOVER STATE -->
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea placeholder="add your message" rows="1"></textarea>
+        <button class="mic-btn" style="color: var(--text); background: rgba(255,255,255,0.06);" title="Record voice message">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send" title="Send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation" style="bottom: -16px; right: 28px;">hover</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SECTION 3 — Listening State                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+
+<div class="section-title">Variation B — Listening State</div>
+<p class="section-subtitle">
+  Mic button turns <strong>orange with a pulsing glow</strong>. Interim transcript text appears
+  in the textarea in real-time as the user speaks. The text is styled normally (not italic)
+  since it replaces any placeholder. Click the mic button again to stop early.
+</p>
+
+<div class="variations">
+  <div class="col">
+    <span class="col-label">Listening · interim transcript streaming</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <!-- Element toolbar -->
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb"><svg><use href="#ico-draw"/></svg></button>
+        <button class="tb"><svg><use href="#ico-text"/></svg></button>
+      </div>
+
+      <!-- Message row — LISTENING STATE -->
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea rows="1">make the card title larger and</textarea>
+        <button class="mic-btn listening" title="Stop recording">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation orange" style="bottom: -16px; right: 20px;">● listening — pulsing</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <span class="col-label">Listening · appending to existing text</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <!-- Element toolbar -->
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb"><svg><use href="#ico-draw"/></svg></button>
+        <button class="tb"><svg><use href="#ico-text"/></svg></button>
+      </div>
+
+      <!-- Message row — LISTENING with existing text -->
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea rows="2" style="height: auto;">fix the spacing on this card
+also add a subtle shadow</textarea>
+        <button class="mic-btn listening" title="Stop recording">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation" style="bottom: -20px; left: 0;">typed text + voice appended below</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SECTION 4 — Done / Ready to Send                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+
+<div class="section-title">Variation C — Transcript Ready to Send</div>
+<p class="section-subtitle">
+  After speech ends, the final transcript sits in the textarea. User can edit it before
+  sending. Mic button returns to idle state. User sends with the teal send button or Enter key.
+</p>
+
+<div class="variations">
+  <div class="col">
+    <span class="col-label">Transcript complete · ready to send</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb"><svg><use href="#ico-draw"/></svg></button>
+        <button class="tb"><svg><use href="#ico-text"/></svg></button>
+      </div>
+
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea rows="1">make the card title larger and bolder</textarea>
+        <button class="mic-btn" title="Record voice message">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send" title="Send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation" style="bottom: -16px; left: 0;">transcript complete — click send or press Enter</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <span class="col-label">After send · toast confirmation</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb"><svg><use href="#ico-draw"/></svg></button>
+        <button class="tb"><svg><use href="#ico-text"/></svg></button>
+      </div>
+
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea placeholder="add your message" rows="1"></textarea>
+        <button class="mic-btn" title="Record voice message">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send" title="Send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+      </div>
+
+      <!-- Toast -->
+      <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+                  background: #1a1a1a; color: var(--text); font-family: var(--font-ui);
+                  font-size: 12px; padding: 8px 16px; border-radius: 8px;
+                  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+                  white-space: nowrap;">
+        Message staged
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SECTION 5 — Error State                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+
+<div class="section-title">Variation D — Error State</div>
+<p class="section-subtitle">
+  Mic blocked or permission denied. Mic button turns <strong>orange</strong>. A toast explains the issue.
+  Clicking the mic again retries (browser will re-prompt for permission).
+</p>
+
+<div class="variations">
+  <div class="col">
+    <span class="col-label">Microphone blocked · toast shown</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb"><svg><use href="#ico-draw"/></svg></button>
+        <button class="tb"><svg><use href="#ico-text"/></svg></button>
+      </div>
+
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea placeholder="add your message" rows="1"></textarea>
+        <button class="mic-btn error" title="Microphone blocked — click address bar to allow">
+          <svg><use href="#ico-mic"/></svg>
+        </button>
+        <button class="msg-send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation orange" style="bottom: -16px; right: 20px;">error state</div>
+      </div>
+
+      <!-- Error toast -->
+      <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+                  background: #1a1a1a; color: var(--orange); font-family: var(--font-ui);
+                  font-size: 12px; padding: 8px 16px; border-radius: 8px;
+                  box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+                  white-space: nowrap;">
+        Microphone blocked — allow access in your browser's address bar
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <span class="col-label">API not available · button hidden</span>
+    <div class="mock-page">
+      <div class="mock-heading">Dashboard</div>
+      <div class="mock-text">Welcome back! Here's your latest activity summary.</div>
+      <div class="mock-card selected-element">
+        <div class="mock-card-title">Activity Feed</div>
+        <div class="mock-card-body">3 new comments on your pull request. 2 issues assigned to you.</div>
+      </div>
+
+      <div class="element-toolbar" style="top: 58px; left: 24px;">
+        <button class="tb active">
+          <svg><use href="#ico-select"/></svg>
+          Design
+        </button>
+        <button class="tb"><svg><use href="#ico-draw"/></svg></button>
+        <button class="tb"><svg><use href="#ico-text"/></svg></button>
+      </div>
+
+      <!-- Message row — NO MIC BUTTON (Firefox / unsupported) -->
+      <div class="msg-row" style="bottom: 28px; left: 24px;">
+        <textarea placeholder="add your message" rows="1"></textarea>
+        <button class="msg-send">
+          <svg><use href="#ico-send"/></svg>
+        </button>
+        <div class="annotation" style="bottom: -16px; right: 0;">no mic button (Firefox)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SECTION 6 — Browser Support                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+
+<div class="section-title">Browser Support</div>
+<p class="section-subtitle">
+  The Web Speech API is available in all Chromium browsers and Safari. When unavailable,
+  the mic button simply doesn't render — the typing experience is unchanged.
+</p>
+
+<table class="support-table">
+  <thead>
+    <tr>
+      <th>Browser</th>
+      <th>API</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="browser">Chrome 33+</td>
+      <td class="yes">✅ webkitSpeechRecognition</td>
+      <td style="color: var(--text-mid);">Best support, most VyBit users</td>
+    </tr>
+    <tr>
+      <td class="browser">Edge 79+</td>
+      <td class="yes">✅ webkitSpeechRecognition</td>
+      <td style="color: var(--text-mid);">Chromium-based, same engine</td>
+    </tr>
+    <tr>
+      <td class="browser">Safari 14.1+</td>
+      <td class="yes">✅ SpeechRecognition</td>
+      <td style="color: var(--text-mid);">macOS and iOS</td>
+    </tr>
+    <tr>
+      <td class="browser">Firefox</td>
+      <td class="no">❌ Not shipped</td>
+      <td style="color: var(--muted);">Behind flag only — button hidden</td>
+    </tr>
+  </tbody>
+</table>
+
+
+</body>
+</html>

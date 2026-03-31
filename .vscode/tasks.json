@@ -211,6 +211,75 @@
       "dependsOrder": "parallel",
       "presentation": { "reveal": "always" },
       "problemMatcher": []
+    },
+    {
+      "label": "Server Angular (port 3335)",
+      "type": "shell",
+      "command": "npx tsx watch ../server/index.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/test-app-angular",
+        "env": { "PORT": "3335", "STORYBOOK_URL": "http://localhost:6009" }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "tsx-angular",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": ".", "endsPattern": "Listening on" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Test App Angular (port 5177)",
+      "type": "shell",
+      "command": "npx ng serve --port 5177",
+      "options": { "cwd": "${workspaceFolder}/test-app-angular" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "angular-dev",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": "angular", "endsPattern": "Local:" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Storybook Angular (port 6009)",
+      "type": "shell",
+      "command": "npm run storybook",
+      "options": { "cwd": "${workspaceFolder}/storybook-test/angular-v10" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "storybook-angular",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": "storybook", "endsPattern": "Local:" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Watch: Angular CSS",
+      "type": "shell",
+      "command": "npx @tailwindcss/cli -i src/tailwind.css -o src/styles.css --watch",
+      "options": { "cwd": "${workspaceFolder}/test-app-angular" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "tailwind-angular",
+        "pattern": { "regexp": "^(Error): (.*)$", "severity": 1, "message": 2 },
+        "background": { "activeOnStart": true, "beginsPattern": "tailwindcss", "endsPattern": "Done in" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "silent" }
+    },
+    {
+      "label": "Dev: Angular",
+      "dependsOn": ["Watch: Overlay", "Watch: Panel", "Watch: Angular CSS", "Server Angular (port 3335)", "Test App Angular (port 5177)"],
+      "dependsOrder": "parallel",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: SB Angular",
+      "dependsOn": ["Watch: Overlay", "Watch: Panel", "Watch: Angular CSS", "Server Angular (port 3335)", "Storybook Angular (port 6009)", "Test App Angular (port 5177)"],
+      "dependsOrder": "parallel",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
     }
   ]
 }

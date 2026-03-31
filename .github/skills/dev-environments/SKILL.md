@@ -17,6 +17,8 @@ Run via **Terminal → Run Task**:
 | **Dev: SB8** | Overlay watch, Panel watch, Server (3333→SB 6007), SB8 (6007), Test App (5173) | Testing Storybook 8 addon integration |
 | **Dev: SB10** | Overlay watch, Panel watch, Server (3333→SB 6008), SB10 (6008), Test App (5173) | Testing Storybook 10 addon integration |
 | **Dev: All v3** | Overlay watch, Panel watch, Server v3 (3334), Test App v3 (5175) | Testing Tailwind v3 support |
+| **Dev: Angular** | Overlay watch, Panel watch, Server Angular (3335), Test App Angular (5177) | Testing Angular 21 support |
+| **Dev: SB Angular** | Overlay watch, Panel watch, Server Angular (3335→SB 6009), SB Angular (6009), Test App Angular (5177) | Testing Angular Storybook addon |
 
 ## Port Map
 
@@ -31,6 +33,9 @@ Run via **Terminal → Run Task**:
 | 6006 | Panel Storybook | Panel component stories (internal dev) |
 | 6007 | SB8: Test App | Storybook 8 with test-app stories + Vybit addon |
 | 6008 | SB10: Test App | Storybook 10 with test-app stories + Vybit addon |
+| 3335 | MCP Server Angular | Runs from `test-app-angular/` cwd (resolves TW v4) |
+| 5177 | Test App Angular | Angular 21 + Tailwind v4 app |
+| 6009 | SB10: Angular | Storybook 10 with Angular test-app stories + Vybit addon |
 
 ## Service Dependency Rules
 
@@ -44,6 +49,7 @@ These are the brain of the system. Without them, changes to overlay or panel cod
 The server resolves `tailwindcss` from its cwd's `node_modules/`. This determines which Tailwind version the compiler uses:
 - `test-app/` → Tailwind v4
 - `test-app-v3/` → Tailwind v3
+- `test-app-angular/` → Tailwind v4 (via PostCSS)
 
 ### Server needs STORYBOOK_URL for the Draw tab
 The server's `STORYBOOK_URL` env var tells it which Storybook to connect to for the Draw tab feature:
@@ -117,7 +123,36 @@ Test the inspector with Tailwind v3 apps.
 
 **Open:** http://localhost:5175 (app) and http://localhost:3334/panel/ (inspector)
 
-### 5. Astro Testing
+### 5. Angular Testing
+
+**Task:** `Dev: Angular`
+
+Test the inspector with Angular 21 apps.
+
+**Services:**
+1. Watch: Overlay
+2. Watch: Panel
+3. Server Angular (port 3335) — from `test-app-angular/`
+4. Test App Angular (port 5177)
+
+**Open:** http://localhost:5177 (app) and http://localhost:3335/panel/ (inspector)
+
+### 6. Angular Storybook Integration
+
+**Task:** `Dev: SB Angular`
+
+Test the Vybit addon in Storybook 10 with Angular components.
+
+**Services:**
+1. Watch: Overlay
+2. Watch: Panel
+3. Server Angular (port 3335) — `STORYBOOK_URL=http://localhost:6009`
+4. Storybook Angular (port 6009) — from `storybook-test/angular-v10/`
+5. Test App Angular (port 5177)
+
+**Open:** http://localhost:6009 — Vybit addon panel appears in the right sidebar
+
+### 7. Astro Testing
 
 **No compound task yet** — run individually:
 
@@ -128,7 +163,7 @@ Test the inspector with Tailwind v3 apps.
 
 **Open:** http://localhost:5176
 
-### 6. Mock MCP Agent Loop
+### 8. Mock MCP Agent Loop
 
 For testing the full agent workflow (stage → commit → implement → mark done → repeat):
 

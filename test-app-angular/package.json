@@ -1,0 +1,37 @@
+{
+  "name": "test-app-angular",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "build:css": "tailwindcss -i src/tailwind.css -o src/styles.css",
+    "watch:css": "tailwindcss -i src/tailwind.css -o src/styles.css --watch",
+    "start": "ng serve",
+    "build": "npm run build:css && ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "packageManager": "npm@10.8.2",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@tailwindcss/postcss": "^4.2.2",
+    "postcss": "^8.5.8",
+    "rxjs": "~7.8.0",
+    "tailwindcss": "^4.2.2",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.5",
+    "@angular/cli": "^21.2.5",
+    "@angular/compiler-cli": "^21.2.0",
+    "@storybook/angular": "^10.3.3",
+    "@tailwindcss/cli": "^4.2.2",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  }
+}

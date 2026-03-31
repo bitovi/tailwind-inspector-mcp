@@ -67,6 +67,7 @@ function makeLoadStylesheet(cwd: string) {
  */
 function findProjectCssEntry(cwd: string): string | null {
 	const candidates = [
+		"src/tailwind.css",
 		"src/index.css",
 		"src/app.css",
 		"src/globals.css",
@@ -80,13 +81,18 @@ function findProjectCssEntry(cwd: string): string | null {
 		"styles/global.css",
 	];
 
+	// Check if a CSS file contains Tailwind source directives (not just compiled output).
+	// Compiled output contains "tailwindcss" only in a comment like /*! tailwindcss v4 ... */
+	// but source files contain @import "tailwindcss" or @theme blocks.
+	function isTailwindSource(content: string): boolean {
+		return /(?:@import\s+["']tailwindcss|@theme\b)/.test(content);
+	}
+
 	for (const candidate of candidates) {
 		const fullPath = join(cwd, candidate);
 		if (existsSync(fullPath)) {
 			const content = readFileSync(fullPath, "utf8");
-			// Check if it imports tailwindcss (v4 style) or has @theme blocks
-			if (content.includes("tailwindcss") || content.includes("@theme")) {
-
+			if (isTailwindSource(content)) {
 				return fullPath;
 			}
 		}
@@ -100,8 +106,7 @@ function findProjectCssEntry(cwd: string): string | null {
 			for (const file of files) {
 				const fullPath = join(srcDir, file);
 				const content = readFileSync(fullPath, "utf8");
-				if (content.includes("tailwindcss") || content.includes("@theme")) {
-
+				if (isTailwindSource(content)) {
 					return fullPath;
 				}
 			}

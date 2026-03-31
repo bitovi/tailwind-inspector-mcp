@@ -9,7 +9,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
     <div className="inline-flex items-center rounded-[6px] bg-[#1a1a1a] p-[2px] gap-[1px]">
       <button
         type="button"
-        onClick={() => onModeChange('select')}
+        onClick={() => onModeChange(mode === 'select' ? null : 'select')}
         className={`${base} ${mode === 'select' ? activeStyle : inactiveStyle}`}
         aria-pressed={mode === 'select'}
         title="Select an element"
@@ -21,7 +21,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       </button>
       <button
         type="button"
-        onClick={() => onModeChange('insert')}
+        onClick={() => onModeChange(mode === 'insert' ? null : 'insert')}
         className={`${base} ${mode === 'insert' ? activeStyle : inactiveStyle}`}
         aria-pressed={mode === 'insert'}
         title="Insert to add content"
@@ -38,7 +38,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       </button>
       <button
         type="button"
-        onClick={() => onModeChange('bug-report')}
+        onClick={() => onModeChange(mode === 'bug-report' ? null : 'bug-report')}
         className={`${base} ${mode === 'bug-report' ? activeStyle : inactiveStyle}`}
         aria-pressed={mode === 'bug-report'}
         title="Report a bug"

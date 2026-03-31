@@ -19,6 +19,7 @@ export function initDesignCanvasManager(deps: {
 }
 
 export function injectDesignCanvas(insertMode: InsertMode): void {
+	console.log('[tw-debug] injectDesignCanvas called, insertMode=', insertMode, 'currentTargetEl=', state.currentTargetEl, 'currentBoundary=', state.currentBoundary);
 	if (!state.currentTargetEl || !state.currentBoundary) {
 		showToastFn("Select an element first");
 		return;
@@ -31,7 +32,9 @@ export function injectDesignCanvas(insertMode: InsertMode): void {
 
 	// Create design canvas element
 	const canvas = document.createElement('vb-design-canvas') as VbDesignCanvas;
-	canvas.setAttribute('src', `${serverOrigin}/panel/?mode=design`);
+	const canvasSrc = `${serverOrigin}/panel/?mode=design`;
+	console.log('[tw-debug] creating vb-design-canvas, src=', canvasSrc, 'targetEl=', targetEl, 'insertMode=', insertMode);
+	canvas.setAttribute('src', canvasSrc);
 	const wrapper = canvas.getWrapper();
 
 	// Insert into the DOM based on insertMode
@@ -72,7 +75,9 @@ export function injectDesignCanvas(insertMode: InsertMode): void {
 		anchor: replacedAnchor,
 	});
 	// Use a short delay to allow the iframe's WS client to connect and register
+	console.log('[tw-debug] canvas inserted into DOM, listening for vb-canvas-ready...');
 	canvas.addEventListener('vb-canvas-ready', () => {
+		console.log('[tw-debug] vb-canvas-ready fired!');
 		const contextMsg = {
 			type: "ELEMENT_CONTEXT",
 			componentName: state.currentBoundary?.componentName ?? "",

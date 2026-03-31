@@ -77,6 +77,7 @@ export class VbDesignCanvas extends HTMLElement {
     this.iframe.allow = 'microphone';
     this.iframe.style.cssText = css(DESIGN_CANVAS_IFRAME);
     this.iframe.addEventListener('load', () => {
+      console.log('[tw-debug] vb-design-canvas iframe load event fired, src=', this.iframe.src);
       this.dispatchEvent(new CustomEvent('vb-canvas-ready', {
         bubbles: true,
         detail: { iframe: this.iframe },
@@ -137,7 +138,9 @@ export class VbDesignCanvas extends HTMLElement {
   /** Sync observed attributes to internal DOM. */
   private syncAttributes(): void {
     const src = this.getAttribute('src');
+    console.log('[tw-debug] vb-design-canvas syncAttributes, src=', src, 'current iframe.src=', this.iframe.src);
     if (src && this.iframe.src !== src) {
+      console.log('[tw-debug] vb-design-canvas setting iframe.src =', src);
       this.iframe.src = src;
     }
 

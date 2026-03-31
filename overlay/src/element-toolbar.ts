@@ -8,10 +8,65 @@ import { computeNearGroups, findSamePathElements } from "./grouping";
 import type { PathMatchResult } from "./grouping";
 import { state, resolveTab } from "./overlay-state";
 import { revertPreview } from "./patcher";
-import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG } from "./svg-icons";
+import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
 import { buildTextContext } from "./context";
 import { send, sendTo } from "./ws";
+
+// Detect Web Speech API (Chrome/Edge: webkitSpeechRecognition, Safari: SpeechRecognition)
+const SpeechRecognitionAPI: (new () => any) | null =
+	typeof window !== "undefined"
+		? ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null)
+		: null;
+
+// Mic-blocked banner shown at top of page (not a toast)
+let activeBanner: HTMLElement | null = null;
+let bannerTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function showMicBanner(message: string): void {
+	// Remove existing banner first
+	if (activeBanner) {
+		activeBanner.remove();
+		activeBanner = null;
+	}
+	if (bannerTimeout) {
+		clearTimeout(bannerTimeout);
+		bannerTimeout = null;
+	}
+
+	const banner = document.createElement("div");
+	banner.className = "mic-banner";
+
+	const text = document.createElement("span");
+	text.textContent = message;
+	banner.appendChild(text);
+
+	const dismiss = document.createElement("button");
+	dismiss.className = "mic-banner-dismiss";
+	dismiss.textContent = "×";
+	dismiss.addEventListener("click", () => {
+		banner.classList.remove("visible");
+		setTimeout(() => banner.remove(), 250);
+		activeBanner = null;
+		if (bannerTimeout) {
+			clearTimeout(bannerTimeout);
+			bannerTimeout = null;
+		}
+	});
+	banner.appendChild(dismiss);
+
+	state.shadowRoot.appendChild(banner);
+	activeBanner = banner;
+
+	requestAnimationFrame(() => banner.classList.add("visible"));
+
+	bannerTimeout = setTimeout(() => {
+		banner.classList.remove("visible");
+		setTimeout(() => banner.remove(), 250);
+		activeBanner = null;
+		bannerTimeout = null;
+	}, 8000);
+}
 
 // External callbacks set via initToolbar() — avoids circular dependencies
 let setSelectMode: (on: boolean) => void;
@@ -38,10 +93,14 @@ async function positionWithFlip(
 	anchor: HTMLElement,
 	floating: HTMLElement,
 	placement: "top-start" | "bottom-start" = "top-start",
+	options?: { disableFlip?: boolean },
 ): Promise<"top-start" | "bottom-start"> {
+	const middleware = options?.disableFlip
+		? [offset(6)]
+		: [offset(6), flip()];
 	const { x, y, placement: resolved } = await computePosition(anchor, floating, {
 		placement,
-		middleware: [offset(6), flip()],
+		middleware,
 	});
 	floating.style.left = `${x}px`;
 	floating.style.top = `${y}px`;
@@ -63,10 +122,12 @@ export async function positionBothMenus(
 
 	if (toolbarPlacement === "bottom-start" && msgPlacement === "bottom-start") {
 		// Top of viewport: both flipped below — stack msgRow under toolbar
-		await positionWithFlip(toolbar, msgRow, "bottom-start");
+		// Disable flip so msgRow doesn't re-flip back on top of toolbar
+		await positionWithFlip(toolbar, msgRow, "bottom-start", { disableFlip: true });
 	} else if (toolbarPlacement === "top-start" && msgPlacement === "top-start") {
 		// Bottom of viewport: both flipped above — stack msgRow above toolbar
-		await positionWithFlip(toolbar, msgRow, "top-start");
+		// Disable flip so msgRow doesn't re-flip back on top of toolbar
+		await positionWithFlip(toolbar, msgRow, "top-start", { disableFlip: true });
 	}
 	// Otherwise they're on opposite sides of the element — no overlap
 }
@@ -109,10 +170,9 @@ export function showDrawButton(targetEl: HTMLElement): void {
 			state.cachedExactMatches = null;
 			state.manuallyAddedNodes = new Set<HTMLElement>();
 			state.addMode = false;
-			state.currentMode = 'select';
-			state.currentTab = resolveTab();
-			sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
-			setSelectMode(true);
+			// Toggle off: already in select mode, deactivate
+			setSelectMode(false);
+			sendTo("panel", { type: "MODE_CHANGED", mode: null });
 		});
 		selectGroup.appendChild(selectBtn);
 
@@ -185,6 +245,7 @@ export function showDrawButton(targetEl: HTMLElement): void {
 		clearLockedInsert();
 		revertPreview();
 		clearHighlights();
+		setSelectMode(false);
 		state.currentEquivalentNodes = [];
 		state.currentTargetEl = null;
 		state.currentBoundary = null;
@@ -192,6 +253,11 @@ export function showDrawButton(targetEl: HTMLElement): void {
 		state.cachedExactMatches = null;
 		state.manuallyAddedNodes = new Set<HTMLElement>();
 		state.addMode = false;
+		if (state.currentMode === 'insert') {
+			// Toggle off: already in insert mode, deactivate
+			sendTo("panel", { type: "MODE_CHANGED", mode: null });
+			return;
+		}
 		state.currentMode = 'insert';
 		if (state.tabPreference === 'design') state.tabPreference = 'component';
 		state.currentTab = resolveTab();
@@ -262,6 +328,64 @@ export function showDrawButton(targetEl: HTMLElement): void {
 	msgInput.rows = 1;
 	msgInput.placeholder = "add your message";
 	msgRow.appendChild(msgInput);
+
+	// ── Mic button (only if browser supports SpeechRecognition) ──
+	let recognition: any = null;
+	let micBtn: HTMLButtonElement | null = null;
+
+	if (SpeechRecognitionAPI) {
+		micBtn = document.createElement("button");
+		micBtn.className = "mic-btn";
+		micBtn.title = "Record voice message";
+		micBtn.innerHTML = MIC_SVG;
+		msgRow.appendChild(micBtn);
+
+		micBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+
+			// Toggle off if already listening
+			if (recognition) {
+				recognition.stop();
+				return;
+			}
+
+			const baseText = msgInput.value;
+			recognition = new SpeechRecognitionAPI();
+			recognition.continuous = false;
+			recognition.interimResults = true;
+			recognition.lang = navigator.language || "en-US";
+
+			recognition.onresult = (event: any) => {
+				let transcript = "";
+				for (let i = 0; i < event.results.length; i++) {
+					transcript += event.results[i][0].transcript;
+				}
+				const separator = baseText && !baseText.endsWith("\n") ? "\n" : "";
+				msgInput.value = baseText + separator + transcript;
+				msgInput.style.height = "auto";
+				msgInput.style.height = msgInput.scrollHeight + "px";
+				positionBothMenus(targetEl, toolbar, msgRow);
+			};
+
+			recognition.onend = () => {
+				micBtn!.classList.remove("listening");
+				recognition = null;
+			};
+
+			recognition.onerror = (event: any) => {
+				micBtn!.classList.remove("listening");
+				if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+					micBtn!.classList.add("error");
+					showMicBanner("Microphone blocked — allow access in your browser's address bar");
+				}
+				recognition = null;
+			};
+
+			micBtn!.classList.remove("error");
+			micBtn!.classList.add("listening");
+			recognition.start();
+		});
+	}
 
 	const msgSendBtn = document.createElement("button");
 	msgSendBtn.className = "msg-send";

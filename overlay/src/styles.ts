@@ -444,6 +444,73 @@ export const OVERLAY_CSS = `
   }
   .msg-send svg { width: 12px; height: 12px; }
 
+  /* ── Mic button (voice messages) ── */
+  .mic-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 120ms ease-out;
+    padding: 0;
+  }
+  .mic-btn:hover { color: #e5e5e5; background: rgba(255,255,255,0.06); }
+  .mic-btn svg { width: 13px; height: 13px; }
+  .mic-btn.listening {
+    background: #F5532D;
+    color: white;
+    animation: mic-pulse 1.5s ease-in-out infinite;
+  }
+  .mic-btn.error { color: #F5532D; }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 83, 45, 0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(245, 83, 45, 0); }
+  }
+  /* ── Mic-blocked banner ── */
+  .mic-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #F5532D;
+    color: white;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    transform: translateY(-100%);
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+  }
+  .mic-banner.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mic-banner-dismiss {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    opacity: 0.8;
+    flex-shrink: 0;
+  }
+  .mic-banner-dismiss:hover { opacity: 1; }
+
   /* ── Text editing action bar ── */
   .text-action-bar {
     position: fixed;

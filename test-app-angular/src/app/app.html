@@ -1,0 +1,130 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <header class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <h1 class="text-xl font-bold text-gray-900">Tailwind Visual Editor — Angular Test App</h1>
+      <div class="flex gap-2">
+        <app-button variant="primary">Save</app-button>
+        <app-button variant="secondary">Cancel</app-button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Cards section — tests multiple instances of same component -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Cards (3 instances of Card)</h2>
+    <div class="grid grid-cols-3 gap-6 mb-12">
+      <app-card
+        title="Design System"
+        description="Create consistent, reusable components for your application."
+        tag="UI"
+      />
+      <app-card
+        title="Performance"
+        description="Optimize bundle size and runtime performance metrics."
+        tag="Engineering"
+      />
+      <app-card
+        title="Accessibility"
+        description="Ensure your app is usable by everyone, including assistive tech."
+        tag="A11y"
+      />
+    </div>
+
+    <!-- Buttons section — tests multiple instances with different variants -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Buttons (6 instances of Button)</h2>
+    <div class="flex flex-wrap gap-3 mb-12">
+      <app-button variant="primary">Primary</app-button>
+      <app-button variant="secondary">Secondary</app-button>
+      <app-button variant="primary">Submit</app-button>
+      <app-button variant="secondary">Reset</app-button>
+      <app-button variant="primary">Confirm</app-button>
+      <app-button variant="secondary">Back</app-button>
+    </div>
+
+    <!-- Badges — tests small inline components -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Badges (5 instances of Badge)</h2>
+    <div class="flex flex-wrap gap-2 mb-12">
+      <app-badge color="blue">Active</app-badge>
+      <app-badge color="green">Approved</app-badge>
+      <app-badge color="yellow">Pending</app-badge>
+      <app-badge color="red">Rejected</app-badge>
+      <app-badge color="gray">Draft</app-badge>
+    </div>
+
+    <!-- Inline list — tests findInlineRepeatedNodes fallback (no CaseListItem component) -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Case List (inline &#64;for, no item component)</h2>
+    <div class="bg-white rounded-lg shadow p-4 mb-12 w-72">
+      <app-case-list />
+    </div>
+
+    <!-- Tags — tests near-group matching (single-class diff between variants) -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Tags (group test: 1-class diff)</h2>
+    <div class="flex flex-wrap gap-2 mb-12">
+      <app-tag color="blue">Frontend</app-tag>
+      <app-tag color="blue">Backend</app-tag>
+      <app-tag color="red">Urgent</app-tag>
+      <app-tag color="green">Done</app-tag>
+      <app-tag color="green">Shipped</app-tag>
+    </div>
+
+    <!-- Typography section -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Typography Showcase</h2>
+    <div class="bg-white rounded-lg shadow p-6 mb-12 flex flex-col gap-4">
+      <h1 class="font-sans text-4xl font-bold not-italic tracking-tight leading-tight text-left text-gray-900 align-baseline">
+        Sans-serif, 4xl, Bold, Tight Tracking
+      </h1>
+      <h2 class="font-serif text-3xl font-extrabold italic tracking-wide leading-snug text-center text-indigo-700 align-middle">
+        Serif, 3xl, Extrabold, Italic, Wide Tracking
+      </h2>
+      <h3 class="font-mono text-2xl font-light not-italic tracking-widest leading-relaxed text-right text-teal-600 align-top">
+        Mono, 2xl, Light, Widest Tracking
+      </h3>
+      <h4 class="font-sans text-xl font-semibold italic tracking-normal leading-loose text-left text-rose-600 align-baseline">
+        Sans, xl, Semibold, Italic, Loose Line Height
+      </h4>
+      <h5 class="font-serif text-lg font-medium not-italic tracking-wider leading-none text-center text-amber-600 align-middle">
+        Serif, lg, Medium, Wider Tracking, None Line Height
+      </h5>
+      <h6 class="font-mono text-base font-thin italic tracking-tight leading-normal text-right text-gray-500 align-bottom">
+        Mono, base, Thin, Italic, Normal Line Height
+      </h6>
+    </div>
+
+    <!-- Effects — tests opacity scrubber -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Effects (opacity)</h2>
+    <div class="flex flex-wrap gap-4 mb-12">
+      <div class="w-24 h-24 rounded-lg bg-teal-500 opacity-50 flex items-center justify-center text-white font-bold text-sm">50%</div>
+      <div class="w-24 h-24 rounded-lg bg-teal-500 flex items-center justify-center text-white font-bold text-sm">100%</div>
+    </div>
+
+    <!-- Nested structure — tests deep component walking -->
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Nested Structure</h2>
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center gap-4 mb-4">
+        <div class="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">JM</div>
+        <div>
+          <p class="font-medium text-gray-900">Justin Meyer</p>
+          <p class="text-sm text-gray-500">Designer</p>
+        </div>
+      </div>
+      <p class="text-gray-600 mb-4">
+        This section tests deeply nested elements to verify the pseudo-HTML context builder captures the full ancestor chain correctly.
+      </p>
+      <div class="flex gap-2">
+        <app-button variant="primary">Follow</app-button>
+        <app-button variant="secondary">Message</app-button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="fixed bottom-0 w-full bg-gray-900 text-gray-400 py-3">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm">
+      <span>Tailwind Visual Editor Test (Angular)</span>
+      <span>v0.1.0</span>
+    </div>
+  </footer>
+</div>
+
+

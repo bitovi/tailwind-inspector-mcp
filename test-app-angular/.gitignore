@@ -1,0 +1,29 @@
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# IDE
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Angular
+/.angular
+
+# Generated Tailwind CSS (compiled from src/tailwind.css by @tailwindcss/cli)
+/src/styles.css

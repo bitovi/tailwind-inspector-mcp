@@ -1,0 +1,29 @@
+{
+  "name": "storybook-test-angular-v10",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "storybook": "ng run storybook-angular:storybook",
+    "build-storybook": "ng run storybook-angular:build-storybook"
+  },
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@tailwindcss/postcss": "^4.2.1",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^4.2.1",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.0",
+    "@angular/cli": "^21.2.0",
+    "@angular/compiler-cli": "^21.2.0",
+    "@storybook/angular": "^10.3.3",
+    "storybook": "^10.3.3",
+    "typescript": "~5.9.2"
+  }
+}

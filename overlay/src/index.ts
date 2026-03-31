@@ -6,10 +6,7 @@ import { PopoverContainer } from "./containers/PopoverContainer";
 import { PopupContainer } from "./containers/PopupContainer";
 import { SidebarContainer } from "./containers/SidebarContainer";
 import { buildContext } from "./context";
-import {
-	findComponentBoundary,
-	getFiber,
-} from "./fiber";
+import { detectComponent } from "./framework-detect";
 import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
@@ -34,8 +31,7 @@ import type { BugReportElement } from "../../shared/types";
 function onBrowseLocked(target: HTMLElement): void {
 	state.currentTargetEl = target;
 	state.currentEquivalentNodes = [target];
-	const fiber = getFiber(target);
-	const boundary = fiber ? findComponentBoundary(fiber) : null;
+	const boundary = detectComponent(target);
 	state.currentBoundary = boundary
 		? { componentName: boundary.componentName }
 		: { componentName: target.tagName.toLowerCase() };
@@ -519,6 +515,7 @@ function init(): void {
 
 			state.currentMode = msg.mode;
 			if (msg.mode === 'insert') {
+				setSelectMode(false);
 				if (state.tabPreference === 'design') state.tabPreference = 'component';
 				state.currentTab = resolveTab();
 				startBrowse(state.shadowHost, onBrowseLocked);
@@ -670,28 +667,42 @@ function init(): void {
 			} else {
 				// Check for a locked insertion point from browse mode
 				const locked = getLockedInsert();
+				console.log('[tw-debug] INSERT_DESIGN_CANVAS else branch, locked=', locked, 'currentTargetEl=', state.currentTargetEl);
 				if (locked) {
 					// Use the locked position
 					state.currentTargetEl = locked.target;
-					const fiber = getFiber(locked.target);
-					const boundary = fiber ? findComponentBoundary(fiber) : null;
+					const boundary = detectComponent(locked.target);
 					state.currentBoundary = boundary
 						? { componentName: boundary.componentName }
 						: { componentName: locked.target.tagName.toLowerCase() };
 					state.currentEquivalentNodes = [locked.target];
 					clearLockedInsert();
+					console.log('[tw-debug] locked path — calling injectDesignCanvas, position=', locked.position, 'boundary=', state.currentBoundary);
 					injectDesignCanvas(locked.position as InsertMode);
 				} else {
 					// No locked position — arm canvas drop-zone
+					console.log('[tw-debug] arming generic insert...');
 					armGenericInsert('Place: Canvas', state.shadowHost, (target, position) => {
-						state.currentTargetEl = target;
-						const fiber = getFiber(target);
-						const boundary = fiber ? findComponentBoundary(fiber) : null;
-						state.currentBoundary = boundary
-							? { componentName: boundary.componentName }
-							: { componentName: target.tagName.toLowerCase() };
-						state.currentEquivalentNodes = [target];
-						injectDesignCanvas(position as InsertMode);
+						console.log('[tw-debug] armGenericInsert callback fired, target=', target, 'position=', position);
+						try {
+							console.log('[tw-debug] step 1: setting currentTargetEl');
+							state.currentTargetEl = target;
+							console.log('[tw-debug] step 2: calling detectComponent');
+							const boundary = detectComponent(target);
+							console.log('[tw-debug] step 3: boundary=', boundary);
+							state.currentBoundary = boundary
+								? { componentName: boundary.componentName }
+								: { componentName: target.tagName.toLowerCase() };
+							state.currentEquivalentNodes = [target];
+							console.log('[tw-debug] step 4: state set, currentBoundary=', state.currentBoundary, '— calling injectDesignCanvas');
+							injectDesignCanvas(position as InsertMode);
+							console.log('[tw-debug] injectDesignCanvas returned OK');
+						} catch (err) {
+							console.error('[tw-debug] CALLBACK THREW (this is the real error):', err);
+							if (err instanceof Error) {
+								console.error('[tw-debug] message:', err.message, 'stack:', err.stack);
+							}
+						}
 					});
 				}
 			}
@@ -847,8 +858,7 @@ function enterBugReportPickMode(): void {
 			return;
 		}
 
-		const fiber = getFiber(target);
-		const boundary = fiber ? findComponentBoundary(fiber) : null;
+		const boundary = detectComponent(target);
 
 		// Build selector path
 		const selectorPath = buildSelectorPath(target);

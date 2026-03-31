@@ -72,6 +72,7 @@
     "fake-indexeddb": "^6.2.5",
     "html-to-image": "^1.11.13",
     "jsdom": "^29.0.1",
+    "storybook": "^10.3.3",
     "typescript": "^5.6.0",
     "vitest": "^4.1.0"
   }

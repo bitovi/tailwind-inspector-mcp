@@ -87,6 +87,7 @@ function InspectorApp() {
 	const [textEditing, setTextEditing] = useState(false);
 	const [insertPoint, setInsertPoint] = useState<{ position: string; targetName: string } | null>(null);
 	const patchManager = usePatchManager();
+	const [promptCopied, setPromptCopied] = useState(false);
 
 	const currentTabs = useMemo(() => mode === 'insert' ? INSERT_TABS : SELECT_TABS, [mode]);
 	const activeTab = useMemo(() => {
@@ -104,6 +105,16 @@ function InspectorApp() {
 		setInsertPoint(null);
 
 		setMode(newMode);
+
+		if (newMode === null) {
+			// Toggled off — same cleanup as Escape with no element
+			setSelectModeActive(false);
+			if (!fromOverlay) {
+				sendTo('overlay', { type: 'CANCEL_MODE' });
+			}
+			return;
+		}
+
 		// If switching to insert and preference is 'design', force to 'component'
 		// (Insert has no Design tab). Otherwise keep current preference.
 		if (newMode === 'insert') {
@@ -310,6 +321,12 @@ function InspectorApp() {
 		}
 	}
 
+	function handleCopyPrompt() {
+		copyToClipboard(VYBIT_PROMPT);
+		setPromptCopied(true);
+		setTimeout(() => setPromptCopied(false), 2000);
+	}
+
 	function execCommandCopy(text: string) {
 		const el = document.createElement("textarea");
 		el.value = text;
@@ -339,11 +356,11 @@ function InspectorApp() {
 						to start!
 					</span>
 					<button
-						onClick={() => copyToClipboard(VYBIT_PROMPT)}
-						className="shrink-0 px-1.5 py-0.5 rounded border border-amber-700/50 bg-amber-900/40 hover:bg-amber-800/40 text-amber-300 font-semibold text-[9px] transition-colors"
+						onClick={handleCopyPrompt}
+						className={`shrink-0 px-1.5 py-0.5 rounded border font-semibold text-[9px] transition-colors ${promptCopied ? "border-emerald-700/50 bg-emerald-900/40 text-emerald-300" : "border-amber-700/50 bg-amber-900/40 hover:bg-amber-800/40 text-amber-300"}`}
 						title={`Copy: "${VYBIT_PROMPT}"`}
 					>
-						Copy prompt
+						{promptCopied ? "Copied!" : "Copy prompt"}
 					</button>
 				</div>
 			)}
@@ -375,11 +392,11 @@ function InspectorApp() {
 						to start
 					</span>
 					<button
-						onClick={() => copyToClipboard(VYBIT_PROMPT)}
-						className="shrink-0 px-1.5 py-0.5 rounded border border-amber-700/50 bg-amber-900/40 hover:bg-amber-800/40 text-amber-300 font-semibold text-[9px] transition-colors"
+						onClick={handleCopyPrompt}
+						className={`shrink-0 px-1.5 py-0.5 rounded border font-semibold text-[9px] transition-colors ${promptCopied ? "border-emerald-700/50 bg-emerald-900/40 text-emerald-300" : "border-amber-700/50 bg-amber-900/40 hover:bg-amber-800/40 text-amber-300"}`}
 						title={`Copy: "${VYBIT_PROMPT}"`}
 					>
-						Copy prompt
+						{promptCopied ? "Copied!" : "Copy prompt"}
 					</button>
 				</div>
 			)}
