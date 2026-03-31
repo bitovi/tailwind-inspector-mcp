@@ -1,7 +1,7 @@
 // Element toolbar — unified bar shown above the selected element.
 // Extracted from index.ts. Contains showDrawButton() and showGroupPicker().
 
-import { computePosition, flip, offset } from "@floating-ui/dom";
+import { computePosition, flip, offset, shift } from "@floating-ui/dom";
 import { cancelInsert, clearLockedInsert, startBrowse } from "./drop-zone";
 import { highlightElement, clearHighlights, removeDrawButton } from "./element-highlight";
 import { computeNearGroups, findSamePathElements } from "./grouping";
@@ -317,12 +317,30 @@ export function showDrawButton(targetEl: HTMLElement): void {
 	// Position toolbar using @floating-ui/dom (msgRow added after creation below)
 
 	// ── Message row (below element) ──
+	let msgRow: HTMLElement;
+	msgRow = createMsgRow(state.currentBoundary, () => positionBothMenus(targetEl, toolbar, msgRow));
+	state.shadowRoot.appendChild(msgRow);
+	state.msgRowEl = msgRow;
+
+	// Position both toolbar and message row, handling flip overlap
+	positionBothMenus(targetEl, toolbar, msgRow);
+}
+
+export function getCanvasMessageText(): string {
+	const textarea = canvasMsgRow?.querySelector('textarea') as HTMLTextAreaElement | null;
+	return textarea?.value.trim() ?? '';
+}
+
+function createMsgRow(
+	boundary: { componentName: string } | null,
+	onReposition: () => void,
+	options?: { showSendButton?: boolean },
+): HTMLElement {
+	const showSendButton = options?.showSendButton ?? true;
 	const msgRow = document.createElement("div");
 	msgRow.className = "msg-row";
 	msgRow.style.left = "0px";
 	msgRow.style.top = "0px";
-	state.shadowRoot.appendChild(msgRow);
-	state.msgRowEl = msgRow;
 
 	const msgInput = document.createElement("textarea");
 	msgInput.rows = 1;
@@ -364,7 +382,7 @@ export function showDrawButton(targetEl: HTMLElement): void {
 				msgInput.value = baseText + separator + transcript;
 				msgInput.style.height = "auto";
 				msgInput.style.height = msgInput.scrollHeight + "px";
-				positionBothMenus(targetEl, toolbar, msgRow);
+				onReposition();
 			};
 
 			recognition.onend = () => {
@@ -387,10 +405,12 @@ export function showDrawButton(targetEl: HTMLElement): void {
 		});
 	}
 
-	const msgSendBtn = document.createElement("button");
-	msgSendBtn.className = "msg-send";
-	msgSendBtn.innerHTML = SEND_SVG;
-	msgRow.appendChild(msgSendBtn);
+	const msgSendBtn = showSendButton ? document.createElement("button") : null;
+	if (msgSendBtn) {
+		msgSendBtn.className = "msg-send";
+		msgSendBtn.innerHTML = SEND_SVG;
+		msgRow.appendChild(msgSendBtn);
+	}
 
 	function sendMessage() {
 		const text = msgInput.value.trim();
@@ -400,16 +420,16 @@ export function showDrawButton(targetEl: HTMLElement): void {
 			type: "MESSAGE_STAGE",
 			id,
 			message: text,
-			elementKey: state.currentBoundary?.componentName ?? "",
-			component: state.currentBoundary ? { name: state.currentBoundary.componentName } : undefined,
+			elementKey: boundary?.componentName ?? "",
+			component: boundary ? { name: boundary.componentName } : undefined,
 		});
 		msgInput.value = "";
 		msgInput.style.height = "auto";
-		positionBothMenus(targetEl, toolbar, msgRow);
+		onReposition();
 		showToast("Message staged");
 	}
 
-	msgSendBtn.addEventListener("click", (e) => {
+	msgSendBtn?.addEventListener("click", (e) => {
 		e.stopPropagation();
 		sendMessage();
 	});
@@ -427,14 +447,64 @@ export function showDrawButton(targetEl: HTMLElement): void {
 	msgInput.addEventListener("input", () => {
 		msgInput.style.height = "auto";
 		msgInput.style.height = msgInput.scrollHeight + "px";
-		positionBothMenus(targetEl, toolbar, msgRow);
+		onReposition();
 	});
 
 	// Prevent clicks on the message row from triggering page click handlers
 	msgRow.addEventListener("click", (e) => e.stopPropagation());
 
-	// Position both toolbar and message row, handling flip overlap
-	positionBothMenus(targetEl, toolbar, msgRow);
+	return msgRow;
+}
+
+// ── Canvas-anchored message row ─────────────────────────────────────────────
+
+let canvasMsgRow: HTMLElement | null = null;
+let canvasMsgRowObserver: ResizeObserver | null = null;
+
+export function showCanvasMessageRow(
+	canvasWrapper: HTMLElement,
+	boundary: { componentName: string } | null,
+	shadowRoot: ShadowRoot,
+): void {
+	hideCanvasMessageRow();
+
+	const msgRow = createMsgRow(boundary, () => positionCanvasMsgRow(canvasWrapper, msgRow), { showSendButton: false });
+	msgRow.setAttribute("data-canvas-anchor", "true");
+	shadowRoot.appendChild(msgRow);
+	canvasMsgRow = msgRow;
+
+	positionCanvasMsgRow(canvasWrapper, msgRow);
+
+	canvasMsgRowObserver = new ResizeObserver(() => {
+		positionCanvasMsgRow(canvasWrapper, msgRow);
+	});
+	canvasMsgRowObserver.observe(canvasWrapper);
+}
+
+export function hideCanvasMessageRow(): void {
+	canvasMsgRowObserver?.disconnect();
+	canvasMsgRowObserver = null;
+	canvasMsgRow?.remove();
+	canvasMsgRow = null;
+}
+
+function positionCanvasMsgRow(
+	canvasWrapper: HTMLElement,
+	msgRow: HTMLElement,
+): void {
+	computePosition(canvasWrapper, msgRow, {
+		placement: "bottom-start",
+		middleware: [
+			shift({ padding: 8 }),
+			flip(),
+		],
+	}).then(({ x, y }) => {
+		Object.assign(msgRow.style, {
+			position: "fixed",
+			left: `${x}px`,
+			top: `${y}px`,
+		});
+	});
 }
 
 function showGroupPicker(

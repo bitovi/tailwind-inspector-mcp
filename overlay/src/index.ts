@@ -1,5 +1,5 @@
 import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive } from "./drop-zone";
-import { isTextEditing } from "./text-edit";
+import { isTextEditing, endTextEdit } from "./text-edit";
 import type { ContainerName } from "./containers/IContainer";
 import { ModalContainer } from "./containers/ModalContainer";
 import { PopoverContainer } from "./containers/PopoverContainer";
@@ -23,8 +23,9 @@ import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler } from "./element-highlight";
 import { showDrawButton, positionWithFlip, positionBothMenus, initToolbar } from "./element-toolbar";
-import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager } from "./design-canvas-manager";
+import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
+import { createNavigationInterceptor } from "./recording/navigation-interceptor";
 import type { BugReportElement } from "../../shared/types";
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
@@ -393,6 +394,29 @@ export function showToast(message: string, duration: number = 3000): void {
 
 
 
+/**
+ * Full reset: clear all interaction state and deactivate selection.
+ * Called on SPA navigation and Storybook story changes.
+ */
+function resetOnNavigation(): void {
+	if (isTextEditing()) endTextEdit(false);
+	revertPreview();
+	clearHighlights();
+	cancelInsert();
+	clearLockedInsert();
+	removeAllDesignCanvases();
+	state.currentEquivalentNodes = [];
+	state.currentTargetEl = null;
+	state.currentBoundary = null;
+	state.cachedNearGroups = null;
+	state.cachedExactMatches = null;
+	state.manuallyAddedNodes = new Set<HTMLElement>();
+	state.addMode = false;
+	setSelectMode(false);
+	sendTo("panel", { type: "RESET_SELECTION" });
+	sendTo("panel", { type: "COMPONENT_DISARMED" });
+}
+
 function getDefaultContainer(): ContainerName {
 	try {
 		const stored = localStorage.getItem("tw-panel-container");
@@ -446,6 +470,20 @@ function init(): void {
 	}
 	state.shadowRoot.appendChild(btn);
 
+	// SPA navigation — reset all interaction state and return to select mode
+	createNavigationInterceptor(() => {
+		if (state.active) resetOnNavigation();
+	});
+
+	// Storybook story change — reset all interaction state and return to select mode
+	window.addEventListener('message', (event) => {
+		if (event.data?.type === 'STORYBOOK_STORY_RENDERED') {
+			if (state.active) {
+				resetOnNavigation();
+			}
+		}
+	});
+
 	// Escape key — exit add-mode, deselect element (keep mode), or deactivate mode
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
@@ -493,6 +531,8 @@ function init(): void {
 	onMessage((msg: any) => {
 		if (msg.type === "TOGGLE_SELECT_MODE") {
 			if (msg.active) {
+				state.active = true;
+				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
 				setSelectMode(true);
 				// Ensure panel is open (skip in Storybook — panel lives in addon tab)
 				if (!insideStorybook) {
@@ -503,6 +543,11 @@ function init(): void {
 				setSelectMode(false);
 			}
 		} else if (msg.type === "MODE_CHANGED") {
+			// Mark VyBit as active when any mode is engaged
+			if (msg.mode) {
+				state.active = true;
+				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
+			}
 			// Clear current selection and toolbar
 			revertPreview();
 			clearHighlights();

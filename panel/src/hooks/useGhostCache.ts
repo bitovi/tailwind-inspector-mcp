@@ -54,6 +54,7 @@ export function useGhostCache(): GhostCacheResult {
   }, []);
 
   const getCachedGhost = useCallback((storyId: string, args?: Record<string, unknown>) => {
+    if (true) return null; // DEBUG: cache disabled
     const key = cacheKey(storyId, args);
     const entry = cacheRef.current.get(key);
     if (!entry) return null;

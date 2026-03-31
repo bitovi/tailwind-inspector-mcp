@@ -307,6 +307,14 @@ export function getPatchUpdate() {
   };
 }
 
+/** Attach a user message to an existing staged design patch (from canvas msg row). */
+export function attachMessageToPatch(patchId: string, message: string): boolean {
+  const patch = draftPatches.find(p => p.id === patchId);
+  if (!patch) return false;
+  patch.message = message;
+  return true;
+}
+
 export function discardDraftPatch(id: string): boolean {
   // Remove ALL patches with this ID (guards against any duplicates that
   // slipped through addPatch before the ID-dedup was in place).

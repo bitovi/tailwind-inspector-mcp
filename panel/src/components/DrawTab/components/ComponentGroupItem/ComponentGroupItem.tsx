@@ -68,10 +68,13 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
 
   // Bridge: probe results → reducer
   useEffect(() => {
+    console.log(`[ComponentGroupItem:${group.name}] probe bridge: probing=${probing}, bestStory=${bestStory?.id ?? 'null'}, phase=${state.phase}, probeEnabled=${probeEnabled}`);
     if (!probing && bestStory && (state.phase === 'probing' || state.phase === 'cached')) {
       if (Object.keys(argTypes).length > 0) {
+        console.log(`[ComponentGroupItem:${group.name}] → PROBE_COMPLETE with ${Object.keys(argTypes).length} argTypes`);
         dispatch({ type: 'PROBE_COMPLETE', bestStory, argTypes, defaultArgs });
       } else {
+        console.log(`[ComponentGroupItem:${group.name}] → PROBE_FALLBACK (no argTypes)`);
         dispatch({ type: 'PROBE_FALLBACK', bestStory });
       }
     }
@@ -88,7 +91,9 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
 
   // Bridge: slot acquired → reducer
   useEffect(() => {
+    console.log(`[ComponentGroupItem:${group.name}] slot bridge: canLoad=${canLoad}, phase=${state.phase}, queueEnabled=${queueEnabled}`);
     if (canLoad && state.phase === 'probe-done') {
+      console.log(`[ComponentGroupItem:${group.name}] → SLOT_ACQUIRED`);
       dispatch({ type: 'SLOT_ACQUIRED' });
     }
   }, [canLoad, state.phase]);
@@ -96,8 +101,11 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   // ── Phase 4: Iframe src assignment ─────────────────────────────────────
 
   useEffect(() => {
+    console.log(`[ComponentGroupItem:${group.name}] iframe src assignment: phase=${state.phase}, bestStory=${state.bestStory?.id ?? 'null'}, ghostRef=${!!ghostRef.current}, initialLoadDone=${initialLoadDone.current}`);
     if (state.phase !== 'loading' || !state.bestStory || !ghostRef.current || initialLoadDone.current) return;
     initialLoadDone.current = true;
+    const url = buildArgsUrl(state.bestStory.id, {});
+    console.log(`[ComponentGroupItem:${group.name}] → setting adaptive-iframe src=${url}`);
     ghostRef.current.setAttribute('src', buildArgsUrl(state.bestStory.id, {}));
   }, [state.phase, state.bestStory]);
 

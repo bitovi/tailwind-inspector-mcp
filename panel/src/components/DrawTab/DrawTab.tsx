@@ -104,7 +104,7 @@ export function DrawTab({ insertMode }: DrawTabProps = {}) {
         )}
         {!loading && !error && groups.length > 0 && (
           <ul className="flex flex-col gap-2">
-            {groups.map(group => {
+            {groups.filter(g => g.name === 'Button').map(group => {
               const firstStoryId = group.stories[0]?.id;
               const cached = firstStoryId ? getCachedGhost(firstStoryId) : null;
               return (

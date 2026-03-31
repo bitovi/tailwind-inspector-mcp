@@ -25,6 +25,7 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
 
   app.get("/overlay.js", (_req, res) => {
     const overlayPath = path.join(packageRoot, "overlay", "dist", "overlay.js");
+    res.set("Cache-Control", "no-store");
     res.sendFile(overlayPath, (err) => {
       if (err) {
         console.error("[http] Failed to serve overlay.js:", err);

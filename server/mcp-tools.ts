@@ -106,7 +106,7 @@ ${patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
 - **Insert position:** ${patch.insertMode ?? 'after'} the element
 - **Canvas size:** ${patch.canvasWidth ?? '?'}×${patch.canvasHeight ?? '?'}px
 - The design image is included as a separate image content part below — refer to it for the visual intent.
-${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
+${patch.message ? `- **User context:** ${patch.message}\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 ${patch.canvasComponents && patch.canvasComponents.length > 0 ? `
 **Components to place (positions relative to canvas top-left):**
 

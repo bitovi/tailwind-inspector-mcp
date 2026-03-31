@@ -165,6 +165,15 @@ function InspectorApp() {
 			if (msg.type === "RESET_SELECTION") {
 				setElementData(null);
 				setSelectionId((prev) => prev + 1);
+				setTextEditing(false);
+				setInsertPoint(null);
+				setSelectModeActive(false);
+				setMode((prev) => {
+					if (prev !== null) {
+						return null;
+					}
+					return prev;
+				});
 			} else if (msg.type === "ELEMENT_SELECTED") {
 				setElementData({
 					componentName: msg.componentName,

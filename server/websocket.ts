@@ -3,7 +3,7 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server } from "http";
 
-import { addPatch, addAndCommit, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit } from "./queue.js";
+import { addPatch, addAndCommit, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit, attachMessageToPatch } from "./queue.js";
 import type { Patch } from "../shared/types.js";
 
 export interface WebSocketDeps {
@@ -121,10 +121,19 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
           broadcastTo("overlay", {
             type: "DESIGN_SUBMITTED",
             image: msg.image,
+            patchId: patch.id,
           }, ws);
           console.error(`[ws] Design patch staged: ${patch.id}`);
         } else if (msg.type === "DESIGN_CLOSE") {
           broadcastTo("overlay", { type: "DESIGN_CLOSE" }, ws);
+        } else if (msg.type === "CANVAS_MESSAGE_ATTACH") {
+          const patchId: string = msg.patchId;
+          const message: string = msg.message ?? '';
+          if (patchId && message) {
+            attachMessageToPatch(patchId, message);
+            broadcastPatchUpdate();
+            console.error(`[ws] Canvas message attached to patch ${patchId}`);
+          }
         } else if (msg.type === "RESET_SELECTION") {
           broadcastTo("panel", { type: "RESET_SELECTION" }, ws);
           console.error(`[ws] Reset selection broadcast to panels`);

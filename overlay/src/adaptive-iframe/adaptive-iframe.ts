@@ -28,6 +28,7 @@ export class AdaptiveIframe extends HTMLElement {
   private ghostEl: HTMLDivElement;
   private hiddenIframe: HTMLIFrameElement;
   private loadTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private pollId: ReturnType<typeof setInterval> | null = null;
   private hasLoaded = false;
   private _loadedDispatched = false;
   /** Debug log dedup — only log each unique message once per load cycle. */
@@ -74,9 +75,9 @@ export class AdaptiveIframe extends HTMLElement {
       top: '0',
       width: '800px',
       height: '600px',
-      opacity: '0',
+      opacity: '1',
       pointerEvents: 'none',
-      border: 'none',
+      border: '3px solid red',
       zIndex: '-999999',
     });
     this.hiddenIframe.addEventListener('load', () => this.onIframeLoad());
@@ -94,6 +95,7 @@ export class AdaptiveIframe extends HTMLElement {
   disconnectedCallback() {
     this.observer?.disconnect();
     this.observer = null;
+    if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
     this.hiddenIframe.remove();
   }
 
@@ -118,8 +120,9 @@ export class AdaptiveIframe extends HTMLElement {
     this.observer?.disconnect();
     this.observer = null;
 
-    // Clear any pending load timeout
+    // Clear any pending load timeout and polling interval
     if (this.loadTimeoutId) clearTimeout(this.loadTimeoutId);
+    if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
     this.hasLoaded = false;
     this._loadedDispatched = false;
     this._loggedOnce.clear();
@@ -129,7 +132,11 @@ export class AdaptiveIframe extends HTMLElement {
     if (srcdoc != null) {
       this.hiddenIframe.srcdoc = srcdoc;
     } else if (src) {
-      this.hiddenIframe.src = src;
+      // Append ghost marker so the Storybook addon skips overlay injection
+      // and story-rendered events in this hidden iframe.
+      const url = new URL(src, location.href);
+      url.searchParams.set('vybit-ghost', '1');
+      this.hiddenIframe.src = url.toString();
     }
 
     // Set a timeout to detect if the iframe never loads (e.g., wrong URL, network error)
@@ -142,6 +149,11 @@ export class AdaptiveIframe extends HTMLElement {
   }
 
   private onIframeLoad() {
+    // Ignore load events from the initial blank iframe (no src/srcdoc set yet)
+    const src = this.getAttribute('src');
+    const srcdoc = this.getAttribute('srcdoc');
+    if (!src && srcdoc == null) return;
+
     // Clear the load timeout since the iframe loaded successfully
     if (this.loadTimeoutId) {
       clearTimeout(this.loadTimeoutId);
@@ -149,7 +161,6 @@ export class AdaptiveIframe extends HTMLElement {
     }
     this.hasLoaded = true;
 
-    const src = this.getAttribute('src');
     console.log(`[AdaptiveIframe] iframe loaded — src=${src}`);
 
     const doc = this.hiddenIframe.contentDocument;
@@ -165,7 +176,6 @@ export class AdaptiveIframe extends HTMLElement {
     doc.head.appendChild(resetStyle);
 
     // For srcdoc iframes, content is available immediately
-    const srcdoc = this.getAttribute('srcdoc');
     if (srcdoc != null) {
       this.extractAndApply(doc);
       return;
@@ -173,7 +183,7 @@ export class AdaptiveIframe extends HTMLElement {
 
     // For Storybook src iframes, the story component renders asynchronously
     // after the page load event. Wait for a non-spinner child in #storybook-root.
-    console.log(`[AdaptiveIframe] waiting for story content — #storybook-root=${!!doc.querySelector('#storybook-root')}, bodyChildren=${doc.body?.childElementCount}`);
+    console.log(`[AdaptiveIframe] waiting for story content - #storybook-root=${!!doc.querySelector('#storybook-root')}, bodyChildren=${doc.body?.childElementCount}`);
     this.waitForStoryContent(doc);
   }
 
@@ -209,8 +219,10 @@ export class AdaptiveIframe extends HTMLElement {
    * when the story re-renders (e.g. after an updateArgs call).
    */
   private waitForStoryContent(doc: Document) {
-    // Clean up any previous observer
+    // Clean up any previous observer and polling interval
     this.observer?.disconnect();
+    this.observer = null;
+    if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
 
     let extracted = false;
     let attempts = 0;
@@ -239,14 +251,20 @@ export class AdaptiveIframe extends HTMLElement {
     const target = storybookRoot ?? doc.body;
     if (!target) return;
 
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((mutations) => {
       if (!extracted) {
         attempts++;
-        if (tryExtract()) return;
+        const addedNodes = mutations.reduce((n, m) => n + m.addedNodes.length, 0);
+        console.log(`[AdaptiveIframe] MutationObserver fired — attempt=${attempts}, mutations=${mutations.length}, addedNodes=${addedNodes}, #storybook-root children=${storybookRoot?.children.length ?? '?'}`);
+        if (tryExtract()) {
+          if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
+          return;
+        }
         // Give up after MAX_ATTEMPTS mutations without finding content
         if (attempts >= MAX_ATTEMPTS) {
           observer.disconnect();
           this.observer = null;
+          if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
           console.error(`[AdaptiveIframe] gave up after ${attempts} mutations — story never appeared. src=${this.getAttribute('src')}`);
           this.reportError('Story did not render — component may not exist or Storybook story file has an error');
         }
@@ -264,15 +282,46 @@ export class AdaptiveIframe extends HTMLElement {
       observer.observe(doc.body, { childList: true });
     }
 
+    // Polling fallback — Angular renders content asynchronously and may not
+    // trigger MutationObserver if the doc reference goes stale.  Re-read the
+    // live contentDocument on each poll to handle iframe navigations.
+    let pollCount = 0;
+    this.pollId = setInterval(() => {
+      if (extracted) { clearInterval(this.pollId!); this.pollId = null; return; }
+      pollCount++;
+      // Re-read live document in case the iframe navigated
+      const liveDoc = this.hiddenIframe.contentDocument;
+      const liveSbRoot = liveDoc?.querySelector('#storybook-root');
+      const sbChildren = liveSbRoot?.children.length ?? -1;
+      const bodyChildren = liveDoc?.body?.childElementCount ?? -1;
+      console.log(`[AdaptiveIframe] poll #${pollCount} — #storybook-root children=${sbChildren}, body children=${bodyChildren}, src=${this.getAttribute('src')}`);
+      // Try extraction against the live document
+      if (liveDoc) {
+        const root = this.findStoryRoot(liveDoc);
+        if (root) {
+          extracted = true;
+          this.extractAndApply(liveDoc);
+          if (this.observer) { this.observer.disconnect(); this.observer = null; }
+          clearInterval(this.pollId!); this.pollId = null;
+          return;
+        }
+      }
+      if (pollCount >= 40) {
+        clearInterval(this.pollId!); this.pollId = null;
+        console.log('[AdaptiveIframe] polling stopped after 40 attempts');
+      }
+    }, 1000);
+
     // Safety timeout — disconnect if story never renders
     setTimeout(() => {
       if (!extracted && this.observer === observer) {
         this.observer.disconnect();
         this.observer = null;
-        console.error(`[AdaptiveIframe] 20s timeout — story never rendered. src=${this.getAttribute('src')}`);
+        if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
+        console.error(`[AdaptiveIframe] 40s timeout — story never rendered. src=${this.getAttribute('src')}`);
         this.reportError('Story did not render — component may not exist or Storybook story file has an error');
       }
-    }, 20000);
+    }, 40000);
   }
 
   /**
@@ -283,17 +332,25 @@ export class AdaptiveIframe extends HTMLElement {
   private findStoryRoot(doc: Document): Element | null {
     const storybookRoot = doc.querySelector('#storybook-root');
     if (storybookRoot) {
-      // Log all children once per load cycle for debugging
+      // Log all children once per load cycle for debugging (re-log when count changes)
+      const childCount = storybookRoot.children.length;
       const childSummary = Array.from(storybookRoot.children).map(
         (c, i) => `[${i}] <${c.tagName.toLowerCase()} id="${c.id}" class="${(c.className || '').toString().slice(0, 50)}">`
       ).join('\n  ');
-      this.logOnce('children', `[AdaptiveIframe] findStoryRoot — #storybook-root has ${storybookRoot.children.length} children:\n  ${childSummary}`);
+      this.logOnce(`children-${childCount}`, `[AdaptiveIframe] findStoryRoot — #storybook-root has ${childCount} children:\n  ${childSummary}`);
 
       // Skip Storybook infrastructure elements (spinner, highlights addon, etc.)
       for (const child of storybookRoot.children) {
         if (child.classList.contains('sb-loader')) continue;
         if (child.id && (child.id.startsWith('storybook-') || child.id.startsWith('sb-'))) continue;
-        this.logOnce('root', `[AdaptiveIframe] SELECTED story root: <${child.tagName.toLowerCase()} id="${child.id}" class="${(child.className || '').toString().slice(0, 80)}">`);
+        // Angular Storybook adds <storybook-root> before Angular bootstraps the
+        // component template inside it.  Skip empty elements so the
+        // MutationObserver keeps waiting for content to render.
+        if (child.children.length === 0 && !child.textContent?.trim()) {
+          console.log(`[AdaptiveIframe] found <${child.tagName.toLowerCase()}> but it has no content yet — waiting for framework render`);
+          return null;
+        }
+        this.logOnce('root', `[AdaptiveIframe] SELECTED story root: <${child.tagName.toLowerCase()} id="${child.id}" class="${(child.className || '').toString().slice(0, 80)}"> (children=${child.children.length}, text=${(child.textContent || '').trim().length > 0})`);
         return child;
       }
       this.logOnce('no-root-filtered', `[AdaptiveIframe] NO story root found after filtering ${storybookRoot.children.length} children`);
@@ -395,7 +452,7 @@ export class AdaptiveIframe extends HTMLElement {
     const root = this.findStoryRoot(doc);
     const win = root ? (root.ownerDocument.defaultView ?? window) : window;
     if (!root) return;
-    this.logOnce('extract', `[AdaptiveIframe] extractAndApply: root=<${root.tagName.toLowerCase()}>, src=${this.getAttribute('src')}`);
+    this.logOnce('extract', `[AdaptiveIframe] extractAndApply: root=<${root.tagName.toLowerCase()}>, src=${this.getAttribute('src')}, children=${root.children.length}, innerHTML=${root.innerHTML.length} chars`);
 
     // Extract computed styles and apply to host (drives layout flow)
     const styles = extractStyles(root);

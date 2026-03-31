@@ -81,6 +81,7 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
     function loadStory(idx: number) {
       if (idx >= stories.length) {
         // None had args — fall back to first story
+        console.log(`[useStoryProbe] exhausted all ${stories.length} stories — falling back to ${stories[0]?.id}`);
         if (!resolvedRef.current) {
           resolvedRef.current = true;
           setBestStory(stories[0]);
@@ -106,6 +107,11 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
         try { msg = JSON.parse(msg); } catch { return; }
       }
 
+      // Log all storybook-channel messages for debugging
+      if (msg?.key === 'storybook-channel') {
+        console.log(`[useStoryProbe] received storybook-channel message: type=${msg.event?.type}, storyId=${msg.event?.args?.[0]?.id}, waiting for=${stories[indexRef.current]?.id}`);
+      }
+
       const currentStory = stories[indexRef.current];
       if (
         msg?.key === 'storybook-channel' &&
@@ -114,9 +120,11 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
       ) {
         const detected = msg.event.args[0].argTypes ?? {};
         const detectedArgs = msg.event.args[0].initialArgs ?? msg.event.args[0].args ?? {};
+        console.log(`[useStoryProbe] storyPrepared matched for ${currentStory.id} — argTypes keys: [${Object.keys(detected).join(', ')}]`);
 
         if (Object.keys(detected).length > 0) {
           // Found a story with args
+          console.log(`[useStoryProbe] ✓ resolved with args: ${currentStory.id}`);
           resolvedRef.current = true;
           setBestStory(currentStory);
           setArgTypes(normalizeArgTypes(detected));
@@ -124,6 +132,7 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
           setProbing(false);
         } else {
           // No args — try next story
+          console.log(`[useStoryProbe] no args for ${currentStory.id}, trying next...`);
           if (storyTimeout) clearTimeout(storyTimeout);
           const nextIdx = indexRef.current + 1;
           storyTimeout = setTimeout(() => loadStory(nextIdx), 50);
@@ -138,6 +147,7 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
       if (storyTimeout) clearTimeout(storyTimeout);
       storyTimeout = setTimeout(() => {
         if (!resolvedRef.current && indexRef.current < stories.length) {
+          console.log(`[useStoryProbe] 5s timeout for story ${stories[indexRef.current]?.id} — storyPrepared never fired, trying next`);
           loadStory(indexRef.current + 1);
           setupStoryTimeout();
         }
@@ -145,6 +155,7 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
     }
 
     iframe.addEventListener('load', () => {
+      console.log(`[useStoryProbe] probe iframe loaded for ${stories[indexRef.current]?.id}`);
       setupStoryTimeout();
     });
 

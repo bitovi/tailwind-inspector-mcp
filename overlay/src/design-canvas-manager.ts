@@ -5,7 +5,9 @@ import { areSiblings, captureRegion } from "./screenshot";
 import { sendTo } from "./ws";
 import { css, SUBMITTED_IMAGE } from './styles';
 import { clearHighlights } from "./element-highlight";
+import { showCanvasMessageRow, hideCanvasMessageRow, getCanvasMessageText } from "./element-toolbar";
 import { state } from "./overlay-state";
+import { send } from "./ws";
 
 let serverOrigin = '';
 let showToastFn: (msg: string, duration?: number) => void = () => {};
@@ -74,6 +76,7 @@ export function injectDesignCanvas(insertMode: InsertMode): void {
 		parent: replacedParent,
 		anchor: replacedAnchor,
 	});
+	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), state.currentBoundary, state.shadowRoot));
 	// Use a short delay to allow the iframe's WS client to connect and register
 	console.log('[tw-debug] canvas inserted into DOM, listening for vb-canvas-ready...');
 	canvas.addEventListener('vb-canvas-ready', () => {
@@ -185,6 +188,7 @@ export async function handleCaptureScreenshot(): Promise<void> {
 	marker.remove();
 
 	state.designCanvasWrappers.push({ wrapper: canvas as unknown as HTMLElement, replacedNodes, parent, anchor: canvas.nextSibling });
+	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), state.currentBoundary, state.shadowRoot));
 	canvas.addEventListener('vb-canvas-ready', () => {
 		const contextMsg = {
 			type: "ELEMENT_CONTEXT",
@@ -217,7 +221,7 @@ export function removeAllDesignCanvases(): void {
 	state.designCanvasWrappers.length = 0;
 }
 
-export function handleDesignSubmitted(msg: { image?: string }): void {
+export function handleDesignSubmitted(msg: { image?: string; patchId?: string }): void {
 	const lastEntry = state.designCanvasWrappers[state.designCanvasWrappers.length - 1];
 	const last = lastEntry?.wrapper;
 	if (last) {
@@ -234,6 +238,11 @@ export function handleDesignSubmitted(msg: { image?: string }): void {
 			last.appendChild(img);
 		}
 	}
+	const messageText = getCanvasMessageText();
+	if (messageText && msg.patchId) {
+		send({ type: 'CANVAS_MESSAGE_ATTACH', patchId: msg.patchId, message: messageText });
+	}
+	hideCanvasMessageRow();
 }
 
 export function handleDesignClose(): void {
@@ -246,4 +255,5 @@ export function handleDesignClose(): void {
 		}
 		last.wrapper.remove();
 	}
+	hideCanvasMessageRow();
 }
