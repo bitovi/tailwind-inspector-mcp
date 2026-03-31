@@ -4,12 +4,12 @@ import { buildArgsUrl } from './useArgsUrl';
 describe('buildArgsUrl', () => {
   test('builds basic URL without args', () => {
     expect(buildArgsUrl('components-button--primary'))
-      .toBe('/storybook/iframe.html?id=components-button--primary&viewMode=story');
+      .toBe('/storybook/iframe.html?id=components-button--primary&viewMode=story&vybit-ghost=1');
   });
 
   test('appends single arg', () => {
     expect(buildArgsUrl('components-button--primary', { variant: 'secondary' }))
-      .toBe('/storybook/iframe.html?id=components-button--primary&viewMode=story&args=variant:secondary');
+      .toBe('/storybook/iframe.html?id=components-button--primary&viewMode=story&vybit-ghost=1&args=variant:secondary');
   });
 
   test('appends multiple args separated by semicolons', () => {
@@ -18,7 +18,7 @@ describe('buildArgsUrl', () => {
       children: 'Cancel',
     });
     expect(url).toBe(
-      '/storybook/iframe.html?id=components-button--primary&viewMode=story&args=variant:secondary;children:Cancel'
+      '/storybook/iframe.html?id=components-button--primary&viewMode=story&vybit-ghost=1&args=variant:secondary;children:Cancel'
     );
   });
 
@@ -33,16 +33,16 @@ describe('buildArgsUrl', () => {
       size: null,
       variant: undefined,
     });
-    expect(url).toBe('/storybook/iframe.html?id=test--story&viewMode=story&args=color:red');
+    expect(url).toBe('/storybook/iframe.html?id=test--story&viewMode=story&vybit-ghost=1&args=color:red');
   });
 
   test('returns URL without args param when args object is empty', () => {
     expect(buildArgsUrl('test--story', {}))
-      .toBe('/storybook/iframe.html?id=test--story&viewMode=story');
+      .toBe('/storybook/iframe.html?id=test--story&viewMode=story&vybit-ghost=1');
   });
 
   test('uses custom base path', () => {
     expect(buildArgsUrl('test--story', {}, '/custom'))
-      .toBe('/custom/iframe.html?id=test--story&viewMode=story');
+      .toBe('/custom/iframe.html?id=test--story&viewMode=story&vybit-ghost=1');
   });
 });

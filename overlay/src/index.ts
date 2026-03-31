@@ -138,9 +138,10 @@ function normalizeToHex(cssColor: string): string | null {
 }
 
 async function clickHandler(e: MouseEvent): Promise<void> {
+	console.log('[overlay-debug] clickHandler fired', { target: (e.target as Element)?.tagName, selectModeOn: state.selectModeOn, active: state.active });
 	// Ignore clicks on our own shadow DOM UI
 	const composed = e.composedPath();
-	if (composed.some((el) => el === state.shadowHost)) { return; }
+	if (composed.some((el) => el === state.shadowHost)) { console.log('[overlay-debug] click ignored: shadowHost'); return; }
 
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
@@ -315,6 +316,7 @@ function rebuildSelectionFromSources(): void {
 export { rebuildSelectionFromSources };
 
 function setSelectMode(on: boolean): void {
+	console.log('[overlay-debug] setSelectMode', on, 'active:', state.active, 'currentMode:', state.currentMode);
 	state.selectModeOn = on;
 	if (on) {
 		document.documentElement.style.cursor = "crosshair";
@@ -431,13 +433,11 @@ function getDefaultContainer(): ContainerName {
 }
 
 function init(): void {
-	// Storybook preview iframes (viewMode=story) must not run the overlay —
-	// they are either the visible story frame (no overlay needed) or hidden
-	// ghost frames used for component extraction (overlay would send spurious
-	// RESET_SELECTION messages). Ghost frames also get ?vybit-ghost=1 as
-	// belt-and-suspenders.
+	// Ghost frames used for component extraction must not run the overlay —
+	// they would send spurious RESET_SELECTION messages. Ghost frames get
+	// ?vybit-ghost=1 from AdaptiveIframe.
 	const params = new URLSearchParams(location.search);
-	if (params.get('viewMode') === 'story' || params.get('vybit-ghost') === '1') return;
+	if (params.get('vybit-ghost') === '1') return;
 
 	state.shadowHost = document.createElement("div");
 	state.shadowHost.id = "tw-visual-editor-host";
@@ -529,6 +529,7 @@ function init(): void {
 
 	// Handle messages from Panel via WS
 	onMessage((msg: any) => {
+		console.log('[overlay-debug] WS message from panel:', msg.type, msg);
 		if (msg.type === "TOGGLE_SELECT_MODE") {
 			if (msg.active) {
 				state.active = true;

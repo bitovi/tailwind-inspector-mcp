@@ -90,7 +90,7 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
         return;
       }
       indexRef.current = idx;
-      iframe.src = `/storybook/iframe.html?id=${stories[idx].id}&viewMode=story`;
+      iframe.src = `/storybook/iframe.html?id=${stories[idx].id}&viewMode=story&vybit-ghost=1`;
     }
 
     // Set a per-story timeout — if storyPrepared never fires, move to next

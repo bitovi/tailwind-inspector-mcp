@@ -119,6 +119,7 @@ function InspectorApp() {
 
 	// When mode is clicked, clear current selection and restart
 	function handleModeChange(newMode: AppMode, fromOverlay = false) {
+		console.log('[panel-debug] handleModeChange', { newMode, currentMode: mode, fromOverlay, hasElement: !!elementData, hasInsertPoint: !!insertPoint });
 		// Re-click same mode: deselect element if present, otherwise toggle off
 		if (newMode === mode) {
 			if (elementData || insertPoint) {
