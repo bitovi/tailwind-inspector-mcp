@@ -32,6 +32,7 @@ temp/
 .vite/
 *.tsbuildinfo
 .astro/
+.angular/
 
 # Storybook
 panel/storybook-static/

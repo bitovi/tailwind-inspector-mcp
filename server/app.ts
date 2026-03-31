@@ -125,6 +125,7 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
     sbProxy = createProxyMiddleware({
       target: url,
       changeOrigin: true,
+      ws: true,
       pathRewrite: { '^/storybook': '' },
     });
     sbAssetProxy = createProxyMiddleware({
