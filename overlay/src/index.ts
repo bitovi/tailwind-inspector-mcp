@@ -345,6 +345,7 @@ function setAddMode(on: boolean): void {
 		document.removeEventListener("mousemove", mouseMoveHandler);
 		clearHoverPreview();
 	}
+	sendTo("panel", { type: "SELECT_MODE_CHANGED", active: on });
 }
 
 const PANEL_OPEN_KEY = "tw-inspector-panel-open";

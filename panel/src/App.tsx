@@ -703,7 +703,7 @@ function InspectorApp() {
 						<ModeToggle
 							mode={mode}
 							onModeChange={handleModeChange}
-							isPicking={false}
+							isPicking={selectModeActive}
 						/>
 						<div className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight truncate">
 							{elementData.componentName}{" "}
