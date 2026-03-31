@@ -511,12 +511,15 @@ function init(): void {
 				state.cachedExactMatches = null;
 				state.manuallyAddedNodes = new Set<HTMLElement>();
 				state.addMode = false;
-				sendTo("panel", { type: "RESET_SELECTION" });
-				// Re-enter selection/browse mode
+				// Re-enter selection/browse mode (don't send RESET_SELECTION — that nukes the panel to landing)
 				if (state.currentMode === 'select') {
 					setSelectMode(true);
+					sendTo("panel", { type: "DESELECT_ELEMENT" });
 				} else if (state.currentMode === 'insert') {
+					sendTo("panel", { type: "DESELECT_ELEMENT" });
 					startBrowse(state.shadowHost, onBrowseLocked);
+				} else {
+					sendTo("panel", { type: "RESET_SELECTION" });
 				}
 			} else if (state.selectModeOn) {
 				// No element, deactivate select mode → go to landing

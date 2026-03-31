@@ -169,6 +169,12 @@ function InspectorApp() {
 				setInsertPoint(null);
 				setSelectModeActive(false);
 				setMode(null);
+			} else if (msg.type === "DESELECT_ELEMENT") {
+				// Overlay Escape: clear element but stay in current mode
+				setElementData(null);
+				setSelectionId((prev) => prev + 1);
+				setTextEditing(false);
+				setInsertPoint(null);
 			} else if (msg.type === "ELEMENT_SELECTED") {
 				setElementData({
 					componentName: msg.componentName,
@@ -438,6 +444,9 @@ function InspectorApp() {
 	);
 
 	if (!elementData) {
+		// Picking = mode is active but waiting for user action
+		const isPicking = selectModeActive || (mode === 'insert' && !insertPoint);
+
 		// Landing page — no mode selected yet
 		if (mode === null) {
 			return (
@@ -447,6 +456,7 @@ function InspectorApp() {
 							<ModeToggle
 								mode={mode}
 								onModeChange={handleModeChange}
+								isPicking={isPicking}
 							/>
 							{!isEmbeddedInStorybook && <ContainerSwitcher />}
 						</div>
@@ -537,6 +547,7 @@ function InspectorApp() {
 							<ModeToggle
 								mode={mode}
 								onModeChange={handleModeChange}
+								isPicking={isPicking}
 							/>
 							<div className="flex-1 min-w-0">
 								<span className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight">
@@ -579,6 +590,7 @@ function InspectorApp() {
 						<ModeToggle
 							mode={mode}
 							onModeChange={handleModeChange}
+							isPicking={isPicking}
 						/>
 						<div className="flex-1 min-w-0">
 							{mode === 'insert' ? (
@@ -691,6 +703,7 @@ function InspectorApp() {
 						<ModeToggle
 							mode={mode}
 							onModeChange={handleModeChange}
+							isPicking={false}
 						/>
 						<div className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight truncate">
 							{elementData.componentName}{" "}

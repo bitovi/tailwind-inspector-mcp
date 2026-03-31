@@ -1,16 +1,22 @@
 import type { ModeToggleProps } from './types';
 
 const base = 'w-[30px] h-7 rounded-[4px] border-none flex items-center justify-center cursor-pointer transition-all duration-[120ms] ease-out';
-const activeStyle = 'bg-[#00464A] text-[#5fd4da] shadow-[0_1px_3px_rgba(0,0,0,0.3)]';
+const engagedStyle = 'bg-[#00464A] text-[#5fd4da] shadow-[0_1px_3px_rgba(0,0,0,0.3)]';
+const pickingStyle = 'bg-[#F5532D]/15 text-[#F5532D] shadow-[0_1px_3px_rgba(0,0,0,0.3)]';
 const inactiveStyle = 'bg-transparent text-[#999] hover:text-[#b3b3b3]';
 
-export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
+function buttonStyle(isActive: boolean, isPicking: boolean) {
+  if (!isActive) return inactiveStyle;
+  return isPicking ? pickingStyle : engagedStyle;
+}
+
+export function ModeToggle({ mode, onModeChange, isPicking = false }: ModeToggleProps) {
   return (
     <div className="inline-flex items-center rounded-[6px] bg-[#1a1a1a] p-[2px] gap-[1px]">
       <button
         type="button"
         onClick={() => onModeChange(mode === 'select' ? null : 'select')}
-        className={`${base} ${mode === 'select' ? activeStyle : inactiveStyle}`}
+        className={`${base} ${buttonStyle(mode === 'select', mode === 'select' && isPicking)}`}
         aria-pressed={mode === 'select'}
         title="Select an element"
       >
@@ -22,7 +28,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       <button
         type="button"
         onClick={() => onModeChange(mode === 'insert' ? null : 'insert')}
-        className={`${base} ${mode === 'insert' ? activeStyle : inactiveStyle}`}
+        className={`${base} ${buttonStyle(mode === 'insert', mode === 'insert' && isPicking)}`}
         aria-pressed={mode === 'insert'}
         title="Insert to add content"
       >
@@ -39,7 +45,7 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       <button
         type="button"
         onClick={() => onModeChange(mode === 'bug-report' ? null : 'bug-report')}
-        className={`${base} ${mode === 'bug-report' ? activeStyle : inactiveStyle}`}
+        className={`${base} ${buttonStyle(mode === 'bug-report', false)}`}
         aria-pressed={mode === 'bug-report'}
         title="Report a bug"
       >
