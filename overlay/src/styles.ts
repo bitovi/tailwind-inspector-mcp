@@ -327,6 +327,30 @@ export const OVERLAY_CSS = `
   }
   .hover-tooltip .ht-dim { opacity: 0.55; }
   /* ── Element toolbar — 3f unified bar ── */
+  .el-toolbar .drag-handle {
+    width: 12px;
+    height: 28px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 5px 0 0 5px;
+    opacity: 0.5;
+    transition: opacity 120ms ease-out, background 120ms ease-out;
+  }
+  .el-toolbar .drag-handle:hover {
+    background: #333;
+    opacity: 1;
+  }
+  .el-toolbar .drag-handle:active {
+    background: #444;
+    opacity: 1;
+  }
+  .el-toolbar .drag-handle svg {
+    width: 6px;
+    height: 10px;
+  }
   .el-toolbar {
     position: fixed;
     z-index: 999999;

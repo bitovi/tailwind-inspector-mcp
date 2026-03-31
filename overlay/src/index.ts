@@ -20,9 +20,9 @@ import {
 	revertPreview,
 } from "./patcher";
 import { connect, onMessage, send, sendTo } from "./ws";
-import { state, resolveTab } from "./overlay-state";
+import { state, resolveTab, clearSelectionState } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler } from "./element-highlight";
-import { showDrawButton, positionWithFlip, positionBothMenus, initToolbar } from "./element-toolbar";
+import { showDrawButton, positionWithFlip, positionBothMenus, isToolbarDragged, initToolbar } from "./element-toolbar";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
 import { createNavigationInterceptor } from "./recording/navigation-interceptor";
@@ -406,13 +406,7 @@ function resetOnNavigation(): void {
 	cancelInsert();
 	clearLockedInsert();
 	removeAllDesignCanvases();
-	state.currentEquivalentNodes = [];
-	state.currentTargetEl = null;
-	state.currentBoundary = null;
-	state.cachedNearGroups = null;
-	state.cachedExactMatches = null;
-	state.manuallyAddedNodes = new Set<HTMLElement>();
-	state.addMode = false;
+	clearSelectionState();
 	setSelectMode(false);
 	sendTo("panel", { type: "RESET_SELECTION" });
 	sendTo("panel", { type: "COMPONENT_DISARMED" });
@@ -505,13 +499,7 @@ function init(): void {
 				// Deselect element, stay in current mode
 				revertPreview();
 				clearHighlights();
-				state.currentEquivalentNodes = [];
-				state.currentTargetEl = null;
-				state.currentBoundary = null;
-				state.cachedNearGroups = null;
-				state.cachedExactMatches = null;
-				state.manuallyAddedNodes = new Set<HTMLElement>();
-				state.addMode = false;
+				clearSelectionState();
 				// Re-enter selection/browse mode (don't send RESET_SELECTION — that nukes the panel to landing)
 				if (state.currentMode === 'select') {
 					setSelectMode(true);
@@ -565,10 +553,7 @@ function init(): void {
 			clearHighlights();
 			cancelInsert();
 			clearLockedInsert();
-			state.currentEquivalentNodes = [];
-			state.currentTargetEl = null;
-			state.currentBoundary = null;
-			state.cachedNearGroups = null;
+			clearSelectionState();
 
 			state.currentMode = msg.mode;
 			if (msg.mode === 'insert') {
@@ -840,7 +825,9 @@ function init(): void {
 			state.currentEquivalentNodes.forEach((n) => highlightElement(n));
 		}
 		if (state.toolbarEl && state.currentTargetEl) {
-			positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+			if (!isToolbarDragged()) {
+				positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+			}
 		}
 	});
 
@@ -854,7 +841,9 @@ function init(): void {
 				state.currentEquivalentNodes.forEach((n) => highlightElement(n));
 			}
 			if (state.toolbarEl && state.currentTargetEl) {
-				positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+				if (!isToolbarDragged()) {
+					positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+				}
 			}
 		},
 		{ capture: true, passive: true },

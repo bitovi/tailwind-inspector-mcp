@@ -67,3 +67,14 @@ export function resolveTab(): string {
 	if (state.currentMode === 'insert') return 'place';
 	return state.tabPreference === 'component' ? 'replace' : 'design';
 }
+
+/** Clear all element-selection state. Call before re-entering a mode or resetting. */
+export function clearSelectionState(): void {
+	state.currentEquivalentNodes = [];
+	state.currentTargetEl = null;
+	state.currentBoundary = null;
+	state.cachedNearGroups = null;
+	state.cachedExactMatches = null;
+	state.manuallyAddedNodes = new Set<HTMLElement>();
+	state.addMode = false;
+}

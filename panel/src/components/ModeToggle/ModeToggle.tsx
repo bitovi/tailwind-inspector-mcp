@@ -15,7 +15,7 @@ export function ModeToggle({ mode, onModeChange, isPicking = false }: ModeToggle
     <div className="inline-flex items-center rounded-[6px] bg-[#1a1a1a] p-[2px] gap-[1px]">
       <button
         type="button"
-        onClick={() => onModeChange(mode === 'select' ? null : 'select')}
+        onClick={() => onModeChange('select')}
         className={`${base} ${buttonStyle(mode === 'select', mode === 'select' && isPicking)}`}
         aria-pressed={mode === 'select'}
         title="Select an element"
@@ -27,7 +27,7 @@ export function ModeToggle({ mode, onModeChange, isPicking = false }: ModeToggle
       </button>
       <button
         type="button"
-        onClick={() => onModeChange(mode === 'insert' ? null : 'insert')}
+        onClick={() => onModeChange('insert')}
         className={`${base} ${buttonStyle(mode === 'insert', mode === 'insert' && isPicking)}`}
         aria-pressed={mode === 'insert'}
         title="Insert to add content"
@@ -44,7 +44,7 @@ export function ModeToggle({ mode, onModeChange, isPicking = false }: ModeToggle
       </button>
       <button
         type="button"
-        onClick={() => onModeChange(mode === 'bug-report' ? null : 'bug-report')}
+        onClick={() => onModeChange('bug-report')}
         className={`${base} ${buttonStyle(mode === 'bug-report', false)}`}
         aria-pressed={mode === 'bug-report'}
         title="Report a bug"

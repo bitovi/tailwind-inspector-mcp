@@ -54,4 +54,11 @@ describe('ModeToggle', () => {
     fireEvent.click(screen.getByTitle('Report a bug'));
     expect(onChange).toHaveBeenCalledWith('bug-report');
   });
+
+  it('re-clicking active mode passes same mode (toggle handled by parent)', () => {
+    const onChange = vi.fn();
+    render(<ModeToggle mode="select" onModeChange={onChange} />);
+    fireEvent.click(screen.getByTitle('Select an element'));
+    expect(onChange).toHaveBeenCalledWith('select');
+  });
 });

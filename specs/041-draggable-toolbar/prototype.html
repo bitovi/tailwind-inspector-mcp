@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draggable Toolbar Prototype — 041</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #f5f5f5;
+    min-height: 200vh; /* scrollable */
+  }
+
+  /* ── Fake page content ── */
+  .page-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .page-content h1 { font-size: 24px; color: #333; margin-bottom: 12px; }
+  .page-content p { color: #666; line-height: 1.6; margin-bottom: 16px; }
+
+  /* ── Fake selected element ── */
+  .selected-element {
+    background: white;
+    border: 2px solid #00848B;
+    border-radius: 8px;
+    padding: 24px;
+    margin: 40px 0;
+    box-shadow: 0 0 0 3px rgba(0, 132, 139, 0.15);
+    position: relative;
+  }
+  .selected-element::before {
+    content: '← selected element';
+    position: absolute;
+    right: -160px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #00848B;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ── Overlay toolbar (position: fixed) ── */
+  .el-toolbar {
+    position: fixed;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 3px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    pointer-events: auto;
+    gap: 1px;
+    user-select: none;
+  }
+
+  /* ── NEW: Drag handle ── */
+  .el-toolbar .drag-handle {
+    width: 12px;
+    height: 28px;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 5px 0 0 5px;
+    opacity: 0.7;
+    transition: opacity 120ms ease-out, background 120ms ease-out;
+  }
+  .el-toolbar .drag-handle:hover {
+    background: #333;
+    opacity: 1;
+  }
+  .el-toolbar .drag-handle:active {
+    background: #444;
+    opacity: 1;
+  }
+  .el-toolbar .drag-handle svg {
+    width: 6px;
+    height: 10px;
+  }
+
+  /* ── Toolbar buttons ── */
+  .el-toolbar .tb {
+    height: 28px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 120ms ease-out;
+    position: relative;
+    flex-shrink: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 0;
+  }
+  .el-toolbar .tb:hover { background: #333; color: white; }
+  .el-toolbar .tb.active { background: #00464A; color: #5fd4da; }
+  .el-toolbar .tb svg { width: 14px; height: 14px; }
+  .el-toolbar .tb-combo {
+    gap: 4px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .el-toolbar .tb-combo svg { width: 12px; height: 12px; }
+  .el-toolbar .tb-adjunct {
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+    background: transparent;
+    border-radius: 0;
+  }
+  .el-toolbar .mode-group {
+    display: flex;
+    align-items: center;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .el-toolbar .mode-group.ring {
+    box-shadow: inset 0 0 0 1.5px #00848B;
+  }
+  .el-toolbar .mode-sep {
+    width: 1px;
+    height: 14px;
+    background: rgba(0,132,139,0.5);
+    flex-shrink: 0;
+  }
+  .el-toolbar .tb-sep {
+    width: 1px;
+    height: 16px;
+    background: #3a3a3a;
+    margin: 0 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Message row ── */
+  .msg-row {
+    position: fixed;
+    z-index: 999999;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 3px 4px 3px 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    pointer-events: auto;
+  }
+  .msg-row textarea {
+    width: 260px;
+    border: none;
+    background: #2a2a2a;
+    color: #e5e5e5;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 4px 8px;
+    border-radius: 5px;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+    height: 26px;
+    box-sizing: border-box;
+  }
+  .msg-row textarea::placeholder { color: #888; }
+  .msg-send {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: none;
+    background: #00848B;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .msg-send svg { width: 12px; height: 12px; }
+  .mic-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .mic-btn svg { width: 14px; height: 14px; }
+
+  /* ── Group picker popover ── */
+  .el-picker {
+    position: fixed;
+    z-index: 1000000;
+    background: #fff;
+    border: 1px solid #DFE2E2;
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.14);
+    min-width: 240px;
+    max-width: 320px;
+    pointer-events: auto;
+    overflow: hidden;
+    display: none;
+  }
+  .el-picker.open { display: block; }
+  .el-group-exact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #A0ABAB;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .el-count-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    background: #00848B;
+    border-radius: 9999px;
+  }
+  .el-group-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+    font-size: 11px;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .el-group-row:hover { background: rgba(0,132,139,0.05); }
+  .el-group-row.add-btn {
+    font-weight: 500;
+    color: #00848B;
+  }
+  .el-group-row.add-btn.active {
+    color: #fff;
+    background: #00848B;
+    border-radius: 4px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* ── Instructions panel ── */
+  .instructions {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #ccc;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: 'Inter', system-ui, sans-serif;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    z-index: 999;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .instructions kbd {
+    background: #333;
+    color: #5fd4da;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .instructions .label {
+    color: #00848B;
+    font-weight: 600;
+  }
+
+  /* ── State indicator ── */
+  .drag-state {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: #1a1a1a;
+    color: #5fd4da;
+    font-family: 'Inter', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    z-index: 999999;
+    opacity: 0;
+    transition: opacity 200ms;
+    pointer-events: none;
+  }
+  .drag-state.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Fake page content to provide context -->
+<div class="page-content">
+  <h1>My App — Product Cards</h1>
+  <p>This prototype demonstrates the draggable overlay toolbar. The toolbar and message row are positioned near the selected element. Drag the grip handle to move them out of the way.</p>
+
+  <div class="selected-element" id="target">
+    <h2 style="font-size:18px; margin-bottom:8px;">Product Card Component</h2>
+    <p style="color:#666; font-size:14px;">This represents a selected element in the user's app. The toolbar appears above it, the message row below.</p>
+  </div>
+
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
+  <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.</p>
+</div>
+
+<!-- Overlay toolbar -->
+<div class="el-toolbar" id="toolbar">
+  <!-- NEW: Drag handle -->
+  <div class="drag-handle" id="drag-handle" title="Drag to move toolbar">
+    <svg viewBox="0 0 6 10" fill="#999">
+      <circle cx="1.5" cy="1.5" r="1"/>
+      <circle cx="4.5" cy="1.5" r="1"/>
+      <circle cx="1.5" cy="5" r="1"/>
+      <circle cx="4.5" cy="5" r="1"/>
+      <circle cx="1.5" cy="8.5" r="1"/>
+      <circle cx="4.5" cy="8.5" r="1"/>
+    </svg>
+  </div>
+
+  <!-- Select group (ring) -->
+  <div class="mode-group ring">
+    <button class="tb tb-combo tb-select" style="color: #5fd4da; border-radius: 0;">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg>
+      Select
+    </button>
+    <div class="mode-sep"></div>
+    <button class="tb tb-adjunct" id="add-group-btn" style="color: #5fd4da; border-radius: 0;">
+      1 <span style="font-size:9px;margin-left:1px;opacity:0.6;">+</span>
+    </button>
+  </div>
+
+  <!-- Insert button -->
+  <button class="tb tb-combo" style="opacity: 0.4;">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg>
+    Insert
+  </button>
+
+  <div class="tb-sep"></div>
+
+  <!-- Action buttons -->
+  <button class="tb tb-combo active">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M15,0H1C0.448,0,0,0.448,0,1v9c0,0.552,0.448,1,1,1h2.882l-1.776,3.553c-0.247,0.494-0.047,1.095,0.447,1.342C2.696,15.966,2.849,16,2.999,16c0.367,0,0.72-0.202,0.896-0.553L4.618,14h6.764l0.724,1.447C12.281,15.798,12.634,16,13.001,16c0.15,0,0.303-0.034,0.446-0.105c0.494-0.247,0.694-0.848,0.447-1.342L12.118,11H15c0.552,0,1-0.448,1-1V1C16,0.448,15.552,0,15,0z M5.618,12l0.5-1h3.764l0.5,1H5.618z M14,9H2V2h12V9z"/></svg>
+    Design
+  </button>
+  <button class="tb tb-combo">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg>
+    Text
+  </button>
+  <button class="tb tb-combo">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M6,15H1a1,1,0,0,1-1-1V2A1,1,0,0,1,1,1H6A1,1,0,0,1,7,2V14A1,1,0,0,1,6,15Z"/><rect x="9" y="6" width="2" height="4"/><path d="M14,13H11V12H9v2a1,1,0,0,0,1,1h5a1,1,0,0,0,1-1V12H14Z"/><path d="M15,1H10A1,1,0,0,0,9,2V4h2V3h3V4h2V2A1,1,0,0,0,15,1Z"/><rect x="14" y="6" width="2" height="4"/></svg>
+    Replace
+  </button>
+</div>
+
+<!-- Message row (below element) -->
+<div class="msg-row" id="msg-row">
+  <textarea rows="1" placeholder="add your message"></textarea>
+  <button class="mic-btn">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg>
+  </button>
+  <button class="msg-send">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg>
+  </button>
+</div>
+
+<!-- Group picker popover (toggled by N+ button) -->
+<div class="el-picker" id="picker">
+  <div class="el-group-exact">
+    <span class="el-count-chip" id="picker-chip">1</span>
+    <span>element selected</span>
+  </div>
+  <div class="el-group-row add-btn" id="add-more-btn">Add more</div>
+  <label class="el-group-row">
+    <input type="checkbox">
+    <span style="color: #555;">All exact matches (5)</span>
+  </label>
+  <label class="el-group-row">
+    <input type="checkbox">
+    <span style="color: #555;">All ProductCard (8)</span>
+  </label>
+  <label class="el-group-row">
+    <input type="checkbox">
+    <span style="color: #888; font-size: 10px;">(3)</span>
+    <span style="color: #555;">
+      <span style="color: #16a34a;">+ring-2</span>
+      <span style="color: #16a34a;">+ring-blue-500</span>
+    </span>
+  </label>
+  <label class="el-group-row">
+    <input type="checkbox">
+    <span style="color: #888; font-size: 10px;">(1)</span>
+    <span style="color: #555;">
+      <span style="color: #dc2626;">-px-4</span>
+      <span style="color: #16a34a;">+px-6</span>
+    </span>
+  </label>
+</div>
+
+<!-- Drag state indicator -->
+<div class="drag-state" id="drag-state">dragged: true</div>
+
+<!-- Instructions -->
+<div class="instructions">
+  <span class="label">Drag handle:</span> Grab the <kbd>⠿</kbd> dots on the left edge to move the toolbar + message row.<br>
+  <span class="label">Picker:</span> Click <kbd>1 +</kbd> to toggle the group picker. It follows the toolbar when dragged.<br>
+  <span class="label">Scroll:</span> After dragging, scroll the page — toolbar stays in place. Press <kbd>R</kbd> to reset.
+</div>
+
+<script>
+  const toolbar = document.getElementById('toolbar');
+  const msgRow = document.getElementById('msg-row');
+  const dragHandle = document.getElementById('drag-handle');
+  const picker = document.getElementById('picker');
+  const addGroupBtn = document.getElementById('add-group-btn');
+  const addMoreBtn = document.getElementById('add-more-btn');
+  const dragStateEl = document.getElementById('drag-state');
+  const target = document.getElementById('target');
+
+  let toolbarDragged = false;
+
+  // ── Position toolbar and msgRow relative to target element ──
+  function positionToTarget() {
+    const rect = target.getBoundingClientRect();
+    toolbar.style.left = `${rect.left}px`;
+    toolbar.style.top = `${rect.top - toolbar.offsetHeight - 6}px`;
+    msgRow.style.left = `${rect.left}px`;
+    msgRow.style.top = `${rect.bottom + 6}px`;
+  }
+
+  // Initial position
+  positionToTarget();
+
+  // Reposition on scroll/resize (only if not dragged)
+  window.addEventListener('scroll', () => {
+    if (!toolbarDragged) positionToTarget();
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    if (!toolbarDragged) positionToTarget();
+  });
+
+  // ── Drag logic ──
+  function setupDrag() {
+    let startX = 0, startY = 0;
+    let startToolbarLeft = 0, startToolbarTop = 0;
+    let startMsgLeft = 0, startMsgTop = 0;
+
+    const onMove = (e) => {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      toolbar.style.left = `${startToolbarLeft + dx}px`;
+      toolbar.style.top = `${startToolbarTop + dy}px`;
+      // Snap message row directly below the toolbar
+      const tRect = toolbar.getBoundingClientRect();
+      msgRow.style.left = `${tRect.left}px`;
+      msgRow.style.top = `${tRect.bottom + 4}px`;
+      // Reposition picker if open
+      if (picker.classList.contains('open')) {
+        positionPicker();
+      }
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    dragHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      toolbarDragged = true;
+      dragStateEl.textContent = 'dragged: true';
+      dragStateEl.classList.add('visible');
+      startX = e.clientX;
+      startY = e.clientY;
+      startToolbarLeft = parseFloat(toolbar.style.left) || 0;
+      startToolbarTop = parseFloat(toolbar.style.top) || 0;
+      startMsgLeft = parseFloat(msgRow.style.left) || 0;
+      startMsgTop = parseFloat(msgRow.style.top) || 0;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+  setupDrag();
+
+  // ── Picker toggle ──
+  function positionPicker() {
+    const btnRect = addGroupBtn.getBoundingClientRect();
+    picker.style.left = `${btnRect.left}px`;
+    picker.style.top = `${btnRect.bottom + 6}px`;
+  }
+
+  addGroupBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (picker.classList.contains('open')) {
+      picker.classList.remove('open');
+    } else {
+      picker.classList.add('open');
+      positionPicker();
+    }
+  });
+
+  // ── Add more toggle ──
+  addMoreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    addMoreBtn.classList.toggle('active');
+    addMoreBtn.textContent = addMoreBtn.classList.contains('active') ? 'Stop adding' : 'Add more';
+  });
+
+  // ── Reset with R key ──
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      toolbarDragged = false;
+      dragStateEl.textContent = 'dragged: false (reset)';
+      dragStateEl.classList.add('visible');
+      setTimeout(() => dragStateEl.classList.remove('visible'), 1500);
+      picker.classList.remove('open');
+      positionToTarget();
+    }
+  });
+</script>
+</body>
+</html>

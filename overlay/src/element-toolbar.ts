@@ -6,9 +6,9 @@ import { cancelInsert, clearLockedInsert, startBrowse } from "./drop-zone";
 import { highlightElement, clearHighlights, removeDrawButton } from "./element-highlight";
 import { computeNearGroups, findSamePathElements } from "./grouping";
 import type { PathMatchResult } from "./grouping";
-import { state, resolveTab } from "./overlay-state";
+import { state, resolveTab, clearSelectionState } from "./overlay-state";
 import { revertPreview } from "./patcher";
-import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG } from "./svg-icons";
+import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
 import { buildTextContext } from "./context";
 import { send, sendTo } from "./ws";
@@ -66,6 +66,53 @@ function showMicBanner(message: string): void {
 		activeBanner = null;
 		bannerTimeout = null;
 	}, 8000);
+}
+
+// ── Drag state ──
+let toolbarDragged = false;
+
+export function isToolbarDragged(): boolean {
+	return toolbarDragged;
+}
+
+function setupToolbarDrag(handle: HTMLElement, toolbar: HTMLElement): void {
+	let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+	const onMove = (e: MouseEvent) => {
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+		toolbar.style.left = `${startLeft + dx}px`;
+		toolbar.style.top = `${startTop + dy}px`;
+		// Snap message row directly below toolbar
+		if (state.msgRowEl) {
+			const tRect = toolbar.getBoundingClientRect();
+			state.msgRowEl.style.left = `${tRect.left}px`;
+			state.msgRowEl.style.top = `${tRect.bottom + 4}px`;
+		}
+		// Reposition picker if open
+		if (state.pickerEl) {
+			const addGroupBtn = toolbar.querySelector('.tb-adjunct') as HTMLElement | null;
+			if (addGroupBtn) {
+				positionWithFlip(addGroupBtn, state.pickerEl, 'bottom-start');
+			}
+		}
+	};
+
+	const onUp = () => {
+		document.removeEventListener('mousemove', onMove);
+		document.removeEventListener('mouseup', onUp);
+	};
+
+	handle.addEventListener('mousedown', (e) => {
+		e.preventDefault();
+		toolbarDragged = true;
+		startX = e.clientX;
+		startY = e.clientY;
+		startLeft = parseFloat(toolbar.style.left) || 0;
+		startTop = parseFloat(toolbar.style.top) || 0;
+		document.addEventListener('mousemove', onMove);
+		document.addEventListener('mouseup', onUp);
+	});
 }
 
 // External callbacks set via initToolbar() — avoids circular dependencies
@@ -136,6 +183,7 @@ export { positionWithFlip };
 
 export function showDrawButton(targetEl: HTMLElement): void {
 	removeDrawButton();
+	toolbarDragged = false;
 
 	const instanceCount = state.currentEquivalentNodes.length;
 
@@ -146,6 +194,14 @@ export function showDrawButton(targetEl: HTMLElement): void {
 	toolbar.style.top = "0px";
 	state.shadowRoot.appendChild(toolbar);
 	state.toolbarEl = toolbar;
+
+	// ── Drag handle ──
+	const dragHandle = document.createElement("div");
+	dragHandle.className = "drag-handle";
+	dragHandle.title = "Drag to move toolbar";
+	dragHandle.innerHTML = DRAG_GRIP_SVG;
+	toolbar.appendChild(dragHandle);
+	setupToolbarDrag(dragHandle, toolbar);
 
 	// ── Select mode group (ring when active) or standalone Select button ──
 	if (state.currentMode === 'select') {
@@ -163,16 +219,10 @@ export function showDrawButton(targetEl: HTMLElement): void {
 			clearLockedInsert();
 			revertPreview();
 			clearHighlights();
-			state.currentEquivalentNodes = [];
-			state.currentTargetEl = null;
-			state.currentBoundary = null;
-			state.cachedNearGroups = null;
-			state.cachedExactMatches = null;
-			state.manuallyAddedNodes = new Set<HTMLElement>();
-			state.addMode = false;
-			// Toggle off: already in select mode, deactivate
-			setSelectMode(false);
-			sendTo("panel", { type: "MODE_CHANGED", mode: null });
+			clearSelectionState();
+			// Deselect element, stay in select mode so user can pick another
+			setSelectMode(true);
+			sendTo("panel", { type: "DESELECT_ELEMENT" });
 		});
 		selectGroup.appendChild(selectBtn);
 
@@ -215,13 +265,7 @@ export function showDrawButton(targetEl: HTMLElement): void {
 			clearLockedInsert();
 			revertPreview();
 			clearHighlights();
-			state.currentEquivalentNodes = [];
-			state.currentTargetEl = null;
-			state.currentBoundary = null;
-			state.cachedNearGroups = null;
-			state.cachedExactMatches = null;
-			state.manuallyAddedNodes = new Set<HTMLElement>();
-			state.addMode = false;
+			clearSelectionState();
 			state.currentMode = 'select';
 			state.currentTab = resolveTab();
 			sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
@@ -246,16 +290,11 @@ export function showDrawButton(targetEl: HTMLElement): void {
 		revertPreview();
 		clearHighlights();
 		setSelectMode(false);
-		state.currentEquivalentNodes = [];
-		state.currentTargetEl = null;
-		state.currentBoundary = null;
-		state.cachedNearGroups = null;
-		state.cachedExactMatches = null;
-		state.manuallyAddedNodes = new Set<HTMLElement>();
-		state.addMode = false;
+		clearSelectionState();
 		if (state.currentMode === 'insert') {
-			// Toggle off: already in insert mode, deactivate
-			sendTo("panel", { type: "MODE_CHANGED", mode: null });
+			// Already in insert mode — deselect element, re-enter browse mode
+			sendTo("panel", { type: "DESELECT_ELEMENT" });
+			startBrowse(state.shadowHost, onBrowseLocked);
 			return;
 		}
 		state.currentMode = 'insert';
@@ -318,7 +357,9 @@ export function showDrawButton(targetEl: HTMLElement): void {
 
 	// ── Message row (below element) ──
 	let msgRow: HTMLElement;
-	msgRow = createMsgRow(state.currentBoundary, () => positionBothMenus(targetEl, toolbar, msgRow));
+	msgRow = createMsgRow(state.currentBoundary, () => {
+		if (!toolbarDragged) positionBothMenus(targetEl, toolbar, msgRow);
+	});
 	state.shadowRoot.appendChild(msgRow);
 	state.msgRowEl = msgRow;
 

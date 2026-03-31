@@ -96,8 +96,39 @@ function InspectorApp() {
 		return 'design';
 	}, [mode, tabPreference]);
 
+	/**
+	 * Deselect the current element/insertPoint but stay in the current mode,
+	 * re-entering picking (select) or browse (insert) mode.
+	 * Shared by: ModeToggle re-click, Escape key, overlay DESELECT_ELEMENT.
+	 */
+	function deselectAndReenter(fromOverlay = false) {
+		setElementData(null);
+		setSelectionId((prev) => prev + 1);
+		setTextEditing(false);
+		setInsertPoint(null);
+		if (!fromOverlay) {
+			sendTo("overlay", { type: "CLEAR_HIGHLIGHTS", deselect: true });
+			if (mode === 'select') {
+				setSelectModeActive(true);
+				sendTo("overlay", { type: "TOGGLE_SELECT_MODE", active: true });
+			} else if (mode === 'insert') {
+				sendTo("overlay", { type: "MODE_CHANGED", mode: "insert" });
+			}
+		}
+	}
+
 	// When mode is clicked, clear current selection and restart
 	function handleModeChange(newMode: AppMode, fromOverlay = false) {
+		// Re-click same mode: deselect element if present, otherwise toggle off
+		if (newMode === mode) {
+			if (elementData || insertPoint) {
+				deselectAndReenter(fromOverlay);
+				return;
+			}
+			// No element — toggle mode off
+			newMode = null;
+		}
+
 		// Clear panel's element selection
 		setElementData(null);
 		setSelectionId((prev) => prev + 1);
@@ -170,11 +201,8 @@ function InspectorApp() {
 				setSelectModeActive(false);
 				setMode(null);
 			} else if (msg.type === "DESELECT_ELEMENT") {
-				// Overlay Escape: clear element but stay in current mode
-				setElementData(null);
-				setSelectionId((prev) => prev + 1);
-				setTextEditing(false);
-				setInsertPoint(null);
+				// Overlay Escape/toolbar: clear element but stay in current mode
+				deselectAndReenter(true);
 			} else if (msg.type === "ELEMENT_SELECTED") {
 				setElementData({
 					componentName: msg.componentName,
@@ -235,19 +263,8 @@ function InspectorApp() {
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
-				if (elementData) {
-					// Deselect element, stay in current mode
-					setElementData(null);
-					setSelectionId((prev) => prev + 1);
-					sendTo("overlay", { type: "CLEAR_HIGHLIGHTS", deselect: true });
-					// Re-enter selection/browse mode
-					if (mode === 'select') {
-						setSelectModeActive(true);
-						sendTo("overlay", { type: "TOGGLE_SELECT_MODE", active: true });
-					} else if (mode === 'insert') {
-						setInsertPoint(null);
-						sendTo("overlay", { type: "MODE_CHANGED", mode: "insert" });
-					}
+				if (elementData || insertPoint) {
+					deselectAndReenter(false);
 				} else if (mode !== null) {
 					// No element selected — go back to landing
 					setMode(null);
@@ -259,7 +276,7 @@ function InspectorApp() {
 		};
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [elementData, mode]);
+	}, [elementData, insertPoint, mode]);
 
 	const { draft, committed, implementing, implemented, partial, error } =
 		patchManager.counts;
