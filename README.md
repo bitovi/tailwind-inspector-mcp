@@ -2,7 +2,10 @@
 
 Change designs, draw mockups, provide suggestions, and report bugs __in your browser__ and send them to your favorite coding agent (Claude, Cursor, Copilot, etc) to be implemented. VyBit works with React or Angular apps built with Tailwind v3 or v4. 
 
-<img width="1453" height="903" alt="Cursor_and_Carton_Case_Management" src="https://github.com/user-attachments/assets/59b8e280-a827-4fa0-95e3-6c350afacbc9" />
+[Watch a video going over its features](https://www.youtube.com/watch?v=dE2rYcyC2xk)
+
+[![Watch the video](https://github.com/user-attachments/assets/99961c66-e2c9-48e3-9e7d-c23d6eda37ca)](https://www.youtube.com/watch?v=dE2rYcyC2xk)
+
 
 `VyBit` changes how you can design and build an app or website. Instead of building your design system and page designs in Sketch or Figma and then implementing it in code, you:
 
