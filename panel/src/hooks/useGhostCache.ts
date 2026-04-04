@@ -3,15 +3,18 @@ import type { GhostCacheEntry } from '../../../shared/types';
 
 interface GhostCacheResult {
   /** Look up a cached ghost by storyId and optional args. */
-  getCachedGhost: (storyId: string, args?: Record<string, unknown>) => { ghostHtml: string; hostStyles: Record<string, string> } | null;
+  getCachedGhost: (storyId: string, args?: Record<string, unknown>) => { ghostHtml: string; ghostCss?: string; hostStyles: Record<string, string>; storyBackground?: string; argCount?: number } | null;
   /** Submit (or refresh) a ghost in the server cache. Fire-and-forget. */
   submitToCache: (params: {
     storyId: string;
     args?: Record<string, unknown>;
     ghostHtml: string;
+    ghostCss?: string;
     hostStyles: Record<string, string>;
+    storyBackground?: string;
     componentName: string;
     componentPath?: string;
+    argCount?: number;
   }) => void;
   loaded: boolean;
 }
@@ -57,35 +60,41 @@ export function useGhostCache(): GhostCacheResult {
     const key = cacheKey(storyId, args);
     const entry = cacheRef.current.get(key);
     if (!entry) return null;
-    return { ghostHtml: entry.ghostHtml, hostStyles: entry.hostStyles, storyBackground: entry.storyBackground };
+    return { ghostHtml: entry.ghostHtml, ghostCss: entry.ghostCss, hostStyles: entry.hostStyles, storyBackground: entry.storyBackground, argCount: entry.argCount };
   }, []);
 
   const submitToCache = useCallback((params: {
     storyId: string;
     args?: Record<string, unknown>;
     ghostHtml: string;
+    ghostCss?: string;
     hostStyles: Record<string, string>;
     storyBackground?: string;
     componentName: string;
     componentPath?: string;
+    argCount?: number;
   }) => {
     const key = cacheKey(params.storyId, params.args);
-    const alreadyCached = cacheRef.current.has(key);
+    const existingEntry = cacheRef.current.get(key);
+    // POST if new, or if the server entry is missing data we now have (e.g. argCount)
+    const needsServerUpdate = !existingEntry || (params.argCount != null && existingEntry.argCount == null);
 
     // Update local cache immediately
     cacheRef.current.set(key, {
       storyId: params.storyId,
       argsHash: argsHashKey(params.args),
       ghostHtml: params.ghostHtml,
+      ghostCss: params.ghostCss,
       hostStyles: params.hostStyles,
       storyBackground: params.storyBackground,
       componentName: params.componentName,
       componentPath: params.componentPath,
+      argCount: params.argCount,
       extractedAt: Date.now(),
     });
 
-    // Skip the POST if this entry was already in the server cache
-    if (alreadyCached) return;
+    // Skip the POST if the server already has a complete entry
+    if (!needsServerUpdate) return;
 
     // Fire-and-forget to server
     fetch('/api/ghost-cache', {
@@ -95,10 +104,12 @@ export function useGhostCache(): GhostCacheResult {
         storyId: params.storyId,
         args: params.args,
         ghostHtml: params.ghostHtml,
+        ghostCss: params.ghostCss,
         hostStyles: params.hostStyles,
         storyBackground: params.storyBackground,
         componentName: params.componentName,
         componentPath: params.componentPath,
+        argCount: params.argCount,
       }),
     }).catch(() => {});
   }, []);

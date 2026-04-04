@@ -155,18 +155,18 @@ describe('cardReducer', () => {
   describe('GHOST_EXTRACTED', () => {
     test('updates storyBackground in ready phase', () => {
       const ready: CardState = { ...INITIAL_STATE, phase: 'ready', liveReady: true };
-      const next = cardReducer(ready, { type: 'GHOST_EXTRACTED', storyBackground: '#fff' });
+      const next = cardReducer(ready, { type: 'GHOST_EXTRACTED', ghostHtml: '<div>test</div>', ghostCss: '.test{}', storyBackground: '#fff' });
       expect(next.storyBackground).toBe('#fff');
     });
 
     test('updates storyBackground in loading phase', () => {
       const loading: CardState = { ...INITIAL_STATE, phase: 'loading' };
-      const next = cardReducer(loading, { type: 'GHOST_EXTRACTED', storyBackground: '#000' });
+      const next = cardReducer(loading, { type: 'GHOST_EXTRACTED', ghostHtml: '<div>test</div>', ghostCss: '.test{}', storyBackground: '#000' });
       expect(next.storyBackground).toBe('#000');
     });
 
     test('ignores in idle phase', () => {
-      const next = cardReducer(INITIAL_STATE, { type: 'GHOST_EXTRACTED', storyBackground: '#f00' });
+      const next = cardReducer(INITIAL_STATE, { type: 'GHOST_EXTRACTED', ghostHtml: '<div>test</div>', ghostCss: '.test{}', storyBackground: '#f00' });
       expect(next.storyBackground).toBeUndefined();
     });
   });

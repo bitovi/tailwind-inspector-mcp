@@ -85,25 +85,26 @@ test('shows "no stories found" when entries is empty', async () => {
 });
 
 describe('component cards', () => {
-  test('components show loading preview by default', async () => {
+  test('components show Customize and Insert buttons', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BUTTON_SECONDARY.id]: BUTTON_SECONDARY },
     });
     renderDrawTab();
     await screen.findByText('Button');
 
-    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
+    expect(screen.getByText('Customize')).toBeInTheDocument();
+    expect(screen.getByText('Insert')).toBeInTheDocument();
   });
 
-  test('multiple components each show loading preview', async () => {
+  test('multiple components each show their names', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BADGE_BLUE.id]: BADGE_BLUE },
     });
     renderDrawTab();
     await screen.findByText('Button');
 
-    const previews = screen.getAllByText('Loading preview…');
-    expect(previews.length).toBe(2);
+    expect(screen.getByText('Button')).toBeInTheDocument();
+    expect(screen.getByText('Badge')).toBeInTheDocument();
   });
 });
 
@@ -124,7 +125,7 @@ describe('probe iframe', () => {
     expect(iframe).toBeTruthy();
   });
 
-  test('shows loading message while probing', async () => {
+  test('shows component name while probing', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY },
       argTypes: {},
@@ -132,7 +133,7 @@ describe('probe iframe', () => {
     renderDrawTab();
     await screen.findByText('Button');
 
-    expect(screen.getByText('Loading preview…')).toBeInTheDocument();
+    expect(screen.getByText('Button')).toBeInTheDocument();
   });
 });
 

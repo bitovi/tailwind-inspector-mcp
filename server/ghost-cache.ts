@@ -1,17 +1,9 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import type { GhostCacheEntry } from "../shared/types.js";
 
-export interface GhostCacheEntry {
-  storyId: string;
-  argsHash: string;
-  ghostHtml: string;
-  hostStyles: Record<string, string>;
-  storyBackground?: string;
-  componentName: string;
-  componentPath?: string;
-  extractedAt: number;
-}
+export type { GhostCacheEntry };
 
 interface CacheFile {
   entries: GhostCacheEntry[];
@@ -106,7 +98,7 @@ function evictIfNeeded(): void {
   // Evict by total size
   let totalBytes = () => {
     let sum = 0;
-    for (const entry of cache.values()) sum += entry.ghostHtml.length;
+    for (const entry of cache.values()) sum += entry.ghostHtml.length + (entry.ghostCss?.length ?? 0);
     return sum;
   };
   while (totalBytes() > MAX_TOTAL_BYTES && cache.size > 0) {
@@ -133,10 +125,12 @@ export function setCachedGhost(entry: Omit<GhostCacheEntry, "argsHash" | "extrac
     storyId: entry.storyId,
     argsHash,
     ghostHtml: entry.ghostHtml,
+    ghostCss: entry.ghostCss,
     hostStyles: entry.hostStyles,
     storyBackground: entry.storyBackground,
     componentName: entry.componentName,
     componentPath: entry.componentPath,
+    argCount: entry.argCount,
     extractedAt: Date.now(),
   };
   cache.set(cacheKey(full.storyId, argsHash), full);

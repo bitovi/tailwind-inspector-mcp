@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>043 · Component List Redesign — Compact Rows + Smart Ghost Thumbnails</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS (Bitovi dark theme) ───────────────────────── */
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --orange-hover: #C73D26;
+      --orange-dim:   rgba(245, 83, 45, 0.12);
+      --teal:         #00848B;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --green:        #2E7229;
+
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+      --t-med:        200ms ease-out;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px 40px 120px;
+    }
+
+    .page-header {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      line-height: 1.7;
+      max-width: 880px;
+    }
+
+    .page-subtitle strong { color: var(--text-mid); }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 52px 0 36px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+      max-width: 780px;
+    }
+
+    .variations {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      max-width: 420px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 420px;
+      line-height: 1.55;
+      margin-bottom: 6px;
+    }
+
+    /* ─── PANEL CHROME ─────────────────────────────────────── */
+    .panel {
+      width: 340px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+
+    .panel-body {
+      padding: 8px;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      margin-bottom: 6px;
+    }
+
+    .search-bar svg { flex-shrink: 0; color: var(--muted); }
+
+    .search-bar input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      outline: none;
+      width: 100%;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+
+    /* ─── FAKE PREVIEW ELEMENTS ────────────────────────────── */
+    .preview-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 999px;
+      color: white;
+    }
+    .preview-badge.red    { background: #ef4444; }
+    .preview-badge.blue   { background: #3b82f6; }
+
+    .preview-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: white;
+      cursor: default;
+    }
+    .preview-button.primary { background: #6366f1; }
+
+    .preview-card {
+      background: white;
+      border-radius: 8px;
+      padding: 14px;
+      color: #1a1a1a;
+      font-size: 11px;
+      line-height: 1.4;
+      width: 200px;
+    }
+    .preview-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-card h4 .mini-tag {
+      font-size: 10px;
+      background: #dbeafe;
+      color: #2563eb;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .preview-card p { color: #64748b; font-size: 11px; }
+
+    .preview-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 4px;
+      color: white;
+      background: #f59e0b;
+    }
+
+    .preview-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #0f172a;
+      border-radius: 6px;
+      padding: 8px 12px;
+      width: 220px;
+    }
+    .preview-nav .nav-logo {
+      width: 16px;
+      height: 16px;
+      background: var(--teal);
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .preview-nav .nav-link {
+      font-size: 10px;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .preview-nav .nav-link.active {
+      color: white;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* ─── COMPONENT ROW ────────────────────────────────────── */
+    .comp-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: background var(--t-fast), border-color var(--t-fast);
+      position: relative;
+    }
+
+    .comp-row:hover {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    .comp-row.selected-for-insert {
+      background: var(--teal-dim);
+      border-color: var(--teal);
+    }
+
+    .comp-row.arming {
+      background: var(--orange-dim);
+      border-color: var(--orange);
+    }
+
+    .comp-row.selected-for-replace {
+      background: var(--orange-dim);
+      border-color: var(--orange);
+    }
+
+    /* ── Thumbnail ── */
+    .thumb {
+      width: 56px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 4px;
+      flex-shrink: 0;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb-inner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 4px;
+    }
+
+    /* Small items (e.g. Tag, Badge) → scale(1): no shrink needed, thumb clips natural size */
+    .thumb-inner.scale-none {
+      transform: scale(1);
+      width: 56px;
+      height: 40px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Medium items (e.g. Button) → scale(0.5): slightly shrunk */
+    .thumb-inner.scale-med {
+      transform: scale(0.5);
+      width: calc(56px / 0.5);
+      height: calc(40px / 0.5);
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Large items (e.g. Card, Nav) → scale(0.25): heavily shrunk to fit */
+    .thumb-inner.scale-lg {
+      transform: scale(0.25);
+      width: calc(56px / 0.25);
+      height: calc(40px / 0.25);
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 8px;
+    }
+
+    .thumb-placeholder {
+      width: 56px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 9px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      border: 1px dashed var(--border);
+      transition: border-color var(--t-fast), color var(--t-fast);
+    }
+
+    .thumb-placeholder:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .thumb-loading {
+      width: 56px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb-loading .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .comp-row.selected-for-insert .thumb,
+    .comp-row.selected-for-replace .thumb {
+      background: rgba(0, 132, 139, 0.06);
+    }
+
+    /* ── Row info ── */
+    .row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .row-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* ── Row actions ── */
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .comp-row:hover .row-actions,
+    .comp-row.selected-for-insert .row-actions,
+    .comp-row.selected-for-replace .row-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      height: 24px;
+      min-width: 24px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      transition: background var(--t-fast), color var(--t-fast);
+      font-family: var(--font-ui);
+      font-size: 10px;
+      padding: 0 5px;
+    }
+
+    .action-btn:hover {
+      background: var(--surface-hi);
+      color: var(--text);
+    }
+
+    .action-btn.props-btn {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 600;
+    }
+
+    /* ── Explicit row buttons ── */
+    .row-btn {
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-mid);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 0 8px;
+      transition: all var(--t-fast);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .row-btn:hover {
+      border-color: #555;
+      color: var(--text);
+      background: var(--surface-hi);
+    }
+
+    .row-btn.select-btn {
+      /* Default: gray, identical to base .row-btn — no page selection exists */
+    }
+
+    /* Ready state: page HAS a selection target → all buttons turn teal */
+    .row-btn.select-btn.ready {
+      border-color: var(--teal);
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    .row-btn.select-btn.ready:hover {
+      background: rgba(0, 132, 139, 0.2);
+      color: white;
+    }
+
+    /* Arming state: user clicked with no page selection → orange, stays sticky */
+    .row-btn.select-btn.arming {
+      border-color: var(--orange);
+      color: white;
+      background: var(--orange);
+    }
+
+    .row-btn.select-btn.arming:hover {
+      background: #d94425;
+    }
+
+    .selection-pill {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .selection-pill.insert {
+      color: var(--teal);
+      background: var(--teal-dim);
+    }
+
+    .selection-pill.replace {
+      color: var(--orange);
+      background: var(--orange-dim);
+    }
+
+    /* ── Expanded preview ── */
+    .expanded-preview {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height var(--t-med);
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin: -2px 0 2px;
+    }
+
+    .expanded-preview.open {
+      max-height: 300px;
+    }
+
+    .expanded-inner {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .expanded-ghost {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Props editor inline ── */
+    .props-editor {
+      padding: 8px 10px 10px;
+      display: none;
+    }
+
+    .props-editor.open { display: block; }
+
+    .props-header {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+    }
+
+    .prop-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 56px;
+      flex-shrink: 0;
+    }
+
+    .prop-control {
+      flex: 1;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+
+    select.prop-control {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    /* ─── ANNOTATIONS ──────────────────────────────────────── */
+    .annotation {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--teal);
+      background: rgba(0, 132, 139, 0.12);
+      padding: 2px 6px;
+      border-radius: 3px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .annotation.orange {
+      color: var(--orange);
+      background: rgba(245, 83, 45, 0.12);
+    }
+
+    .annotation.neutral {
+      color: var(--text-mid);
+      background: var(--surface);
+    }
+  </style>
+</head>
+<body>
+
+<h1 class="page-header">043 · Component List Redesign</h1>
+<p class="page-subtitle">
+  Evolving the compact tile row layout from spec 024 with <strong>smart ghost thumbnails</strong>,
+  <strong>lazy loading</strong>, <strong>better naming</strong>, and an <strong>expand-to-full-size</strong> preview.
+  The goals: fast scan, minimal resource usage, clear selection language, and easy access to variant/props editing.
+  See <a href="spec.md" style="color: var(--teal);">spec.md</a> for technical specifications.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">1 — Thumbnail Scaling Strategy</div>
+<p class="section-subtitle">
+  The ghost is rendered at natural size inside a hidden <code>&lt;adaptive-iframe&gt;</code>, then
+  <code>transform: scale()</code> shrinks it to fit the 56×40 thumbnail. The scale factor is <strong>adaptive</strong>:
+  small components (Tag, Badge) don't shrink at all; large components (Card, Nav) shrink significantly.
+  The outer <code>.thumb</code> clips via <code>overflow: hidden</code>.
+</p>
+
+<div class="variations">
+
+  <!-- ── Adaptive scaling examples ── -->
+  <div class="col">
+    <span class="col-label">Adaptive scale — no shrink needed</span>
+    <p class="col-description">
+      Small components like Badge and Tag render at natural pixel size.
+      The 56×40 thumb area is large enough to show them without scaling.
+      <code>scale(1)</code> — zero distortion.
+    </p>
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <div>
+        <div class="thumb" style="width: 80px; height: 56px;">
+          <div class="thumb-inner scale-none" style="width: 80px; height: 56px;">
+            <span class="preview-badge red">New</span>
+          </div>
+        </div>
+        <div style="font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center;">Badge @ 1×</div>
+      </div>
+      <div>
+        <div class="thumb" style="width: 80px; height: 56px;">
+          <div class="thumb-inner scale-none" style="width: 80px; height: 56px;">
+            <span class="preview-tag">Design</span>
+          </div>
+        </div>
+        <div style="font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center;">Tag @ 1×</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <span class="col-label">Adaptive scale — medium shrink</span>
+    <p class="col-description">
+      Medium-sized components like Button shrink to ~50%.
+      Still legible — you can read the label and see the shape.
+    </p>
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <div>
+        <div class="thumb" style="width: 80px; height: 56px;">
+          <div class="thumb-inner scale-med" style="width: calc(80px / 0.5); height: calc(56px / 0.5);">
+            <span class="preview-button primary">Click me</span>
+          </div>
+        </div>
+        <div style="font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center;">Button @ 0.5×</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <span class="col-label">Adaptive scale — heavy shrink</span>
+    <p class="col-description">
+      Large components (Card, Navbar) shrink to ~25%.
+      You see the <em>shape</em> and color but can't read text. That's fine — the name is right next to it.
+      Click the row to expand for full-size preview.
+    </p>
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <div>
+        <div class="thumb" style="width: 80px; height: 56px;">
+          <div class="thumb-inner scale-lg" style="width: calc(80px / 0.25); height: calc(56px / 0.25);">
+            <div class="preview-card" style="width: 260px;">
+              <h4>Card Title <span class="mini-tag">Tag</span></h4>
+              <p>Card description goes here with more text.</p>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center;">Card @ 0.25×</div>
+      </div>
+      <div>
+        <div class="thumb" style="width: 80px; height: 56px;">
+          <div class="thumb-inner scale-lg" style="width: calc(80px / 0.25); height: calc(56px / 0.25);">
+            <div class="preview-nav">
+              <div class="nav-logo"></div>
+              <span class="nav-link active">Home</span>
+              <span class="nav-link">About</span>
+              <span class="nav-link">Blog</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center;">Navbar @ 0.25×</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">2 — Row Actions: Customize + Insert/Replace Buttons (3 States)</div>
+<p class="section-subtitle">
+  Every component row has two <strong>always-visible</strong> buttons: <strong>Customize</strong> (expands preview + props)
+  and an <strong>Insert/Replace</strong> button whose appearance depends on page context.
+  The button has three visual states: <strong>gray</strong> (idle), <strong>teal</strong> (page has a target — one click acts),
+  and <strong>orange</strong> (user-initiated arming — waiting for page click).
+</p>
+
+<div class="variations">
+
+  <!-- ── State 1: GRAY — no page selection ── -->
+  <div class="col">
+    <span class="col-label">A · Gray — no page selection</span>
+    <p class="col-description">
+      No element is selected on the page. The Insert/Replace button looks <strong>gray</strong>,
+      identical to Customize. It's available but not highlighted — nothing urgent to act on.
+      Clicking it enters <strong>arming mode</strong> (see state C).
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-tag">Design</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Tag</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── State 2: TEAL — page has a selection target ── -->
+  <div class="col">
+    <span class="col-label">B · Teal/Ready — page has a selection target</span>
+    <p class="col-description">
+      An element is selected on the page. <strong>All</strong> component rows show a <strong>teal "Replace"</strong> button.
+      One click immediately replaces. After clicking, <strong>that row's button reverts to gray</strong>
+      (action done), but <strong>all other buttons stay teal</strong> — the user can quickly swap to a
+      different component with one more click.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation" style="font-size: 8px;">element selected</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-tag">Design</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Tag</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 16px;"></div>
+
+    <!-- After one was clicked -->
+    <span class="col-label" style="margin-bottom: 8px; display: block;">After clicking "Replace" on Button:</span>
+    <p class="col-description">
+      Button was just replaced. Its button reverts to gray. Others stay teal — one click to switch.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation" style="font-size: 8px;">element selected</span>
+      </div>
+      <div class="panel-body">
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+
+        <!-- Button — just used, reverted to gray -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Replace</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── State 3: ORANGE — user-initiated arming ── -->
+  <div class="col">
+    <span class="col-label">C · Orange/Arming — user-initiated, no page selection</span>
+    <p class="col-description">
+      No element is selected, but user clicks the gray "Insert" button on Button.
+      That button turns <strong>orange</strong> and reads <strong>"Inserting"</strong>.
+      Other rows stay gray. User clicks the page to place.
+      After insertion, the button <strong>stays orange</strong> — user can keep inserting elsewhere.
+      Click the orange button again to deactivate (back to gray).
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Button — arming (orange) -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn arming">Inserting</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-tag">Design</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Tag</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">3 — Lazy Loading States</div>
+<p class="section-subtitle">
+  Thumbnails load lazily. The buttons are always visible regardless of thumbnail state.
+  Clicking <strong>Customize</strong> or the <strong>thumbnail placeholder</strong> triggers ghost extraction
+  and then expands to the preview+props drawer once loaded.
+</p>
+
+<div class="variations">
+
+  <!-- ── Unloaded ── -->
+  <div class="col">
+    <span class="col-label">A · Unloaded — placeholder</span>
+    <p class="col-description">
+      Dashed placeholder. The two action buttons are still visible and functional.
+      Clicking "Customize" or the placeholder triggers loading → then auto-expands.
+      Clicking "Insert" arms immediately (no preview needed to select).
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <!-- Badge — cached from previous session -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Button — not loaded -->
+        <div class="comp-row">
+          <div class="thumb-placeholder">
+            <span>preview</span>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Card — not loaded -->
+        <div class="comp-row">
+          <div class="thumb-placeholder">
+            <span>preview</span>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Tag — not loaded -->
+        <div class="comp-row">
+          <div class="thumb-placeholder">
+            <span>preview</span>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Tag</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Loading ── -->
+  <div class="col">
+    <span class="col-label">B · Loading — triggered by Customize or scroll</span>
+    <p class="col-description">
+      Ghost iframe is extracting. Spinner replaces the placeholder.
+      If triggered by Customize click, the drawer will auto-open once loading finishes.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Button — loading (user clicked Customize) -->
+        <div class="comp-row" style="background: var(--surface);">
+          <div class="thumb-loading">
+            <div class="spinner"></div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta" style="color: var(--teal);">Loading preview…</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn" style="opacity: 0.5;">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb-placeholder">
+            <span>preview</span>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── All loaded ── -->
+  <div class="col">
+    <span class="col-label">C · All loaded — cache hit</span>
+    <p class="col-description">
+      All thumbnails loaded from cache. Instant display, no spinners.
+      Every row has its two action buttons ready.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title <span class="mini-tag">Tag</span></h4>
+                <p>Description text here.</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-tag">Design</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Tag</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">4 — Expand Drawer: Full-Size Preview + Props Together</div>
+<p class="section-subtitle">
+  Clicking <strong>Customize</strong> or the <strong>thumbnail</strong> expands a drawer below the row showing
+  <em>both</em> the full-size ghost preview <em>and</em> the props editor at the same time.
+  The Insert/Replace button stays in the row header in its current state (gray, teal, or orange).
+</p>
+
+<div class="variations">
+
+  <!-- ── Expanded: gray state (no page selection) ── -->
+  <div class="col">
+    <span class="col-label">A · Expanded — gray (no page selection)</span>
+    <p class="col-description">
+      User clicked Customize or thumbnail to expand. No page element selected, so
+      the Insert button stays gray. User can tweak props, then optionally click "Insert"
+      to enter arming mode (orange).
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <!-- Badge — collapsed -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Button — EXPANDED, gray button -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Click me</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props · expanded</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Expanded drawer: preview + props TOGETHER -->
+        <div class="expanded-preview open">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-button primary" style="padding: 10px 28px; font-size: 14px;">Click me</span>
+            </div>
+
+            <div class="props-editor open">
+              <div class="props-header">
+                <span>Props</span>
+                <span style="font-size: 9px; font-weight: 400; color: var(--muted);">Changes re-render live</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control">
+                  <option>primary</option><option>secondary</option><option>outline</option>
+                </select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children</span>
+                <input class="prop-control" value="Click me">
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">disabled</span>
+                <select class="prop-control">
+                  <option>false</option><option>true</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card — collapsed -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Expanded: teal/ready state (page has selection) ── -->
+  <div class="col">
+    <span class="col-label">B · Expanded — teal/ready (page has selection)</span>
+    <p class="col-description">
+      Page element is selected. User expanded Button to tweak props before replacing.
+      The "Replace" button is teal. Click it to immediately replace. Other collapsed rows
+      also show teal buttons.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation" style="font-size: 8px;">element selected</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <!-- Badge — collapsed, teal ready -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+
+        <!-- Button — EXPANDED, teal ready -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Submit</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props · expanded</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview open">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-button primary" style="padding: 10px 28px; font-size: 14px;">Submit</span>
+            </div>
+
+            <div class="props-editor open">
+              <div class="props-header">
+                <span>Props</span>
+                <span style="font-size: 9px; font-weight: 400; color: var(--muted);">Changes re-render live</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control">
+                  <option>primary</option><option>secondary</option><option>outline</option>
+                </select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children</span>
+                <input class="prop-control" value="Submit" style="border-color: var(--teal);">
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">disabled</span>
+                <select class="prop-control">
+                  <option>false</option><option>true</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card — collapsed, teal ready -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn ready">Replace</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Expanded: orange/arming state ── -->
+  <div class="col">
+    <span class="col-label">C · Expanded — orange/arming (user-initiated)</span>
+    <p class="col-description">
+      No page selection. User expanded Button, tweaked props (changed children to "Submit"),
+      then clicked "Insert" → button turned orange "Inserting". Drawer stays open.
+      User can keep editing props, then click the page to place.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <div class="search-bar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="Search components…">
+        </div>
+
+        <!-- Badge — collapsed, gray -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">New</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+
+        <!-- Button — EXPANDED + ARMING (orange) -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-med">
+              <span class="preview-button primary">Submit</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Button</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn select-btn arming">Inserting</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview open">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-button primary" style="padding: 10px 28px; font-size: 14px;">Submit</span>
+            </div>
+
+            <div class="props-editor open">
+              <div class="props-header">
+                <span>Props</span>
+                <span style="font-size: 9px; font-weight: 400; color: var(--muted);">Changes re-render live</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control">
+                  <option>primary</option><option>secondary</option><option>outline</option>
+                </select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children</span>
+                <input class="prop-control" value="Submit" style="border-color: var(--teal);">
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">disabled</span>
+                <select class="prop-control">
+                  <option>false</option><option>true</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card — collapsed, gray -->
+        <div class="comp-row">
+          <div class="thumb" style="cursor: pointer;">
+            <div class="thumb-inner scale-lg">
+              <div class="preview-card" style="width: 260px;">
+                <h4>Card Title</h4>
+                <p>Description</p>
+              </div>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Card</div>
+            <div class="row-meta">3 props</div>
+          </div>
+          <div class="row-actions" style="opacity: 1; gap: 4px;">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn select-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+</body>
+</html>

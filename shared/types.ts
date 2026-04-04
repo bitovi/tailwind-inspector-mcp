@@ -6,10 +6,12 @@ export interface GhostCacheEntry {
   storyId: string;
   argsHash: string;
   ghostHtml: string;
+  ghostCss?: string;
   hostStyles: Record<string, string>;
   storyBackground?: string;
   componentName: string;
   componentPath?: string;
+  argCount?: number;
   extractedAt: number;
 }
 
@@ -58,6 +60,7 @@ export interface Patch {
   canvasComponents?: CanvasComponent[]; // Components placed on the design canvas
   // Component-drop fields (used when kind === 'component-drop'):
   ghostHtml?: string;        // HTML of the dropped component (overlay preview only — stripped from MCP response)
+  ghostCss?: string;         // CSS for the dropped component (injected alongside ghost in target app)
   componentStoryId?: string; // Storybook story ID
   componentPath?: string;    // Source file of the component, e.g. './src/components/Button.tsx'
   // Text-change fields (used when kind === 'text-change'):
@@ -355,6 +358,7 @@ export interface ComponentArmMessage {
   componentName: string;
   storyId: string;
   ghostHtml: string;
+  ghostCss?: string;
   componentPath?: string;  // Source file path from Storybook index, e.g. './src/components/Button.tsx'
   args?: Record<string, unknown>; // Current prop values from ArgsForm
   insertMode?: 'replace';  // When 'replace', arms element-select if no element is selected

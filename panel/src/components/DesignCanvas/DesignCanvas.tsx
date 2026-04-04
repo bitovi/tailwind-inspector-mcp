@@ -1,6 +1,7 @@
 import type { DesignCanvasProps } from './types';
 import { useFabricCanvas } from './useFabricCanvas';
 import { CanvasToolbar } from './CanvasToolbar';
+import { ShadowGhost } from '../ShadowGhost';
 
 export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponent, onComponentPlaced }: DesignCanvasProps) {
   const {
@@ -50,8 +51,10 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponen
       >
         <canvas ref={canvasElRef} />
         {/* Ghost HTML preview following cursor when a component is armed */}
-        {isArmed && ghostPos && armedComponent?.ghostHtml && (
-          <div
+        {isArmed && ghostPos && armedComponent?.ghostHtml && armedComponent?.ghostCss && (
+          <ShadowGhost
+            ghostHtml={armedComponent.ghostHtml}
+            ghostCss={armedComponent.ghostCss}
             style={{
               position: 'absolute',
               left: ghostPos.x - (ghostSize?.width ?? 0) / 2,
@@ -62,7 +65,6 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponen
               outlineOffset: 2,
               zIndex: 10,
             }}
-            dangerouslySetInnerHTML={{ __html: armedComponent.ghostHtml }}
           />
         )}
         {/* Armed indicator banner */}

@@ -3,6 +3,7 @@ import { Canvas as FabricCanvas, PencilBrush, Rect, Circle, Line, Textbox, Fabri
 import type { DrawingTool, ArmedComponent } from './types';
 import type { CanvasComponent } from '../../../../shared/types';
 import { rasterizeHtml } from './rasterize';
+import { rewriteHostToRoot } from '../../../../shared/css-utils';
 
 export interface UseFabricCanvasOptions {
   onSubmit: (imageDataUrl: string, width: number, height: number, canvasComponents?: CanvasComponent[]) => void;
@@ -85,6 +86,7 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
           meta.ghostHtml,
           newWidth,
           newHeight,
+          meta.ghostCss,
         );
         const fresh = await FabricImage.fromURL(dataUrl);
         fresh.set({
@@ -557,7 +559,12 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
     const measurer = document.createElement('div');
     measurer.style.cssText =
       'position:fixed;left:-99999px;top:-99999px;visibility:hidden;pointer-events:none;';
-    measurer.innerHTML = armedComponent.ghostHtml;
+    if (armedComponent.ghostCss) {
+      const style = document.createElement('style');
+      style.textContent = rewriteHostToRoot(armedComponent.ghostCss);
+      measurer.appendChild(style);
+    }
+    measurer.insertAdjacentHTML('beforeend', armedComponent.ghostHtml);
     document.body.appendChild(measurer);
     setGhostSize({ width: measurer.offsetWidth || 100, height: measurer.offsetHeight || 40 });
     document.body.removeChild(measurer);
@@ -593,7 +600,7 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
       const y = e.clientY - rect.top;
 
       try {
-        const { dataUrl, width, height } = await rasterizeHtml(armedComponent.ghostHtml);
+        const { dataUrl, width, height } = await rasterizeHtml(armedComponent.ghostHtml, undefined, undefined, armedComponent.ghostCss);
         const img = await FabricImage.fromURL(dataUrl);
         img.set({
           left: x - width / 2,
@@ -608,6 +615,7 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
           storyId: armedComponent.storyId,
           args: armedComponent.args,
           ghostHtml: armedComponent.ghostHtml,
+          ghostCss: armedComponent.ghostCss,
         };
         canvas.add(img);
         canvas.setActiveObject(img);
@@ -635,6 +643,7 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
           storyId: armedComponent.storyId,
           args: armedComponent.args,
           ghostHtml: armedComponent.ghostHtml,
+          ghostCss: armedComponent.ghostCss,
         };
         const label = new Textbox(armedComponent.componentName, {
           left: x - w / 2 + 4,

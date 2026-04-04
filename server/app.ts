@@ -96,13 +96,13 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
     res.json(getAllCachedGhosts());
   });
 
-  app.post('/api/ghost-cache', express.json({ limit: '1mb' }), (req, res) => {
-    const { storyId, args, ghostHtml, hostStyles, storyBackground, componentName, componentPath } = req.body;
+  app.post('/api/ghost-cache', express.json({ limit: '2mb' }), (req, res) => {
+    const { storyId, args, ghostHtml, ghostCss, hostStyles, storyBackground, componentName, componentPath, argCount } = req.body;
     if (!storyId || typeof ghostHtml !== 'string') {
       res.status(400).json({ error: 'storyId and ghostHtml are required' });
       return;
     }
-    setCachedGhost({ storyId, args, ghostHtml, hostStyles: hostStyles ?? {}, storyBackground, componentName: componentName ?? '', componentPath });
+    setCachedGhost({ storyId, args, ghostHtml, ghostCss, hostStyles: hostStyles ?? {}, storyBackground, componentName: componentName ?? '', componentPath, argCount });
     res.json({ ok: true });
   });
 

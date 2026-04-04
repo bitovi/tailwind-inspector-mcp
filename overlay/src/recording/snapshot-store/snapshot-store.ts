@@ -47,7 +47,7 @@ export class SnapshotStore {
       req.onerror = () => reject(req.error);
     });
 
-    await this.pruneIfNeeded();
+    await this.pruneIfNeeded().catch(err => console.warn('[SnapshotStore] pruneIfNeeded failed:', err));
     return id;
   }
 

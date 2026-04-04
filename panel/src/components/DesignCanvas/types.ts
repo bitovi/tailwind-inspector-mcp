@@ -22,6 +22,7 @@ export interface ArmedComponent {
   componentName: string;
   storyId: string;
   ghostHtml: string;
+  ghostCss?: string;
   componentPath?: string;
   args?: Record<string, unknown>;
 }

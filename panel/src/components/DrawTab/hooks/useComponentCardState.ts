@@ -21,6 +21,22 @@ export interface CardState {
   args: Record<string, unknown>;
   liveReady: boolean;
   storyBackground?: string;
+  /**
+   * The most recently extracted ghost HTML from the live adaptive-iframe.
+   * This is the single source of truth for what the card preview displays
+   * once the iframe has extracted styles — both the panel card and the
+   * cached ghost HTML use this same string, so they always look identical.
+   * Populated by GHOST_EXTRACTED; null until first extraction completes.
+   */
+  liveGhostHtml: string | null;
+  /**
+   * Collected CSS from the iframe's stylesheets — travels alongside ghostHtml
+   * and is injected as a <style> tag inside a shadow DOM wrapper.
+   */
+  liveGhostCss: string | null;
+  /** Natural pixel dimensions of the rendered component (from iframe measurement). */
+  naturalWidth: number;
+  naturalHeight: number;
   error: string | null;
   pendingArgs: Record<string, unknown> | null;
   /** True once the live adaptive-iframe has been triggered (even if still loading). */
@@ -36,7 +52,7 @@ export type CardAction =
   | { type: 'SLOT_ACQUIRED' }
   | { type: 'IFRAME_LOADED' }
   | { type: 'IFRAME_ERROR'; message: string }
-  | { type: 'GHOST_EXTRACTED'; storyBackground?: string }
+  | { type: 'GHOST_EXTRACTED'; ghostHtml: string; ghostCss: string; storyBackground?: string; naturalWidth?: number; naturalHeight?: number }
   | { type: 'ARGS_CHANGED'; args: Record<string, unknown> }
   | { type: 'REQUEST_LIVE_REFRESH' }
   | { type: 'CLEAR_PENDING_ARGS' };
@@ -51,6 +67,10 @@ export const INITIAL_STATE: CardState = {
   args: {},
   liveReady: false,
   storyBackground: undefined,
+  liveGhostHtml: null,
+  liveGhostCss: null,
+  naturalWidth: 0,
+  naturalHeight: 0,
   error: null,
   pendingArgs: null,
   loadLiveRequested: false,
@@ -109,7 +129,11 @@ export function cardReducer(state: CardState, action: CardAction): CardState {
       if (state.phase !== 'ready' && state.phase !== 'loading') return state;
       return {
         ...state,
+        liveGhostHtml: action.ghostHtml,
+        liveGhostCss: action.ghostCss,
         storyBackground: action.storyBackground ?? state.storyBackground,
+        naturalWidth: action.naturalWidth ?? state.naturalWidth,
+        naturalHeight: action.naturalHeight ?? state.naturalHeight,
       };
     }
 

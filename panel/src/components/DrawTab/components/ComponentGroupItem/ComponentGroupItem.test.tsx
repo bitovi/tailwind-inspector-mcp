@@ -28,25 +28,32 @@ test('renders group name', () => {
   expect(screen.getByText('Button')).toBeInTheDocument();
 });
 
-test('shows loading preview', () => {
-  renderItem();
-  expect(screen.getByText('Loading preview…')).toBeInTheDocument();
-});
-
-test('shows placement hint when armed', () => {
+test('shows component name when armed', () => {
   renderItem(group, true);
-  expect(screen.getByText('Click the page to place')).toBeInTheDocument();
-  expect(screen.queryByText('Button')).not.toBeInTheDocument();
-});
-
-test('shows group name when not armed', () => {
-  renderItem(group, false);
+  // In the compact row layout, name is always visible
   expect(screen.getByText('Button')).toBeInTheDocument();
-  expect(screen.queryByText('Click the page to place')).not.toBeInTheDocument();
 });
 
-test('creates a hidden probe iframe for the first story', () => {
+test('shows "Inserting" label when armed', () => {
+  renderItem(group, true);
+  expect(screen.getByText('Inserting')).toBeInTheDocument();
+});
+
+test('shows "Insert" label when not armed', () => {
+  renderItem(group, false);
+  expect(screen.getByText('Insert')).toBeInTheDocument();
+});
+
+test('shows Customize button', () => {
   renderItem();
-  const iframe = document.querySelector('iframe[src*="components-button--primary"]');
-  expect(iframe).toBeTruthy();
+  expect(screen.getByText('Customize')).toBeInTheDocument();
+});
+
+test('shows "Replace" when hasPageSelection is true', () => {
+  const onArm = vi.fn();
+  const onDisarm = vi.fn();
+  render(
+    <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} hasPageSelection />
+  );
+  expect(screen.getByText('Replace')).toBeInTheDocument();
 });

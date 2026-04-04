@@ -1,25 +1,5 @@
-import { extractStyles, applyStylesToHost, injectChildStyles, CHILD_STYLE_PROPERTIES } from './style-cloner';
-
-/** Properties inlined on the root element when building component HTML for insertion. */
-const COMPONENT_INLINE_PROPS: readonly string[] = CHILD_STYLE_PROPERTIES;
-
-/** Recursively inline computed styles from a source tree onto a cloned tree. */
-function injectChildStylesDeep(source: Element, clone: Element): void {
-  const srcChildren = source.children;
-  const clnChildren = clone.children;
-  const len = Math.min(srcChildren.length, clnChildren.length);
-  for (let i = 0; i < len; i++) {
-    const srcChild = srcChildren[i];
-    const clnChild = clnChildren[i] as HTMLElement;
-    const computed = (srcChild.ownerDocument.defaultView ?? window).getComputedStyle(srcChild);
-    if (clnChild.style) {
-      for (const prop of COMPONENT_INLINE_PROPS) {
-        clnChild.style.setProperty(prop, computed.getPropertyValue(prop));
-      }
-    }
-    injectChildStylesDeep(srcChild, clnChild);
-  }
-}
+import { extractStyles, applyStylesToHost, injectChildStyles } from './style-cloner';
+import { collectIframeCss } from './css-collector';
 
 export class AdaptiveIframe extends HTMLElement {
   static observedAttributes = ['src', 'srcdoc'];
@@ -322,7 +302,9 @@ export class AdaptiveIframe extends HTMLElement {
         // Angular Storybook adds <storybook-root> before Angular bootstraps the
         // component template inside it.  Skip empty elements so the
         // MutationObserver keeps waiting for content to render.
-        if (child.children.length === 0 && !child.textContent?.trim()) {
+        // But preserve elements with classes — they're real rendered components
+        // (e.g. a <button> checkbox with no text/children).
+        if (child.children.length === 0 && !child.textContent?.trim() && !(child as HTMLElement).className) {
           return null;
         }
         return child;
@@ -386,9 +368,12 @@ export class AdaptiveIframe extends HTMLElement {
   }
 
   /**
-   * Returns the full outerHTML of the story root element with inlined
-   * computed styles on the root and all descendants — suitable for
-   * insertion into a different document.
+   * Returns the raw outerHTML of the story root element with original
+   * class names preserved — no inline styles on children.
+   *
+   * Styling is provided by ghostCss (collected from iframe stylesheets)
+   * which travels alongside this HTML and is injected as a <style> tag
+   * inside a shadow DOM wrapper wherever the ghost is rendered.
    */
   getComponentHtml(): string {
     const doc = this.hiddenIframe.contentDocument;
@@ -397,14 +382,17 @@ export class AdaptiveIframe extends HTMLElement {
     if (!root) return this.ghostEl.innerHTML;
 
     const clone = root.cloneNode(true) as HTMLElement;
-    // Inline computed styles on the root clone itself
-    const computed = getComputedStyle(root);
-    for (const prop of COMPONENT_INLINE_PROPS) {
-      clone.style.setProperty(prop, computed.getPropertyValue(prop));
-    }
-    // Inline on all descendant elements
-    injectChildStylesDeep(root, clone);
     return clone.outerHTML;
+  }
+
+  /**
+   * Returns the collected CSS from the iframe's stylesheets.
+   * Used alongside getComponentHtml() for arming.
+   */
+  getComponentCss(): string {
+    const doc = this.hiddenIframe.contentDocument;
+    if (!doc) return '';
+    return collectIframeCss(doc);
   }
 
   private extractAndApply(doc: Document) {
@@ -462,9 +450,27 @@ export class AdaptiveIframe extends HTMLElement {
     // Emit extracted ghost data for caching — fires on every extraction
     // (initial load AND arg-change re-renders) so the cache stays fresh.
     const ghostHtml = this.getComponentHtml();
+    const ghostCss = collectIframeCss(doc);
     const storyBackground = getComputedStyle(doc.body).backgroundColor;
+
+    // Measure the component's intrinsic (content-fit) dimensions for
+    // thumbnail scaling.  Block-level components expand to fill their
+    // parent, so we briefly set `width: fit-content` on the root to
+    // collapse it to the component's natural width before reading sizes.
+    const measurableRoot = root as HTMLElement;
+    const prevWidth = measurableRoot.style.width;
+    const prevDisplay = measurableRoot.style.display;
+    measurableRoot.style.width = 'fit-content';
+    // Ensure this is a block formatting context so fit-content applies
+    if (!prevDisplay) measurableRoot.style.display = 'block';
+    const naturalWidth = measurableRoot.scrollWidth;
+    const naturalHeight = measurableRoot.scrollHeight;
+    // Restore original styles
+    measurableRoot.style.width = prevWidth;
+    measurableRoot.style.display = prevDisplay;
+
     this.dispatchEvent(new CustomEvent('ghost-extracted', {
-      detail: { ghostHtml, hostStyles: styles, storyBackground },
+      detail: { ghostHtml, ghostCss, hostStyles: styles, storyBackground, naturalWidth, naturalHeight },
     }));
   }
 

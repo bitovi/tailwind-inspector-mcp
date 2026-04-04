@@ -102,7 +102,35 @@ export function extractStyles(el: Element): Record<string, string> {
 /**
  * Apply extracted styles to a host element's inline style.
  *
- * Skips `height` so the ghost's cloned content drives height naturally.
+ * ## Height / block-size trade-off (documented 2026-04-02)
+ *
+ * We skip `height` / `block-size` so wrapper/container components (cards,
+ * sections, layouts) let their ghost content drive height naturally inside
+ * the component card.  Without this skip, tall containers get a fixed pixel
+ * height that overflows or clips in the panel.
+ *
+ * **However**, this breaks leaf components that use an explicit height for
+ * vertical centering (e.g. a `<button class="h-9 px-4 items-center">`).
+ * With height stripped, the button collapses to its text line-height and
+ * the vertical "padding" (actually height + centering) disappears.
+ *
+ * Possible future fixes:
+ *   1. Preserve height when the element is `display:inline-flex|inline-block`
+ *      (leaf elements) and only skip for block-level containers.
+ *   2. Detect when height matches a Tailwind size token (h-8, h-9, h-10)
+ *      and preserve those, skip auto/100%/large values.
+ *   3. Always preserve height and instead cap it with max-height on the
+ *      card container.
+ *
+ * For now we skip unconditionally (approach from commit 8c83151) because
+ * re-enabling caused layout thrashing in earlier testing.
+ *
+ * **Fix (2026-04-02):** We now use approach #1 — preserve height on
+ * inline-level elements (inline-flex, inline-block, inline-grid, inline)
+ * and only skip it on block-level containers (block, flex, grid, etc.).
+ * Inline elements are typically leaf components (buttons, badges, chips)
+ * where height is an intentional design token, not a container fill.
+ *
  * Skips `width` when its computed value matches the container width —
  * this means the element auto-expanded to fill its parent (normal block
  * behaviour) and the host element will do the same naturally.  Elements
@@ -114,8 +142,14 @@ export function applyStylesToHost(
   containerWidth?: number,
 ): void {
   for (const [prop, value] of Object.entries(styles)) {
-    // Skip height / block-size so ghost content drives height naturally
-    if (prop === 'height' || prop === 'block-size') continue;
+    // Preserve height on inline-level elements (buttons, badges, chips)
+    // where height is intentional.  Skip on block-level containers that would
+    // overflow the card.  See docstring above for full trade-off explanation.
+    if (prop === 'height' || prop === 'block-size') {
+      const display = styles['display'] ?? '';
+      const isInline = display.startsWith('inline');
+      if (!isInline) continue;
+    }
     // Skip width / inline-size when the element simply filled its container
     if ((prop === 'width' || prop === 'inline-size') && containerWidth != null) {
       const px = parseFloat(value);
@@ -136,10 +170,16 @@ export function applyStylesToHost(
  * Caches baseline computed styles per tag name to avoid creating a
  * new baseline element for every node in the tree.
  */
-/** Properties to always skip on child elements — they should size naturally
- *  in the host context, and geometry-derived values cause thrashing. */
+/** Properties to always skip on child elements — geometry-derived values
+ *  that cause style thrashing.
+ *
+ *  NOTE (2026-04-02): width/height are NO LONGER skipped on children.
+ *  Ghost HTML is displayed in a context with no Tailwind CSS, so utility
+ *  classes like w-12, h-12, w-full are dead.  Without inlined width/height,
+ *  elements size to content and layouts like calendar grids get unequal
+ *  columns ("31" wider than "1").  Computed pixel widths from the
+ *  extraction iframe are the only sizing information the ghost has. */
 const SKIP_CHILD_PROPS = new Set([
-  'width', 'height', 'inline-size', 'block-size',
   'perspective-origin', 'transform-origin',
 ]);
 

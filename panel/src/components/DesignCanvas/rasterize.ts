@@ -1,4 +1,5 @@
 import { toPng } from 'html-to-image';
+import { rewriteHostToRoot } from '../../../../shared/css-utils';
 
 /**
  * Converts an HTML string (with inlined styles) to a PNG data URL.
@@ -12,12 +13,19 @@ export async function rasterizeHtml(
   html: string,
   targetWidth?: number,
   targetHeight?: number,
+  css?: string,
 ): Promise<{ dataUrl: string; width: number; height: number }> {
   // Render offscreen to measure natural size
   const ghost = document.createElement('div');
   ghost.style.cssText =
     'position:fixed;left:0;top:0;z-index:999999;pointer-events:none;visibility:visible;';
-  ghost.innerHTML = html;
+  if (css) {
+    const style = document.createElement('style');
+    // ghostCss has :root rewritten to :host for shadow DOM; revert for document context
+    style.textContent = rewriteHostToRoot(css);
+    ghost.appendChild(style);
+  }
+  ghost.insertAdjacentHTML('beforeend', html);
   document.body.appendChild(ghost);
 
   try {

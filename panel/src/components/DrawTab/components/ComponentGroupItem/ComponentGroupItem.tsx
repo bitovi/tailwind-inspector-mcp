@@ -4,31 +4,39 @@ import { useStoryProbe } from '../../hooks/useStoryProbe';
 import { useIframeSlot, useProbeSlot } from '../../hooks/useIframeQueue';
 import { buildArgsUrl } from '../../hooks/useArgsUrl';
 import { ArgsForm } from '../ArgsForm';
-import { ComponentCardPreview } from '../ComponentCardPreview';
-import { ComponentCardFooter } from '../ComponentCardFooter';
+import { ComponentRowThumb } from '../ComponentRowThumb';
+import { ShadowGhost } from '../../../ShadowGhost';
 import { cardReducer, INITIAL_STATE } from '../../hooks/useComponentCardState';
 import type { AdaptiveIframe } from '../../../../../../overlay/src/adaptive-iframe/adaptive-iframe';
+import '../../../../../../overlay/src/adaptive-iframe';
 
 export interface ComponentGroupItemProps {
   group: ComponentGroup;
   isArmed: boolean;
-  onArm: (ghostHtml: string, args?: Record<string, unknown>) => void;
+  onArm: (ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => void;
   onDisarm: () => void;
   cachedGhostHtml?: string;
+  cachedGhostCss?: string;
   cachedHostStyles?: Record<string, string>;
   cachedStoryBackground?: string;
+  /** Cached arg count from ghost cache — shown before probe completes */
+  cachedArgCount?: number;
   onGhostExtracted?: (params: {
     storyId: string;
     args?: Record<string, unknown>;
     ghostHtml: string;
+    ghostCss: string;
     hostStyles: Record<string, string>;
     storyBackground?: string;
     componentName: string;
     componentPath?: string;
+    argCount?: number;
   }) => void;
+  /** Whether a page element is currently selected (enables "Replace" mode) */
+  hasPageSelection?: boolean;
 }
 
-export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedHostStyles, cachedStoryBackground, onGhostExtracted }: ComponentGroupItemProps) {
+export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedGhostCss, cachedHostStyles, cachedStoryBackground, cachedArgCount, onGhostExtracted, hasPageSelection }: ComponentGroupItemProps) {
   const [state, dispatch] = useReducer(cardReducer, {
     ...INITIAL_STATE,
     storyBackground: cachedStoryBackground,
@@ -36,7 +44,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   const cardRef = useRef<HTMLLIElement>(null);
   const ghostRef = useRef<HTMLElement>(null);
   const initialLoadDone = useRef(false);
-  const [showProps, setShowProps] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // ── Phase 1: Visibility detection ──────────────────────────────────────
 
@@ -62,25 +70,25 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   // or arms the component (loadLiveRequested).
   const wantsProbe =
     state.phase !== 'idle' &&
-    (state.phase === 'probing' || !cachedGhostHtml || showProps || state.loadLiveRequested) &&
+    (state.phase === 'probing' || !cachedGhostHtml || expanded || state.loadLiveRequested) &&
     !(state.phase === 'probe-done' || state.phase === 'loading' || state.phase === 'ready' || state.phase === 'loaded' || state.phase === 'error');
 
   const { canProbe, releaseProbeSlot } = useProbeSlot(wantsProbe);
   const probeEnabled = wantsProbe && canProbe;
 
-  const { bestStory, probing, argTypes, defaultArgs } = useStoryProbe(group.stories, probeEnabled);
+  const { bestStory: bestStoryFromProbe, probing, argTypes, defaultArgs } = useStoryProbe(group.stories, probeEnabled);
 
   // Bridge: probe results → reducer
   useEffect(() => {
-    if (!probing && bestStory && (state.phase === 'probing' || state.phase === 'cached')) {
+    if (!probing && bestStoryFromProbe && (state.phase === 'probing' || state.phase === 'cached')) {
       releaseProbeSlot();
       if (Object.keys(argTypes).length > 0) {
-        dispatch({ type: 'PROBE_COMPLETE', bestStory, argTypes, defaultArgs });
+        dispatch({ type: 'PROBE_COMPLETE', bestStory: bestStoryFromProbe, argTypes, defaultArgs });
       } else {
-        dispatch({ type: 'PROBE_FALLBACK', bestStory });
+        dispatch({ type: 'PROBE_FALLBACK', bestStory: bestStoryFromProbe });
       }
     }
-  }, [probing, bestStory, argTypes, defaultArgs, state.phase]);
+  }, [probing, bestStoryFromProbe, argTypes, defaultArgs, state.phase]);
 
   // ── Phase 3: Iframe queue ──────────────────────────────────────────────
 
@@ -130,23 +138,28 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
       releaseSlot();
     };
     const handleExtracted = (e: Event) => {
-      const { ghostHtml, hostStyles, storyBackground: bg } = (e as CustomEvent<{
+      const { ghostHtml, ghostCss, hostStyles, storyBackground: bg, naturalWidth, naturalHeight } = (e as CustomEvent<{
         ghostHtml: string;
+        ghostCss: string;
         hostStyles: Record<string, string>;
         storyBackground?: string;
+        naturalWidth?: number;
+        naturalHeight?: number;
       }>).detail;
 
-      if (bg) dispatch({ type: 'GHOST_EXTRACTED', storyBackground: bg });
+      if (bg || ghostHtml) dispatch({ type: 'GHOST_EXTRACTED', ghostHtml, ghostCss: ghostCss ?? '', storyBackground: bg, naturalWidth, naturalHeight });
 
       if (state.bestStory) {
         onGhostExtracted?.({
           storyId: state.bestStory.id,
           args: {},
           ghostHtml,
+          ghostCss: ghostCss ?? '',
           hostStyles,
           storyBackground: bg,
           componentName: group.name,
           componentPath: group.componentPath,
+          argCount: Object.keys(state.argTypes).length || undefined,
         });
       }
     };
@@ -180,83 +193,179 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
 
   // ── Arm / disarm ───────────────────────────────────────────────────────
 
-  const handleArmClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent DrawTab's document click handler from immediately disarming
+  const handleInsertClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     if (isArmed) {
       onDisarm();
       return;
     }
     const el = ghostRef.current as unknown as AdaptiveIframe;
     const ghostHtml = el?.getComponentHtml?.() ?? cachedGhostHtml ?? '';
-    onArm(ghostHtml, state.args);
+    const ghostCss = el?.getComponentCss?.() ?? cachedGhostCss ?? '';
+    onArm(ghostHtml, ghostCss, state.args);
 
-    // Trigger a live iframe load to refresh the cache (also handles first arm for cached components).
     dispatch({ type: 'REQUEST_LIVE_REFRESH' });
 
-    // Refresh cache immediately on arm if we already have a live ghost (captures arg tweaks).
     if (onGhostExtracted && ghostHtml && state.bestStory) {
       onGhostExtracted({
         storyId: state.bestStory.id,
         args: state.args,
         ghostHtml,
+        ghostCss,
         hostStyles: cachedHostStyles ?? {},
         storyBackground: state.storyBackground,
         componentName: group.name,
         componentPath: group.componentPath,
+        argCount: Object.keys(state.argTypes).length || undefined,
       });
     }
-  }, [isArmed, onArm, onDisarm, state.args, state.bestStory, state.storyBackground, cachedGhostHtml, cachedHostStyles, group.name, group.componentPath, onGhostExtracted]);
+  }, [isArmed, onArm, onDisarm, state.args, state.bestStory, state.storyBackground, cachedGhostHtml, cachedGhostCss, cachedHostStyles, group.name, group.componentPath, onGhostExtracted]);
+
+  // ── Customize / expand toggle ──────────────────────────────────────────
+
+  const handleCustomizeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(prev => !prev);
+    // Trigger live load if not yet loaded
+    if (!state.liveReady && !state.loadLiveRequested) {
+      dispatch({ type: 'REQUEST_LIVE_REFRESH' });
+    }
+  }, [state.liveReady, state.loadLiveRequested]);
 
   // ── Derived values ─────────────────────────────────────────────────────
 
-  // Show the gear if we have argTypes from probe, from group, or a cached ghost
   const effectiveArgTypes = Object.keys(state.argTypes).length > 0
     ? state.argTypes
     : (group.argTypes ?? {});
   const hasArgs = Object.keys(effectiveArgTypes).length > 0 || !!cachedGhostHtml;
+  const argCount = Object.keys(effectiveArgTypes).length || cachedArgCount || 0;
+
+  const ghostHtml = state.liveGhostHtml ?? cachedGhostHtml;
+  const ghostCss = state.liveGhostCss ?? cachedGhostCss;
+
+  // Insert/Replace button state
+  const insertLabel = hasPageSelection ? 'Replace' : 'Insert';
+  const armingLabel = 'Inserting';
+
+  // The adaptive-iframe is always rendered (hidden) once we have a bestStory
+  const isVisible = state.phase !== 'idle';
+  const bestStory = state.bestStory ?? bestStoryFromProbe;
+  const mountIframe = isVisible && !state.error && !probing && bestStory;
 
   // ── Render ─────────────────────────────────────────────────────────────
 
+  // Button state classes
+  const selectBtnClass = isArmed
+    ? 'border-bv-orange text-white bg-bv-orange hover:bg-[#d94425]'
+    : hasPageSelection
+      ? 'border-bv-teal text-bv-teal bg-bv-teal/10 hover:bg-bv-teal/20 hover:text-white'
+      : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi';
+
   return (
-    <li
-      ref={cardRef}
-      className={`group rounded border overflow-hidden cursor-pointer transition-[border-color,box-shadow] ${
-        isArmed
-          ? 'border-bv-teal shadow-[0_0_0_2px_var(--color-bv-teal),0_0_12px_rgba(0,132,139,0.2)]'
-          : 'border-bv-border hover:border-[#555]'
-      }`}
-      onClick={handleArmClick}
-    >
-      <ComponentCardPreview
-        phase={state.phase}
-        isArmed={isArmed}
-        error={state.error}
-        cachedGhostHtml={cachedGhostHtml}
-        liveReady={state.liveReady}
-        probing={probing && probeEnabled}
-        bestStory={state.bestStory ?? bestStory}
-        storyBackground={state.storyBackground}
-        ghostRef={ghostRef}
-      />
+    <li ref={cardRef} className="flex flex-col">
+      {/* ── Compact row ── */}
+      <div
+        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md cursor-pointer transition-all ${
+          isArmed
+            ? 'bg-bv-orange/10 border border-bv-orange'
+            : expanded
+              ? 'bg-bv-surface border border-bv-border rounded-b-none'
+              : 'border border-transparent hover:bg-bv-surface hover:border-bv-border'
+        }`}
+        onClick={handleCustomizeClick}
+      >
+        {/* Thumbnail */}
+        <ComponentRowThumb
+          phase={state.phase}
+          ghostHtml={ghostHtml}
+          ghostCss={ghostCss}
+          naturalWidth={state.naturalWidth}
+          naturalHeight={state.naturalHeight}
+          storyBackground={state.storyBackground}
+          onClick={handleCustomizeClick}
+        />
 
-      <ComponentCardFooter
-        isArmed={isArmed}
-        group={group}
-        hasArgs={hasArgs}
-        showProps={showProps}
-        onToggleProps={() => setShowProps(prev => !prev)}
-      />
-
-      {/* Props drawer — hidden until gear is clicked */}
-      {showProps && hasArgs && (
-        <div className="px-2.5 py-2 border-t border-bv-border bg-bv-surface" onClick={(e) => e.stopPropagation()}>
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted mb-1.5">Props</div>
-          <ArgsForm
-            argTypes={effectiveArgTypes}
-            args={state.args}
-            onArgsChange={handleArgsChange}
-          />
+        {/* Name + meta */}
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-semibold text-bv-text leading-tight truncate">
+            {group.name}
+          </div>
+          <div className="text-[10px] text-bv-muted mt-0.5">
+            {state.phase === 'loading' && !ghostHtml ? (
+              <span className="text-bv-teal">Loading preview…</span>
+            ) : argCount > 0 ? (
+              `${argCount} props`
+            ) : null}
+          </div>
         </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all ${
+              expanded
+                ? 'border-[#555] text-bv-text bg-bv-surface-hi'
+                : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi'
+            }`}
+            onClick={handleCustomizeClick}
+          >
+            {expanded ? '▲ Collapse' : 'Customize'}
+          </button>
+          <button
+            type="button"
+            className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all ${selectBtnClass}`}
+            onClick={handleInsertClick}
+          >
+            {isArmed ? armingLabel : insertLabel}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Expand drawer: full-size preview + props ── */}
+      {expanded && (
+        <div className="border border-t-0 border-bv-border rounded-b-md bg-bv-surface overflow-hidden">
+          {/* Full-size ghost preview */}
+          <div
+            className="flex items-center justify-center min-h-20 p-4 border-b border-bv-border overflow-hidden"
+            style={{
+              contain: 'paint',
+              ...(state.storyBackground ? { backgroundColor: state.storyBackground } : {}),
+            }}
+          >
+            {ghostHtml && ghostCss ? (
+              <ShadowGhost ghostHtml={ghostHtml} ghostCss={ghostCss} />
+            ) : ghostHtml ? (
+              <div className="pointer-events-none" dangerouslySetInnerHTML={{ __html: ghostHtml }} />
+            ) : (
+              <span className="text-[10px] text-bv-muted">Loading preview…</span>
+            )}
+          </div>
+
+          {/* Props editor */}
+          {hasArgs && (
+            <div className="px-2.5 py-2" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted">Props</span>
+                <span className="text-[9px] text-bv-muted">Changes re-render live</span>
+              </div>
+              <ArgsForm
+                argTypes={effectiveArgTypes}
+                args={state.args}
+                onArgsChange={handleArgsChange}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Hidden extraction engine — never visible, drives ghost-extracted events */}
+      {mountIframe && (
+        // @ts-expect-error — custom element not in JSX.IntrinsicElements
+        <adaptive-iframe
+          ref={ghostRef}
+          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}
+        />
       )}
     </li>
   );

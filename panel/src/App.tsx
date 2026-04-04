@@ -633,9 +633,9 @@ function InspectorApp() {
 				<TabBar tabs={currentTabs} activeTab={activeTab} onTabChange={handleTabChange} />
 				<div className="flex-1 overflow-auto">
 				{activeTab === "replace" ? (
-					<DrawTab insertMode="replace" />
+					<DrawTab insertMode="replace" hasPageSelection={!!elementData} />
 				) : activeTab === "place" ? (
-					<DrawTab insertMode="place" />
+					<DrawTab insertMode="place" hasPageSelection={!!elementData} />
 				) : selectModeActive ? (
 						<div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
 							<div className="w-10 h-10 rounded-full bg-bv-teal text-white flex items-center justify-center">
@@ -753,10 +753,10 @@ function InspectorApp() {
 					/>
 				)}
 				{activeTab === "replace" && (
-					<DrawTab insertMode="replace" />
+					<DrawTab insertMode="replace" hasPageSelection={!!elementData} />
 				)}
 				{activeTab === "place" && (
-					<DrawTab insertMode="place" />
+					<DrawTab insertMode="place" hasPageSelection={!!elementData} />
 				)}
 			</div>
 			{queueFooter}

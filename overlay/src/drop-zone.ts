@@ -24,6 +24,7 @@ type DropZoneMode =
       componentName: string;
       storyId: string;
       ghostHtml: string;
+      ghostCss: string;
       componentPath: string;
       componentArgs: Record<string, unknown>;
     }
@@ -76,7 +77,7 @@ const locked: LockedState = {
 // ── Public API (signatures unchanged) ────────────────────────────────────
 
 export function armInsert(
-  msg: { componentName: string; storyId: string; ghostHtml: string; componentPath?: string; args?: Record<string, unknown> },
+  msg: { componentName: string; storyId: string; ghostHtml: string; ghostCss?: string; componentPath?: string; args?: Record<string, unknown> },
   shadowHost: HTMLElement,
 ): void {
   arm(
@@ -85,6 +86,7 @@ export function armInsert(
       componentName: msg.componentName,
       storyId: msg.storyId,
       ghostHtml: msg.ghostHtml,
+      ghostCss: msg.ghostCss ?? '',
       componentPath: msg.componentPath ?? '',
       componentArgs: msg.args ?? {},
     },
@@ -99,7 +101,7 @@ export function cancelInsert(): void {
 
 export function replaceElement(
   target: HTMLElement,
-  msg: { componentName: string; storyId: string; ghostHtml: string; componentPath?: string; args?: Record<string, unknown> },
+  msg: { componentName: string; storyId: string; ghostHtml: string; ghostCss?: string; componentPath?: string; args?: Record<string, unknown> },
 ): HTMLElement | null {
   const template = document.createElement('template');
   template.innerHTML = msg.ghostHtml.trim();
@@ -109,6 +111,11 @@ export function replaceElement(
 
   target.insertAdjacentElement('beforebegin', inserted);
   target.style.display = 'none';
+
+  // Inject ghost CSS into the page so all classes resolve
+  if (msg.ghostCss) {
+    injectGhostCss(msg.componentName, msg.ghostCss);
+  }
 
   const targetSelector = buildSelector(target);
 
@@ -148,6 +155,7 @@ export function replaceElement(
           innerText: target.innerText.slice(0, 100),
         },
     ghostHtml: msg.ghostHtml,
+    ghostCss: msg.ghostCss || undefined,
     componentStoryId: msg.storyId,
     componentPath: msg.componentPath || undefined,
     componentArgs: Object.keys(msg.args ?? {}).length > 0 ? msg.args : undefined,
@@ -624,7 +632,7 @@ function handleComponentInsertClick(e: MouseEvent): void {
 
   if (mode.kind !== 'component-insert') return;
 
-  const { componentName: cName, storyId: sId, ghostHtml: gHtml, componentPath: cPath, componentArgs: cArgs } = mode;
+  const { componentName: cName, storyId: sId, ghostHtml: gHtml, ghostCss: gCss, componentPath: cPath, componentArgs: cArgs } = mode;
 
   const template = document.createElement('template');
   template.innerHTML = gHtml.trim();
@@ -652,6 +660,11 @@ function handleComponentInsertClick(e: MouseEvent): void {
     case 'last-child':
       target.appendChild(inserted);
       break;
+  }
+
+  // Inject ghost CSS into the page so all classes resolve
+  if (gCss) {
+    injectGhostCss(cName, gCss);
   }
 
   const targetSelector = buildSelector(target);
@@ -692,6 +705,7 @@ function handleComponentInsertClick(e: MouseEvent): void {
           innerText: target.innerText.slice(0, 100),
         },
     ghostHtml: gHtml,
+    ghostCss: gCss || undefined,
     componentStoryId: sId,
     componentPath: cPath || undefined,
     componentArgs: Object.keys(cArgs).length > 0 ? cArgs : undefined,
@@ -745,4 +759,23 @@ function cleanup(): void {
   dom.arrowRight = null;
   dom.currentTarget = null;
   dom.currentPosition = null;
+}
+
+// ── Ghost CSS injection ──────────────────────────────────────────────────
+
+/**
+ * Inject collected ghost CSS into the target app's page head as a <style> tag.
+ * Ensures all Tailwind utilities and component library CSS resolve for the
+ * dropped ghost element, even if the target app's own build doesn't include them.
+ */
+function injectGhostCss(componentName: string, css: string): void {
+  const id = `vybit-ghost-css-${componentName}`;
+  // Remove any existing ghost CSS for this component (refreshes on re-drop)
+  const existing = document.getElementById(id);
+  if (existing) existing.remove();
+
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = css;
+  document.head.appendChild(style);
 }

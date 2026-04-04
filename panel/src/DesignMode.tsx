@@ -41,6 +41,7 @@ export function DesignMode() {
           componentName: msg.componentName,
           storyId: msg.storyId,
           ghostHtml: msg.ghostHtml,
+          ghostCss: msg.ghostCss,
           componentPath: msg.componentPath,
           args: msg.args,
         });

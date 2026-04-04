@@ -8,21 +8,24 @@ import { useGhostCache } from '../../hooks/useGhostCache';
 interface DrawTabProps {
   /** Controls the insertMode sent with COMPONENT_ARM: 'replace' or default drop behavior */
   insertMode?: 'replace' | 'place';
+  /** Whether a page element is currently selected (enables "Replace" mode on all rows) */
+  hasPageSelection?: boolean;
 }
 
-export function DrawTab({ insertMode }: DrawTabProps = {}) {
+export function DrawTab({ insertMode, hasPageSelection }: DrawTabProps) {
   const { groups, loading, error, refetch } = useComponentGroups();
   const [armedGroup, setArmedGroup] = useState<string | null>(null);
   const [armedCanvas, setArmedCanvas] = useState(false);
   const { getCachedGhost, submitToCache } = useGhostCache();
 
-  const arm = useCallback((group: ComponentGroup, ghostHtml: string, args?: Record<string, unknown>) => {
+  const arm = useCallback((group: ComponentGroup, ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => {
     setArmedGroup(group.name);
     sendTo('overlay', {
       type: 'COMPONENT_ARM',
       componentName: group.name,
       storyId: group.stories[0]?.id ?? '',
       ghostHtml,
+      ghostCss,
       componentPath: group.componentPath,
       args,
       insertMode: insertMode === 'replace' ? 'replace' : undefined,
@@ -112,12 +115,15 @@ export function DrawTab({ insertMode }: DrawTabProps = {}) {
                   key={group.name}
                   group={group}
                   isArmed={armedGroup === group.name}
-                  onArm={(ghostHtml: string, args?: Record<string, unknown>) => arm(group, ghostHtml, args)}
+                  onArm={(ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => arm(group, ghostHtml, ghostCss, args)}
                   onDisarm={disarm}
                   cachedGhostHtml={cached?.ghostHtml}
+                  cachedGhostCss={cached?.ghostCss}
                   cachedHostStyles={cached?.hostStyles}
                   cachedStoryBackground={cached?.storyBackground}
+                  cachedArgCount={cached?.argCount}
                   onGhostExtracted={submitToCache}
+                  hasPageSelection={hasPageSelection}
                 />
               );
             })}
@@ -227,6 +233,7 @@ function useComponentGroups() {
         const entries = Object.values(
           ((data.index?.entries ?? data.index?.stories ?? {}) as Record<string, StoryEntry>)
         );
+
         if (!cancelled) setGroups(groupByComponent(entries, data.argTypes ?? {}));
       } catch {
         if (!cancelled) setError(true);
