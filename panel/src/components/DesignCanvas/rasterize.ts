@@ -1,5 +1,5 @@
 import { toPng } from 'html-to-image';
-import { rewriteHostToRoot } from '../../../../shared/css-utils';
+import { rewriteHostToRoot, GHOST_STYLE_RESET } from '../../../../shared/css-utils';
 
 /**
  * Converts an HTML string (with inlined styles) to a PNG data URL.
@@ -18,7 +18,7 @@ export async function rasterizeHtml(
   // Render offscreen to measure natural size
   const ghost = document.createElement('div');
   ghost.style.cssText =
-    'position:fixed;left:0;top:0;z-index:999999;pointer-events:none;visibility:visible;';
+    `position:fixed;left:0;top:0;z-index:999999;pointer-events:none;visibility:visible;${GHOST_STYLE_RESET};`;
   if (css) {
     const style = document.createElement('style');
     // ghostCss has :root rewritten to :host for shadow DOM; revert for document context

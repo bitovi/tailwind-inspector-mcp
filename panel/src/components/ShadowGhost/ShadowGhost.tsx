@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import type { ShadowGhostProps } from './types';
+import { GHOST_STYLE_RESET } from '../../../../shared/css-utils';
 
 /**
  * Renders ghost HTML + CSS inside a shadow DOM for full CSS isolation.
@@ -14,10 +15,7 @@ export function ShadowGhost({ ghostHtml, ghostCss, style, className }: ShadowGho
   useEffect(() => {
     if (!hostRef.current) return;
     const shadow = hostRef.current.shadowRoot ?? hostRef.current.attachShadow({ mode: 'open' });
-    // Reset inherited properties that leak from the panel's dark theme into
-    // the ghost.  The panel body sets color (#e5e5e5), font-family (Inter),
-    // and font-size (12px) — all of which inherit across the shadow boundary.
-    const hostReset = ':host{color:CanvasText;font-family:system-ui,sans-serif;font-size:16px;line-height:1.5}';
+    const hostReset = `:host{${GHOST_STYLE_RESET}}`;
     shadow.innerHTML = `<style>${hostReset}${ghostCss}</style><div style="pointer-events:none">${ghostHtml}</div>`;
   }, [ghostHtml, ghostCss]);
 
