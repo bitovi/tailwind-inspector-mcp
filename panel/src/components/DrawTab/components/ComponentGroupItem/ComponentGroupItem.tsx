@@ -32,11 +32,13 @@ export interface ComponentGroupItemProps {
     componentPath?: string;
     argCount?: number;
   }) => void;
-  /** Whether a page element is currently selected (enables "Replace" mode) */
+  /** Which tab context: 'replace' or 'place' — drives the button label */
+  insertMode?: 'replace' | 'place';
+  /** Whether a page element is currently selected */
   hasPageSelection?: boolean;
 }
 
-export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedGhostCss, cachedHostStyles, cachedStoryBackground, cachedArgCount, onGhostExtracted, hasPageSelection }: ComponentGroupItemProps) {
+export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedGhostCss, cachedHostStyles, cachedStoryBackground, cachedArgCount, onGhostExtracted, insertMode, hasPageSelection }: ComponentGroupItemProps) {
   const [state, dispatch] = useReducer(cardReducer, {
     ...INITIAL_STATE,
     storyBackground: cachedStoryBackground,
@@ -243,9 +245,9 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   const ghostHtml = state.liveGhostHtml ?? cachedGhostHtml;
   const ghostCss = state.liveGhostCss ?? cachedGhostCss;
 
-  // Insert/Replace button state
-  const insertLabel = hasPageSelection ? 'Replace' : 'Insert';
-  const armingLabel = 'Inserting';
+  // Button label matches the tab context
+  const insertLabel = insertMode === 'replace' ? 'Replace' : 'Place';
+  const armingLabel = insertMode === 'replace' ? 'Replacing' : 'Placing';
 
   // The adaptive-iframe is always rendered (hidden) once we have a bestStory
   const isVisible = state.phase !== 'idle';
@@ -303,7 +305,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all ${
+            className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all cursor-pointer ${
               expanded
                 ? 'border-[#555] text-bv-text bg-bv-surface-hi'
                 : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi'
@@ -314,7 +316,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
           </button>
           <button
             type="button"
-            className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all ${selectBtnClass}`}
+            className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all cursor-pointer ${selectBtnClass}`}
             onClick={handleInsertClick}
           >
             {isArmed ? armingLabel : insertLabel}
@@ -359,12 +361,24 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
         </div>
       )}
 
-      {/* Hidden extraction engine — never visible, drives ghost-extracted events */}
+      {/* Hidden extraction engine — never visible, drives ghost-extracted events.
+          Uses ref callback to set !important styles because applyStylesToHost()
+          inside the adaptive-iframe overwrites normal inline styles with the
+          component's own computed styles (position, width, height, etc.). */}
       {mountIframe && (
         // @ts-expect-error — custom element not in JSX.IntrinsicElements
         <adaptive-iframe
-          ref={ghostRef}
-          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}
+          ref={(el: HTMLElement | null) => {
+            (ghostRef as React.MutableRefObject<HTMLElement | null>).current = el;
+            if (el) {
+              el.style.setProperty('position', 'absolute', 'important');
+              el.style.setProperty('width', '0', 'important');
+              el.style.setProperty('height', '0', 'important');
+              el.style.setProperty('opacity', '0', 'important');
+              el.style.setProperty('pointer-events', 'none', 'important');
+              el.style.setProperty('overflow', 'hidden', 'important');
+            }
+          }}
         />
       )}
     </li>

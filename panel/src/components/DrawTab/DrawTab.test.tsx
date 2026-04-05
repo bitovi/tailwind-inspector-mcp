@@ -85,7 +85,7 @@ test('shows "no stories found" when entries is empty', async () => {
 });
 
 describe('component cards', () => {
-  test('components show Customize and Insert buttons', async () => {
+  test('components show Customize and Place buttons', async () => {
     setupFetch({
       entries: { [BUTTON_PRIMARY.id]: BUTTON_PRIMARY, [BUTTON_SECONDARY.id]: BUTTON_SECONDARY },
     });
@@ -93,7 +93,7 @@ describe('component cards', () => {
     await screen.findByText('Button');
 
     expect(screen.getByText('Customize')).toBeInTheDocument();
-    expect(screen.getByText('Insert')).toBeInTheDocument();
+    expect(screen.getByText('Place')).toBeInTheDocument();
   });
 
   test('multiple components each show their names', async () => {

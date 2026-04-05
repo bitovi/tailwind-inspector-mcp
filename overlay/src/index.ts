@@ -1,4 +1,4 @@
-import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive } from "./drop-zone";
+import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive } from "./drop-zone";
 import { isTextEditing, endTextEdit } from "./text-edit";
 import type { ContainerName } from "./containers/IContainer";
 import { ModalContainer } from "./containers/ModalContainer";
@@ -779,8 +779,13 @@ function init(): void {
 					// Component-first mode — arm crosshair to pick the target
 					armElementSelect(`Replace: ${msg.componentName}`, state.shadowHost, doReplace);
 				}
-			} else {
+			} else if (!placeAtLockedInsert(msg)) {
+				// No locked insert point — enter crosshair drop mode (Flow A)
 				armInsert(msg, state.shadowHost);
+			} else {
+				// Flow B: placed at locked insert — clean up toolbar & selection
+				clearHighlights();
+				clearSelectionState();
 			}
 		} else if (msg.type === "COMPONENT_DISARM") {
 			cancelInsert();

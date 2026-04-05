@@ -1,15 +1,12 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { parseTokens, TAILWIND_PARSERS } from '../../overlay/src/tailwind/grammar';
-import type { ParsedToken } from '../../overlay/src/tailwind/grammar';
-import type { AppMode, PanelTab } from '../../shared/types';
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ContainerSwitcher } from "./components/ContainerSwitcher";
 import { DrawTab } from "./components/DrawTab";
 import { ModeToggle } from "./components/ModeToggle";
 import { PatchPopover } from "./components/PatchPopover";
 import { BugReportMode } from "./components/BugReportMode";
-import type { Tab } from "./components/TabBar";
 import { TabBar } from "./components/TabBar";
 import { usePatchManager } from "./hooks/usePatchManager";
+import { useModeStateMachine } from "./hooks/useModeStateMachine";
 import { Picker } from "./Picker";
 import {
 	connect,
@@ -30,21 +27,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const appMode = urlParams.get("mode");
 const isEmbeddedInStorybook = urlParams.get("embedded") === "storybook";
 
-const TABS: Tab[] = [
-	{ id: "design", label: "Design" },
-	{ id: "replace", label: "Replace" },
-	{ id: "place", label: "Place" },
-];
-
-const SELECT_TABS: Tab[] = [
-	{ id: "design", label: "Design" },
-	{ id: "replace", label: "Replace" },
-];
-
-const INSERT_TABS: Tab[] = [
-	{ id: "place", label: "Place" },
-];
-
 function formatInsertLabel(position: string, targetName: string): string {
 	const tag = `<${targetName}>`;
 	switch (position) {
@@ -54,14 +36,6 @@ function formatInsertLabel(position: string, targetName: string): string {
 		case 'last-child': return `Last in ${tag}`;
 		default: return `${position} ${tag}`;
 	}
-}
-
-interface ElementData {
-	componentName: string;
-	instanceCount: number;
-	classes: string;
-	parsedClasses: ParsedToken[];
-	tailwindConfig: any;
 }
 
 export function App() {
@@ -79,107 +53,42 @@ export function App() {
 
 function InspectorApp() {
 	const [wsConnected, setWsConnected] = useState(false);
-	const [elementData, setElementData] = useState<ElementData | null>(null);
-	const [selectionId, setSelectionId] = useState(0);
-	const [mode, setMode] = useState<AppMode>(null);
-	const [tabPreference, setTabPreference] = useState<'design' | 'component'>('design');
-	const [selectModeActive, setSelectModeActive] = useState(false);
-	const [textEditing, setTextEditing] = useState(false);
-	const [insertPoint, setInsertPoint] = useState<{ position: string; targetName: string } | null>(null);
 	const patchManager = usePatchManager();
 	const [promptCopied, setPromptCopied] = useState(false);
+	const [isComponentArmed, setIsComponentArmed] = useState(false);
 
-	const currentTabs = useMemo(() => mode === 'insert' ? INSERT_TABS : SELECT_TABS, [mode]);
-	const activeTab = useMemo(() => {
-		if (mode === 'insert') return 'place';
-		if (tabPreference === 'component') return 'replace';
-		return 'design';
-	}, [mode, tabPreference]);
+	const {
+		mode,
+		elementData,
+		selectionId,
+		insertPoint,
+		selectModeActive,
+		textEditing,
+		currentTabs,
+		activeTab,
+		isPicking: rawIsPicking,
+		handleModeChange,
+		handleTabChange,
+		handleWsMessage,
+	} = useModeStateMachine();
 
-	/**
-	 * Deselect the current element/insertPoint but stay in the current mode,
-	 * re-entering picking (select) or browse (insert) mode.
-	 * Shared by: ModeToggle re-click, Escape key, overlay DESELECT_ELEMENT.
-	 */
-	function deselectAndReenter(fromOverlay = false) {
-		setElementData(null);
-		setSelectionId((prev) => prev + 1);
-		setTextEditing(false);
-		setInsertPoint(null);
-		if (!fromOverlay) {
-			sendTo("overlay", { type: "CLEAR_HIGHLIGHTS", deselect: true });
-			if (mode === 'select') {
-				setSelectModeActive(true);
-				sendTo("overlay", { type: "TOGGLE_SELECT_MODE", active: true });
-			} else if (mode === 'insert') {
-				sendTo("overlay", { type: "MODE_CHANGED", mode: "insert" });
-			}
-		}
-	}
+	// When a component is armed, the mode button goes gray (not orange)
+	const isPicking = rawIsPicking && !isComponentArmed;
+	// Teal = target is locked (element selected or insert point set)
+	const isEngaged = !!elementData || !!insertPoint;
 
-	// When mode is clicked, clear current selection and restart
-	function handleModeChange(newMode: AppMode, fromOverlay = false) {
-		console.log('[panel-debug] handleModeChange', { newMode, currentMode: mode, fromOverlay, hasElement: !!elementData, hasInsertPoint: !!insertPoint });
-		// Re-click same mode: deselect element if present, otherwise toggle off
-		if (newMode === mode) {
-			if (elementData || insertPoint) {
-				deselectAndReenter(fromOverlay);
-				return;
-			}
-			// No element — toggle mode off
-			newMode = null;
-		}
+	const handleArmedChange = useCallback((armed: boolean) => {
+		setIsComponentArmed(armed);
+	}, []);
 
-		// Clear panel's element selection
-		setElementData(null);
-		setSelectionId((prev) => prev + 1);
-		setTextEditing(false);
-		setInsertPoint(null);
-
-		setMode(newMode);
-
-		if (newMode === null) {
-			// Toggled off — same cleanup as Escape with no element
-			setSelectModeActive(false);
-			if (!fromOverlay) {
-				sendTo('overlay', { type: 'CANCEL_MODE' });
-			}
-			return;
-		}
-
-		// If switching to insert and preference is 'design', force to 'component'
-		// (Insert has no Design tab). Otherwise keep current preference.
-		if (newMode === 'insert') {
-			setTabPreference((prev) => prev === 'design' ? 'component' : prev);
-		}
-		if (!fromOverlay) {
-			sendTo('overlay', { type: 'MODE_CHANGED', mode: newMode });
-		}
-		if (newMode === 'select') {
-			setSelectModeActive(true);
-		} else {
-			setSelectModeActive(false);
-		}
-	}
-
-	function handleTabChange(tabId: string, fromOverlay = false) {
-		// Map concrete tab IDs to the unified preference
-		if (tabId === 'replace' || tabId === 'place') {
-			setTabPreference('component');
-		} else if (tabId === 'design') {
-			setTabPreference('design');
-		}
-		if (!fromOverlay) {
-			sendTo('overlay', { type: 'TAB_CHANGED', tab: tabId as PanelTab });
-		}
-	}
+	// Reset armed state when mode changes (DrawTab may unmount)
+	useEffect(() => {
+		setIsComponentArmed(false);
+	}, [mode]);
 
 	useEffect(() => {
 		const offConnect = onConnect(() => {
 			setWsConnected(true);
-			// Sync stored container preference to the overlay on every (re)connect,
-			// since the overlay and panel run on different origins (different localStorage).
-			// Skip in Storybook — the panel is embedded in SB's addon panel, not a container.
 			if (!isEmbeddedInStorybook) {
 				try {
 					const stored = localStorage.getItem("tw-panel-container");
@@ -194,40 +103,10 @@ function InspectorApp() {
 		const offDisconnect = onDisconnect(() => setWsConnected(false));
 
 		const offMessage = onMessage((msg) => {
-			if (msg.type === "RESET_SELECTION") {
-				setElementData(null);
-				setSelectionId((prev) => prev + 1);
-				setTextEditing(false);
-				setInsertPoint(null);
-				setSelectModeActive(false);
-				setMode(null);
-			} else if (msg.type === "DESELECT_ELEMENT") {
-				// Overlay Escape/toolbar: clear element but stay in current mode
-				deselectAndReenter(true);
-			} else if (msg.type === "ELEMENT_SELECTED") {
-				setElementData({
-					componentName: msg.componentName,
-					instanceCount: msg.instanceCount,
-					classes: msg.classes,
-					parsedClasses: parseTokens(msg.classes, TAILWIND_PARSERS),
-					tailwindConfig: msg.tailwindConfig,
-				});
-				setSelectionId((prev) => prev + 1);
-				setSelectModeActive(false);
-				setMode((prev) => prev ?? 'select');
-			} else if (msg.type === "SELECT_MODE_CHANGED") {
-				setSelectModeActive(!!msg.active);
-			} else if (msg.type === "MODE_CHANGED") {
-				handleModeChange(msg.mode, true);
-			} else if (msg.type === "TAB_CHANGED") {
-				handleTabChange(msg.tab, true);
-			} else if (msg.type === "TEXT_EDIT_ACTIVE") {
-				setTextEditing(true);
-			} else if (msg.type === "TEXT_EDIT_DONE") {
-				setTextEditing(false);
-			} else if (msg.type === "INSERT_POINT_LOCKED") {
-				setInsertPoint({ position: msg.position, targetName: msg.targetName });
-			} else if (msg.type === "QUEUE_UPDATE") {
+			// Mode-related messages are handled by the state machine hook
+			if (handleWsMessage(msg)) return;
+
+			if (msg.type === "QUEUE_UPDATE") {
 				patchManager.handleQueueUpdate({
 					draftCount: msg.draftCount,
 					committedCount: msg.committedCount,
@@ -259,25 +138,6 @@ function InspectorApp() {
 			offMessage();
 		};
 	}, []);
-
-	// Escape key — deselect element (keep mode), or deactivate mode if no element
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
-				if (elementData || insertPoint) {
-					deselectAndReenter(false);
-				} else if (mode !== null) {
-					// No element selected — go back to landing
-					setMode(null);
-					setSelectModeActive(false);
-					setInsertPoint(null);
-					sendTo("overlay", { type: "CANCEL_MODE" });
-				}
-			}
-		};
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [elementData, insertPoint, mode]);
 
 	const { draft, committed, implementing, implemented, partial, error } =
 		patchManager.counts;
@@ -462,9 +322,6 @@ function InspectorApp() {
 	);
 
 	if (!elementData) {
-		// Picking = mode is active but waiting for user action
-		const isPicking = selectModeActive || (mode === 'insert' && !insertPoint);
-
 		// Landing page — no mode selected yet
 		if (mode === null) {
 			return (
@@ -475,6 +332,7 @@ function InspectorApp() {
 								mode={mode}
 								onModeChange={handleModeChange}
 								isPicking={isPicking}
+								isEngaged={isEngaged}
 							/>
 							{!isEmbeddedInStorybook && <ContainerSwitcher />}
 						</div>
@@ -566,6 +424,7 @@ function InspectorApp() {
 								mode={mode}
 								onModeChange={handleModeChange}
 								isPicking={isPicking}
+								isEngaged={isEngaged}
 							/>
 							<div className="flex-1 min-w-0">
 								<span className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight">
@@ -609,6 +468,7 @@ function InspectorApp() {
 							mode={mode}
 							onModeChange={handleModeChange}
 							isPicking={isPicking}
+								isEngaged={isEngaged}
 						/>
 						<div className="flex-1 min-w-0">
 							{mode === 'insert' ? (
@@ -633,9 +493,9 @@ function InspectorApp() {
 				<TabBar tabs={currentTabs} activeTab={activeTab} onTabChange={handleTabChange} />
 				<div className="flex-1 overflow-auto">
 				{activeTab === "replace" ? (
-					<DrawTab insertMode="replace" hasPageSelection={!!elementData} />
+					<DrawTab insertMode="replace" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
 				) : activeTab === "place" ? (
-					<DrawTab insertMode="place" hasPageSelection={!!elementData} />
+					<DrawTab insertMode="place" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
 				) : selectModeActive ? (
 						<div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
 							<div className="w-10 h-10 rounded-full bg-bv-teal text-white flex items-center justify-center">
@@ -665,11 +525,7 @@ function InspectorApp() {
 						<div className="flex flex-1 flex-col justify-center p-4">
 							<button
 								onClick={() => {
-									setSelectModeActive(true);
-									sendTo("overlay", {
-										type: "TOGGLE_SELECT_MODE",
-										active: true,
-									});
+									handleModeChange('select');
 								}}
 								className="w-full flex flex-col items-center gap-3 px-6 py-5 rounded-lg border border-bv-border bg-bv-surface hover:border-bv-teal hover:bg-bv-teal/5 transition-all cursor-pointer"
 							>
@@ -721,7 +577,8 @@ function InspectorApp() {
 						<ModeToggle
 							mode={mode}
 							onModeChange={handleModeChange}
-							isPicking={selectModeActive}
+							isPicking={isPicking}
+								isEngaged={isEngaged}
 						/>
 						<div className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight truncate">
 							{elementData.componentName}{" "}
@@ -753,10 +610,10 @@ function InspectorApp() {
 					/>
 				)}
 				{activeTab === "replace" && (
-					<DrawTab insertMode="replace" hasPageSelection={!!elementData} />
+					<DrawTab insertMode="replace" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
 				)}
 				{activeTab === "place" && (
-					<DrawTab insertMode="place" hasPageSelection={!!elementData} />
+					<DrawTab insertMode="place" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
 				)}
 			</div>
 			{queueFooter}

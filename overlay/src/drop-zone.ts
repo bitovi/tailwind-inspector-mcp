@@ -95,6 +95,85 @@ export function armInsert(
   );
 }
 
+/**
+ * Place a component immediately at the locked insert point (Flow B).
+ * Returns true if placement succeeded, false if no locked point exists.
+ */
+export function placeAtLockedInsert(
+  msg: { componentName: string; storyId: string; ghostHtml: string; ghostCss?: string; componentPath?: string; args?: Record<string, unknown> },
+): boolean {
+  if (!locked.target || !locked.position) return false;
+
+  const target = locked.target;
+  const position = locked.position;
+
+  const template = document.createElement('template');
+  template.innerHTML = msg.ghostHtml.trim();
+  const inserted = template.content.firstElementChild as HTMLElement | null;
+  if (!inserted) return false;
+  inserted.dataset.twDroppedComponent = msg.componentName;
+
+  switch (position) {
+    case 'before':      target.insertAdjacentElement('beforebegin', inserted); break;
+    case 'after':       target.insertAdjacentElement('afterend', inserted); break;
+    case 'first-child': target.insertAdjacentElement('afterbegin', inserted); break;
+    case 'last-child':  target.appendChild(inserted); break;
+  }
+
+  if (msg.ghostCss) injectGhostCss(msg.componentName, msg.ghostCss);
+
+  const targetSelector = buildSelector(target);
+  const isGhostTarget = !!target.dataset.twDroppedComponent;
+  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
+  const ghostTargetName = target.dataset.twDroppedComponent;
+  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
+  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
+  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
+
+  const context = effectiveGhostName
+    ? `Place "${msg.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
+    : buildContext(target, '', '', new Map());
+
+  let parentComponent: { name: string } | undefined;
+  const fiber = getFiber(target);
+  if (fiber) {
+    const boundary = findComponentBoundary(fiber);
+    if (boundary) parentComponent = { name: boundary.componentName };
+  }
+
+  const patch: Patch = {
+    id: crypto.randomUUID(),
+    kind: 'component-drop',
+    elementKey: targetSelector,
+    status: 'staged',
+    originalClass: '',
+    newClass: '',
+    property: 'component-drop',
+    timestamp: new Date().toISOString(),
+    component: { name: msg.componentName },
+    target: isGhostTarget
+      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
+      : { tag: target.tagName.toLowerCase(), classes: target.className, innerText: target.innerText.slice(0, 100) },
+    ghostHtml: msg.ghostHtml,
+    ghostCss: msg.ghostCss || undefined,
+    componentStoryId: msg.storyId,
+    componentPath: msg.componentPath || undefined,
+    componentArgs: Object.keys(msg.args ?? {}).length > 0 ? msg.args : undefined,
+    parentComponent,
+    insertMode: position,
+    context,
+    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
+  };
+
+  inserted.dataset.twDroppedPatchId = patch.id;
+
+  send({ type: 'COMPONENT_DROPPED', patch });
+  sendTo('panel', { type: 'COMPONENT_DISARMED' });
+
+  clearLockedInsert();
+  return true;
+}
+
 export function cancelInsert(): void {
   cleanup();
 }

@@ -5,18 +5,20 @@ const engagedStyle = 'bg-[#00464A] text-[#5fd4da] shadow-[0_1px_3px_rgba(0,0,0,0
 const pickingStyle = 'bg-[#F5532D]/15 text-[#F5532D] shadow-[0_1px_3px_rgba(0,0,0,0.3)]';
 const inactiveStyle = 'bg-transparent text-[#999] hover:text-[#b3b3b3]';
 
-function buttonStyle(isActive: boolean, isPicking: boolean) {
+function buttonStyle(isActive: boolean, isPicking: boolean, isEngaged: boolean) {
   if (!isActive) return inactiveStyle;
-  return isPicking ? pickingStyle : engagedStyle;
+  if (isPicking) return pickingStyle;
+  if (isEngaged) return engagedStyle;
+  return inactiveStyle; // resting mode — active but gray
 }
 
-export function ModeToggle({ mode, onModeChange, isPicking = false }: ModeToggleProps) {
+export function ModeToggle({ mode, onModeChange, isPicking = false, isEngaged = false }: ModeToggleProps) {
   return (
     <div className="inline-flex items-center rounded-[6px] bg-[#1a1a1a] p-[2px] gap-[1px]">
       <button
         type="button"
         onClick={() => onModeChange('select')}
-        className={`${base} ${buttonStyle(mode === 'select', mode === 'select' && isPicking)}`}
+        className={`${base} ${buttonStyle(mode === 'select', mode === 'select' && isPicking, mode === 'select' && isEngaged)}`}
         aria-pressed={mode === 'select'}
         title="Select an element"
       >
@@ -28,7 +30,7 @@ export function ModeToggle({ mode, onModeChange, isPicking = false }: ModeToggle
       <button
         type="button"
         onClick={() => onModeChange('insert')}
-        className={`${base} ${buttonStyle(mode === 'insert', mode === 'insert' && isPicking)}`}
+        className={`${base} ${buttonStyle(mode === 'insert', mode === 'insert' && isPicking, mode === 'insert' && isEngaged)}`}
         aria-pressed={mode === 'insert'}
         title="Insert to add content"
       >

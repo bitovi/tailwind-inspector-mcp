@@ -1,4 +1,4 @@
-import { type Page, type Frame, type Locator } from '@playwright/test';
+import { type Page, type Frame, type Locator, expect } from '@playwright/test';
 
 /**
  * Clicks the overlay toggle button to open the inspector panel.
@@ -126,4 +126,261 @@ export async function openAndSelectElement(page: Page, locator: Locator): Promis
   await clickSelectElementButton(frame);
   await locator.click();
   return frame;
+}
+
+// ---------------------------------------------------------------------------
+// Overlay toolbar helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Waits for the overlay toolbar (.el-toolbar) to appear in the shadow DOM.
+ */
+export async function waitForToolbarVisible(page: Page, timeout = 5000): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!host?.shadowRoot?.querySelector('.el-toolbar');
+  }, { timeout });
+}
+
+/**
+ * Waits for the overlay toolbar to disappear from the shadow DOM.
+ */
+export async function waitForToolbarHidden(page: Page, timeout = 5000): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !host?.shadowRoot?.querySelector('.el-toolbar');
+  }, { timeout });
+}
+
+/**
+ * Clicks a toolbar button by matching its text content.
+ * The toolbar lives inside the shadow DOM of #tw-visual-editor-host.
+ */
+export async function clickToolbarButton(page: Page, buttonText: string): Promise<void> {
+  await waitForToolbarVisible(page);
+  const clicked = await page.evaluate((text) => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const toolbar = host?.shadowRoot?.querySelector('.el-toolbar');
+    if (!toolbar) return false;
+    const buttons = toolbar.querySelectorAll('button');
+    for (const btn of buttons) {
+      if (btn.textContent?.trim().includes(text)) {
+        btn.click();
+        return true;
+      }
+    }
+    return false;
+  }, buttonText);
+  if (!clicked) throw new Error(`Toolbar button "${buttonText}" not found`);
+}
+
+/**
+ * Returns the text content of all toolbar buttons as an array.
+ */
+export async function getToolbarButtonTexts(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const toolbar = host?.shadowRoot?.querySelector('.el-toolbar');
+    if (!toolbar) return [];
+    return Array.from(toolbar.querySelectorAll('button')).map(b => b.textContent?.trim() ?? '');
+  });
+}
+
+/**
+ * Returns the active tab ID from the panel frame by checking [data-active="true"]
+ * or the aria attribute on the TabBar.
+ */
+export async function getPanelActiveTab(frame: Frame): Promise<string | null> {
+  return frame.evaluate(() => {
+    // TabBar buttons have aria-selected="true"
+    const activeBtn = document.querySelector('[role="tab"][aria-selected="true"]');
+    return activeBtn?.textContent?.trim().toLowerCase() ?? null;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Flow table helpers — data-driven verification for SKILL.md flow tables
+// ---------------------------------------------------------------------------
+
+type ButtonColor = 'gray' | 'orange' | 'teal';
+
+/** Click the Insert mode button on the panel. */
+export async function clickInsert(frame: Frame): Promise<void> {
+  await frame.evaluate(() => {
+    const btn = document.querySelector('button[title="Insert to add content"]') as HTMLButtonElement;
+    if (!btn) throw new Error('Insert button not found');
+    btn.click();
+  });
+  await frame.page().waitForTimeout(500);
+}
+
+/** Click a placement site on the page (the "Cards" heading). */
+export async function clickPlacementSite(page: Page): Promise<void> {
+  await page.locator('h2:has-text("Cards")').first().click();
+  await page.waitForTimeout(800);
+}
+
+/** Click the first visible component Place button in the panel (excludes tab bar buttons). */
+export async function clickComponentPlace(frame: Frame): Promise<void> {
+  await frame.waitForFunction(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+  }, { timeout: 10000 });
+  await frame.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const btn = buttons.find(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+    if (!btn) throw new Error('No component Place button found (looked for h-5.5 class)');
+    (btn as HTMLButtonElement).click();
+  });
+  await frame.page().waitForTimeout(800);
+}
+
+/** Returns the color of a panel mode button by inspecting its Tailwind classes. */
+export async function getPanelButtonColor(frame: Frame, title: string): Promise<ButtonColor> {
+  return frame.evaluate((t) => {
+    const btn = document.querySelector(`button[title="${t}"]`) as HTMLElement;
+    if (!btn) return 'gray' as const;
+    const cls = btn.className;
+    if (cls.includes('F5532D')) return 'orange' as const;
+    if (cls.includes('00464A')) return 'teal' as const;
+    return 'gray' as const;
+  }, title);
+}
+
+/** Returns the colors of all component Place/Replace buttons (excludes tab bar buttons). */
+export async function getComponentButtonColors(frame: Frame): Promise<ButtonColor[]> {
+  return frame.evaluate(() => {
+    const allButtons = Array.from(document.querySelectorAll('button'));
+    // Component row buttons have h-5.5 class; tab bar Place/Replace buttons don't
+    const placeButtons = allButtons.filter(b => {
+      const text = b.textContent?.trim() ?? '';
+      return ['Place', 'Replace', 'Placing', 'Replacing'].includes(text) && b.className.includes('h-5.5');
+    });
+    return placeButtons.map(btn => {
+      const cls = btn.className;
+      if (cls.includes('bg-bv-orange') && !cls.includes('bg-bv-orange/10')) return 'orange' as const;
+      if (cls.includes('border-bv-teal') || cls.includes('bg-bv-teal')) return 'teal' as const;
+      return 'gray' as const;
+    });
+  });
+}
+
+/** Returns the page interaction state by checking the document cursor. */
+export async function getPageInteraction(page: Page): Promise<'none' | 'browse-mode'> {
+  return page.evaluate(() => {
+    return document.documentElement.style.cursor === 'crosshair'
+      ? 'browse-mode' as const
+      : 'none' as const;
+  });
+}
+
+/** Whether the overlay toolbar (.el-toolbar) is present in the shadow DOM. */
+export async function isOverlayToolbarVisible(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!host?.shadowRoot?.querySelector('.el-toolbar');
+  });
+}
+
+/** Click an element on the page to place the armed component (Flow A Step 4). */
+export async function placeOnPage(page: Page): Promise<void> {
+  await page.locator('h2:has-text("Cards")').first().click();
+  await page.waitForTimeout(800);
+}
+
+/**
+ * Flow table row — uses the same vocabulary as the SKILL.md tables.
+ * Each field maps to one column in the flow table.
+ */
+export interface FlowTableRow {
+  step: number;
+  action: string;
+  tab: string | null;
+  panelInsert?: ButtonColor;
+  panelSelect?: ButtonColor;
+  overlay: 'no-toolbar' | 'toolbar';
+  /** '—' = no buttons, 'gray'/'teal' = all same color, 'one-orange' = exactly one orange + rest gray */
+  components: '—' | ButtonColor | 'one-orange';
+  page: 'none' | 'browse-mode' | 'insert-point-locked';
+}
+
+/**
+ * Asserts all columns of a flow table row against the live UI.
+ * Vocabulary matches SKILL.md tables exactly so an agent can diff them.
+ */
+export async function verifyFlowRow(
+  page: Page,
+  frame: Frame,
+  row: FlowTableRow,
+): Promise<void> {
+  const label = `Step ${row.step}`;
+
+  // Tab — poll since WS messages may still be propagating
+  await expect.poll(
+    () => getPanelActiveTab(frame),
+    { message: `${label}: tab`, timeout: 5000 },
+  ).toBe(row.tab);
+
+  // Panel mode buttons — poll for color transitions
+  if (row.panelInsert) {
+    await expect.poll(
+      () => getPanelButtonColor(frame, 'Insert to add content'),
+      { message: `${label}: panel Insert button`, timeout: 5000 },
+    ).toBe(row.panelInsert);
+  }
+  if (row.panelSelect) {
+    await expect.poll(
+      () => getPanelButtonColor(frame, 'Select an element'),
+      { message: `${label}: panel Select button`, timeout: 5000 },
+    ).toBe(row.panelSelect);
+  }
+
+  // Overlay toolbar
+  if (row.overlay === 'no-toolbar') {
+    await expect.poll(
+      () => isOverlayToolbarVisible(page),
+      { message: `${label}: overlay toolbar should be hidden`, timeout: 5000 },
+    ).toBe(false);
+  } else {
+    await waitForToolbarVisible(page);
+  }
+
+  // Component buttons — poll since hasPageSelection depends on WS propagation
+  if (row.components !== '—') {
+    if (row.components === 'one-orange') {
+      // Exactly one button is orange, the rest are gray
+      await expect.poll(
+        async () => {
+          const colors = await getComponentButtonColors(frame);
+          if (colors.length === 0) return false;
+          const orangeCount = colors.filter(c => c === 'orange').length;
+          const grayCount = colors.filter(c => c === 'gray').length;
+          return orangeCount === 1 && grayCount === colors.length - 1;
+        },
+        { message: `${label}: exactly one component button should be orange`, timeout: 5000 },
+      ).toBe(true);
+    } else {
+      await expect.poll(
+        async () => {
+          const colors = await getComponentButtonColors(frame);
+          return colors.length > 0 ? colors.every(c => c === row.components) : true;
+        },
+        { message: `${label}: all component buttons should be ${row.components}`, timeout: 5000 },
+      ).toBe(true);
+    }
+  }
+
+  // Page interaction
+  if (row.page === 'insert-point-locked') {
+    // After locking, crosshair is removed but toolbar is visible (checked above)
+    await expect.poll(
+      () => getPageInteraction(page),
+      { message: `${label}: page (crosshair cleared after lock)`, timeout: 5000 },
+    ).toBe('none');
+  } else {
+    await expect.poll(
+      () => getPageInteraction(page),
+      { message: `${label}: page interaction`, timeout: 5000 },
+    ).toBe(row.page);
+  }
 }
