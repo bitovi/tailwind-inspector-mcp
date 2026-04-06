@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>044 · ReactNode Props — UX Exploration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS (Bitovi dark theme) ───────────────────────── */
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --orange-hover: #C73D26;
+      --orange-dim:   rgba(245, 83, 45, 0.12);
+      --teal:         #00848B;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --green:        #2E7229;
+
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+      --t-med:        200ms ease-out;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px 40px 120px;
+    }
+
+    .page-header {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      line-height: 1.7;
+      max-width: 880px;
+    }
+
+    .page-subtitle strong { color: var(--text-mid); }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 52px 0 36px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+      max-width: 780px;
+    }
+
+    .variations {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      max-width: 420px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 420px;
+      line-height: 1.55;
+      margin-bottom: 6px;
+    }
+
+    /* ─── PANEL CHROME ─────────────────────────────────────── */
+    .panel {
+      width: 340px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+
+    .panel-body {
+      padding: 8px;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      margin-bottom: 6px;
+    }
+
+    .search-bar svg { flex-shrink: 0; color: var(--muted); }
+
+    .search-bar input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      outline: none;
+      width: 100%;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+
+    /* ─── ANNOTATION ───────────────────────────────────────── */
+    .annotation {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--teal);
+      background: rgba(0, 132, 139, 0.12);
+      padding: 2px 6px;
+      border-radius: 3px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .annotation.orange {
+      color: var(--orange);
+      background: rgba(245, 83, 45, 0.12);
+    }
+
+    .annotation.neutral {
+      color: var(--text-mid);
+      background: var(--surface);
+    }
+
+    /* ─── FAKE PREVIEW ELEMENTS ────────────────────────────── */
+    .preview-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 999px;
+      color: white;
+    }
+    .preview-badge.red    { background: #ef4444; }
+    .preview-badge.blue   { background: #3b82f6; }
+    .preview-badge.green  { background: #22c55e; }
+
+    .preview-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .preview-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: white;
+      cursor: default;
+    }
+    .preview-button.primary { background: #6366f1; }
+
+    .preview-card {
+      background: white;
+      border-radius: 8px;
+      padding: 14px;
+      color: #1a1a1a;
+      font-size: 11px;
+      line-height: 1.4;
+      width: 200px;
+    }
+    .preview-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-card p { color: #64748b; font-size: 11px; }
+
+    /* ─── COMPONENT ROW ────────────────────────────────────── */
+    .comp-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: background var(--t-fast), border-color var(--t-fast);
+      position: relative;
+    }
+
+    .comp-row:hover {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    .comp-row.arming {
+      background: var(--orange-dim);
+      border-color: var(--orange);
+    }
+
+    /* ── Thumbnail ── */
+    .thumb {
+      width: 56px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 4px;
+      flex-shrink: 0;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb-inner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    .thumb-inner.scale-none {
+      transform: scale(1);
+      width: 56px;
+      height: 40px;
+    }
+
+    .thumb-inner.scale-med {
+      transform: scale(0.5);
+      width: calc(56px / 0.5);
+      height: calc(40px / 0.5);
+    }
+
+    /* ── Row info ── */
+    .row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .row-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* ── Row buttons ── */
+    .row-btn {
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-mid);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 0 8px;
+      transition: all var(--t-fast);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .row-btn:hover {
+      border-color: #555;
+      color: var(--text);
+      background: var(--surface-hi);
+    }
+
+    .row-btn.arming {
+      border-color: var(--orange);
+      color: white;
+      background: var(--orange);
+    }
+
+    .row-btn.arming:hover {
+      background: #d94425;
+    }
+
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ── Expanded preview ── */
+    .expanded-preview {
+      overflow: hidden;
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin: -2px 0 2px;
+    }
+
+    .expanded-inner {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .expanded-ghost {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Props editor ── */
+    .props-editor {
+      padding: 8px 10px 10px;
+    }
+
+    .props-header {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+    }
+
+    .prop-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 60px;
+      flex-shrink: 0;
+    }
+
+    .prop-label .rn-badge {
+      display: inline-block;
+      font-size: 7px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--teal);
+      background: var(--teal-dim);
+      padding: 1px 3px;
+      border-radius: 2px;
+      margin-left: 2px;
+      vertical-align: top;
+    }
+
+    .prop-control {
+      flex: 1;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+
+    select.prop-control {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    /* ─── MODE TABS ────────────────────────────────────────── */
+    .mode-tabs {
+      display: flex;
+      gap: 1px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 4px 0;
+      font-size: 9px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--muted);
+      border: none;
+      transition: all var(--t-fast);
+      font-family: var(--font-ui);
+    }
+
+    .mode-tab:hover {
+      color: var(--text-mid);
+      background: var(--surface-hi);
+    }
+
+    .mode-tab.active {
+      color: var(--text);
+      background: var(--surface-hi);
+    }
+
+    /* ─── DROP TARGET (ReactNode Component mode) ───────────── */
+    .drop-target {
+      flex: 1;
+      min-height: 32px;
+      border: 1.5px dashed var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: all var(--t-fast);
+      background: transparent;
+    }
+
+    .drop-target .dt-label {
+      font-size: 10px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .drop-target .dt-icon {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* Receptive — a component is armed, this target can accept it */
+    .drop-target.receptive {
+      border-color: var(--teal);
+      background: var(--teal-dim);
+      animation: receptive-pulse 2s ease-in-out infinite;
+    }
+
+    .drop-target.receptive .dt-label {
+      color: var(--teal);
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .drop-target.receptive .dt-icon {
+      color: var(--teal);
+    }
+
+    @keyframes receptive-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 132, 139, 0); }
+      50% { box-shadow: 0 0 0 3px rgba(0, 132, 139, 0.15); }
+    }
+
+    /* Filled — a component has been assigned */
+    .drop-target.filled {
+      border-style: solid;
+      border-color: var(--border);
+      background: var(--surface-hi);
+      justify-content: flex-start;
+      cursor: default;
+      padding: 3px 6px;
+    }
+
+    .drop-target.filled .dt-thumb {
+      width: 28px;
+      height: 20px;
+      background: var(--surface);
+      border-radius: 3px;
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drop-target.filled .dt-thumb .mini-preview {
+      transform: scale(0.7);
+      transform-origin: center;
+    }
+
+    .drop-target.filled .dt-name {
+      font-size: 10px;
+      color: var(--text);
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .drop-target.filled .dt-clear {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: all var(--t-fast);
+      flex-shrink: 0;
+    }
+
+    .drop-target.filled .dt-clear:hover {
+      background: rgba(245, 83, 45, 0.15);
+      color: var(--orange);
+    }
+
+    /* ─── HTML TEXTAREA ────────────────────────────────────── */
+    .html-textarea {
+      flex: 1;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 10px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      resize: vertical;
+      min-height: 48px;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    .html-textarea:focus {
+      border-color: var(--teal);
+    }
+
+    .html-textarea::placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* ─── STEP FLOW DIAGRAM ────────────────────────────────── */
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .flow-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: var(--font-display);
+    }
+
+    .flow-num.orange { background: var(--orange); }
+
+    .flow-text {
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1.5;
+      padding-top: 2px;
+    }
+
+    .flow-text strong { color: var(--text); }
+
+    /* ─── STEP ARROW ───────────────────────────────────────── */
+    .step-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<h1 class="page-header">044 · ReactNode Props — UX Exploration</h1>
+<p class="page-subtitle">
+  Exploring how users populate <strong>ReactNode props</strong> (like Badge's <code>iconLeft</code> and <code>children</code>)
+  with HTML or other configured components. The key interaction: <strong>arm a component → click a prop drop target</strong> to assign it.
+  This enables <strong>bottom-up composition</strong> with no nesting depth limit and no embedded component pickers.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">1 — ReactNode Field: Three Modes</div>
+<p class="section-subtitle">
+  Props detected as <code>ReactNode</code> render a <strong>ReactNodeField</strong> instead of a plain text input.
+  The field has three mode tabs: <strong>Text</strong> (default, same as today), <strong>HTML</strong> (paste raw markup),
+  and <strong>Component</strong> (drop target for armed components).
+  The small <span style="color: var(--teal); font-size: 10px; background: var(--teal-dim); padding: 1px 4px; border-radius: 2px; font-weight: 600;">RN</span>
+  badge on the prop label indicates it accepts ReactNode.
+</p>
+
+<div class="variations">
+
+  <!-- ── Text mode ── -->
+  <div class="col">
+    <span class="col-label">A · Text mode (default)</span>
+    <p class="col-description">
+      Same as today — plain text input. User types "New" and that's the children.
+      Mode tabs visible above the input. <code>variant</code> and <code>roundness</code> are normal
+      select controls (not ReactNode).
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header">
+            <span>Props</span>
+            <span style="font-size: 9px; font-weight: 400; color: var(--muted);">Live preview</span>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option><option>secondary</option><option>outline</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">roundness</span>
+            <select class="prop-control">
+              <option>default</option><option>round</option>
+            </select>
+          </div>
+
+          <!-- children — ReactNode, Text mode active -->
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">children <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="New">
+            </div>
+          </div>
+
+          <!-- iconLeft — ReactNode, Text mode active -->
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">iconLeft <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="" placeholder="(empty)">
+            </div>
+          </div>
+
+          <!-- iconRight — ReactNode, Text mode active -->
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">iconRight <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="" placeholder="(empty)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HTML mode ── -->
+  <div class="col">
+    <span class="col-label">B · HTML mode</span>
+    <p class="col-description">
+      User switched <code>iconLeft</code> to HTML mode and pasted an SVG icon.
+      The textarea accepts any raw HTML/SVG. It gets stitched into the ghost preview
+      and converted to JSX for the AI agent.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header">
+            <span>Props</span>
+            <span style="font-size: 9px; font-weight: 400; color: var(--muted);">Live preview</span>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option><option>secondary</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">roundness</span>
+            <select class="prop-control">
+              <option>default</option><option>round</option>
+            </select>
+          </div>
+
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">children <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="Active">
+            </div>
+          </div>
+
+          <!-- iconLeft — HTML mode active -->
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">iconLeft <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab">Text</button>
+                <button class="mode-tab active">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <textarea class="html-textarea" rows="3">&lt;svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"&gt;
+  &lt;path d="M20 6 9 17l-5-5"/&gt;
+&lt;/svg&gt;</textarea>
+            </div>
+          </div>
+
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">iconRight <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="" placeholder="(empty)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Component mode: empty ── -->
+  <div class="col">
+    <span class="col-label">C · Component mode — empty drop target</span>
+    <p class="col-description">
+      User switched <code>iconLeft</code> to Component mode. The field shows a
+      <strong>drop target</strong> with dashed border and placeholder text. No component
+      is armed yet, so it's in the default empty state.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header">
+            <span>Props</span>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">roundness</span>
+            <select class="prop-control">
+              <option>round</option>
+            </select>
+          </div>
+
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">children <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="Active">
+            </div>
+          </div>
+
+          <!-- iconLeft — Component mode, empty -->
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">iconLeft <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab active">Component</button>
+              </div>
+              <div class="drop-target">
+                <svg class="dt-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+                <span class="dt-label">Arm a component, then click here</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">iconRight <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab active">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab">Component</button>
+              </div>
+              <input class="prop-control" value="" placeholder="(empty)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">2 — Drop Target States</div>
+<p class="section-subtitle">
+  The Component-mode drop target has three visual states: <strong>empty</strong> (default),
+  <strong>receptive</strong> (a component is currently armed — teal glow, inviting click),
+  and <strong>filled</strong> (a component has been assigned — shows mini thumbnail + name + clear button).
+</p>
+
+<div class="variations">
+
+  <!-- ── Empty ── -->
+  <div class="col">
+    <span class="col-label">A · Empty — nothing armed</span>
+    <p class="col-description">
+      Dashed border, muted hint text. The user needs to arm a component
+      from the list before this target becomes clickable.
+    </p>
+    <div style="width: 240px;">
+      <div class="drop-target">
+        <svg class="dt-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+        <span class="dt-label">Arm a component, then click here</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Receptive ── -->
+  <div class="col">
+    <span class="col-label">B · Receptive — component is armed</span>
+    <p class="col-description">
+      A component (e.g., Icon) is currently armed. All visible ReactNode drop targets
+      glow teal with a subtle pulse. Clicking assigns the armed component to this slot.
+    </p>
+    <div style="width: 240px;">
+      <div class="drop-target receptive">
+        <svg class="dt-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+        <span class="dt-label">Click to set Icon</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Filled ── -->
+  <div class="col">
+    <span class="col-label">C · Filled — component assigned</span>
+    <p class="col-description">
+      An Icon component (with <code>name="check"</code>) has been assigned.
+      Shows mini ghost thumbnail, component name, and ✕ to clear.
+      The parent's ghost preview re-renders with the composed result.
+    </p>
+    <div style="width: 240px;">
+      <div class="drop-target filled">
+        <div class="dt-thumb">
+          <div class="mini-preview">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+        </div>
+        <span class="dt-name">Icon</span>
+        <span style="font-size: 9px; color: var(--muted); font-family: var(--font-mono);">name="check"</span>
+        <button class="dt-clear" title="Clear">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">3 — Full Flow: Arm → Click-to-Set</div>
+<p class="section-subtitle">
+  The complete interaction for assigning an Icon component to Badge's <code>iconLeft</code> prop.
+  The user works with two component rows — they don't need to leave the component list or use any picker.
+</p>
+
+<div class="flow-steps" style="max-width: 600px; margin-bottom: 32px;">
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-text">
+      <strong>Expand Badge</strong> — click Customize. See props. Switch <code>iconLeft</code> to Component mode.
+      The drop target shows "Arm a component, then click here" (empty state).
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-text">
+      <strong>Find Icon</strong> in the component list. Expand it, configure props: <code>name="check"</code>, <code>size="sm"</code>.
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num orange">3</div>
+    <div class="flow-text">
+      <strong>Arm the Icon</strong> — click the "Insert" button on the Icon row. It turns orange ("Inserting").
+      All visible ReactNode drop targets instantly glow teal (receptive state).
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div class="flow-text">
+      <strong>Click Badge's <code>iconLeft</code> drop target</strong> — the armed Icon is assigned.
+      Drop target switches to filled state (mini thumbnail + "Icon" + ✕). Badge's ghost re-renders showing the composed result.
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">5</div>
+    <div class="flow-text">
+      <strong>Done.</strong> Arm Badge itself and place it on the page — the agent receives:
+      <code style="display: block; margin-top: 4px; color: var(--teal);">&lt;Badge variant="primary" iconLeft={&lt;Icon name="check" size="sm" /&gt;}&gt;Active&lt;/Badge&gt;</code>
+    </div>
+  </div>
+</div>
+
+
+<div class="variations">
+
+  <!-- ── Step 1+2: Badge expanded, Icon not yet armed ── -->
+  <div class="col">
+    <span class="col-label">Steps 1–2 · Badge expanded, Icon configured</span>
+    <p class="col-description">
+      Badge is expanded with <code>iconLeft</code> in Component mode (empty drop target).
+      Icon row is visible below — user is configuring its props.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <!-- Badge — EXPANDED -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">Active</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props · expanded</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-badge red">Active</span>
+            </div>
+            <div class="props-editor">
+              <div class="props-header"><span>Props</span></div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control"><option>primary</option></select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children <span class="rn-badge">RN</span></span>
+                <input class="prop-control" value="Active">
+              </div>
+              <!-- iconLeft — Component mode, empty -->
+              <div class="prop-row" style="align-items: flex-start;">
+                <span class="prop-label">iconLeft <span class="rn-badge">RN</span></span>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <div class="mode-tabs">
+                    <button class="mode-tab">Text</button>
+                    <button class="mode-tab">HTML</button>
+                    <button class="mode-tab active">Component</button>
+                  </div>
+                  <div class="drop-target">
+                    <svg class="dt-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+                    <span class="dt-label">Arm a component, then click here</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Icon — collapsed, user will arm next -->
+        <div class="comp-row">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Icon</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Step 3: Icon armed, drop targets receptive ── -->
+  <div class="col">
+    <span class="col-label">Step 3 · Icon armed — drop targets glow teal</span>
+    <p class="col-description">
+      User clicked "Insert" on Icon → it turned orange ("Inserting").
+      Badge's <code>iconLeft</code> drop target immediately turns <strong>receptive</strong>
+      (teal glow + "Click to set Icon" label). One click assigns.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation orange" style="font-size: 8px;">Icon armed</span>
+      </div>
+      <div class="panel-body">
+        <!-- Badge — EXPANDED, iconLeft now receptive -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">Active</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props · expanded</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-badge red">Active</span>
+            </div>
+            <div class="props-editor">
+              <div class="props-header"><span>Props</span></div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control"><option>primary</option></select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children <span class="rn-badge">RN</span></span>
+                <input class="prop-control" value="Active">
+              </div>
+              <!-- iconLeft — RECEPTIVE (Icon is armed) -->
+              <div class="prop-row" style="align-items: flex-start;">
+                <span class="prop-label">iconLeft <span class="rn-badge">RN</span></span>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <div class="mode-tabs">
+                    <button class="mode-tab">Text</button>
+                    <button class="mode-tab">HTML</button>
+                    <button class="mode-tab active">Component</button>
+                  </div>
+                  <div class="drop-target receptive">
+                    <svg class="dt-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    <span class="dt-label">Click to set Icon</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Icon — ARMED (orange) -->
+        <div class="comp-row arming">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Icon</div>
+            <div class="row-meta">name="check" · size="sm"</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn arming">Inserting</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Step 4+5: Icon assigned, composed preview ── -->
+  <div class="col">
+    <span class="col-label">Steps 4–5 · Icon assigned — composed preview</span>
+    <p class="col-description">
+      User clicked the receptive <code>iconLeft</code> drop target. Icon is now assigned —
+      the drop target shows the filled state with a mini check icon thumbnail.
+      Badge's ghost preview re-renders with the <strong>composed result</strong>:
+      the check icon stitched into the left position.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <!-- Badge — EXPANDED, iconLeft now filled, ghost shows composed result -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <!-- Composed thumbnail: badge with check icon -->
+              <span class="preview-badge red">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                Active
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props · expanded</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview">
+          <div class="expanded-inner">
+            <!-- Ghost preview shows COMPOSED result -->
+            <div class="expanded-ghost">
+              <span class="preview-badge red" style="font-size: 13px; padding: 5px 14px; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                Active
+              </span>
+            </div>
+            <div class="props-editor">
+              <div class="props-header"><span>Props</span></div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control"><option>primary</option></select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children <span class="rn-badge">RN</span></span>
+                <input class="prop-control" value="Active">
+              </div>
+              <!-- iconLeft — FILLED -->
+              <div class="prop-row" style="align-items: flex-start;">
+                <span class="prop-label">iconLeft <span class="rn-badge">RN</span></span>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <div class="mode-tabs">
+                    <button class="mode-tab">Text</button>
+                    <button class="mode-tab">HTML</button>
+                    <button class="mode-tab active">Component</button>
+                  </div>
+                  <div class="drop-target filled">
+                    <div class="dt-thumb">
+                      <div class="mini-preview">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                      </div>
+                    </div>
+                    <span class="dt-name">Icon</span>
+                    <span style="font-size: 9px; color: var(--muted); font-family: var(--font-mono);">check</span>
+                    <button class="dt-clear" title="Clear">✕</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Icon — no longer armed, back to normal -->
+        <div class="comp-row">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Icon</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">4 — Bottom-Up Composition: Nested Depth</div>
+<p class="section-subtitle">
+  The same arm-and-click pattern supports <strong>arbitrary nesting depth</strong>. Configure Icon → assign to Badge's iconLeft →
+  configure Badge → assign to Card's children. Each level uses the same flat drop-target UI. No recursive forms.
+</p>
+
+<div class="variations">
+
+  <div class="col">
+    <span class="col-label">Card with Badge(Icon) nested inside</span>
+    <p class="col-description">
+      Card's <code>children</code> has a configured Badge assigned (which itself has an Icon in <code>iconLeft</code>).
+      The ghost preview shows the full composed result. The agent receives:
+    </p>
+    <div style="margin-bottom: 12px; background: var(--surface); border-radius: 4px; padding: 8px 10px; font-family: var(--font-mono); font-size: 10px; color: var(--teal); line-height: 1.6;">
+      &lt;Card title="Status"&gt;<br>
+      &nbsp;&nbsp;&lt;Badge variant="primary" iconLeft={&lt;Icon name="check" /&gt;}&gt;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;Active<br>
+      &nbsp;&nbsp;&lt;/Badge&gt;<br>
+      &lt;/Card&gt;
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Card — Props (expanded)</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header"><span>Props</span></div>
+
+          <div class="prop-row">
+            <span class="prop-label">title</span>
+            <input class="prop-control" value="Status">
+          </div>
+
+          <!-- children — filled with configured Badge -->
+          <div class="prop-row" style="align-items: flex-start;">
+            <span class="prop-label">children <span class="rn-badge">RN</span></span>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <div class="mode-tabs">
+                <button class="mode-tab">Text</button>
+                <button class="mode-tab">HTML</button>
+                <button class="mode-tab active">Component</button>
+              </div>
+              <div class="drop-target filled">
+                <div class="dt-thumb">
+                  <div class="mini-preview">
+                    <span style="display: inline-flex; align-items: center; gap: 2px; background: #ef4444; color: white; font-size: 6px; font-weight: 700; padding: 1px 4px; border-radius: 99px;">
+                      <svg width="5" height="5" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                      Active
+                    </span>
+                  </div>
+                </div>
+                <span class="dt-name">Badge</span>
+                <span style="font-size: 9px; color: var(--muted); font-family: var(--font-mono);">+ Icon</span>
+                <button class="dt-clear" title="Clear">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ghost preview: full composed Card -->
+        <div style="padding: 12px; border-top: 1px solid var(--border);">
+          <div style="font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;">Preview</div>
+          <div class="preview-card" style="width: 180px; margin: 0 auto;">
+            <h4 style="font-size: 13px;">Status</h4>
+            <div style="margin-top: 6px;">
+              <span class="preview-badge red" style="font-size: 10px; padding: 2px 8px; gap: 4px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                Active
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">5 — Open Questions</div>
+<p class="section-subtitle">
+  Design decisions to resolve during implementation and testing.
+</p>
+
+<div style="max-width: 680px; display: flex; flex-direction: column; gap: 16px;">
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 4px;">
+      Q1: Should the armed state clear after assigning to one slot?
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      <strong>Option A:</strong> Clear immediately — user arms Icon, clicks one drop target, done. Simple and predictable.<br>
+      <strong>Option B:</strong> Stay armed — user can click multiple drop targets to assign the same Icon to several slots. Click the orange button again to disarm.<br>
+      Option B is useful when you want the same Icon in both <code>iconLeft</code> and <code>iconRight</code>.
+    </div>
+  </div>
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 4px;">
+      Q2: How does arming for "prop slot" vs "page insertion" work?
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      Today, arming a component targets the <strong>page</strong> (Insert/Replace). Now we're adding a second target: <strong>prop slots</strong>.
+      Options:<br>
+      <strong>Option A:</strong> Same "Insert" button serves both — armed component can be clicked on the page <em>or</em> on a prop drop target. Simpler, dual-purpose.<br>
+      <strong>Option B:</strong> Separate buttons — "Insert" for page, "Use as Prop" for slots. More explicit, but clutters the row.<br>
+      Option A feels cleaner: the user arms, then clicks <em>wherever</em> they want the component to go.
+    </div>
+  </div>
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 4px;">
+      Q3: Do we need the mode tabs, or should Component mode be the default for ReactNode props?
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      Three tabs (Text / HTML / Component) may be overkill for simple props like <code>children</code>
+      where users usually just want to type text. Options:<br>
+      <strong>Option A:</strong> Start in Text mode, tabs available to switch. Familiar and non-disruptive.<br>
+      <strong>Option B:</strong> Start in Component mode for non-<code>children</code> slot props (like <code>iconLeft</code>), Text for <code>children</code>.<br>
+      <strong>Option C:</strong> No tabs — always show a combined drop target + text input. The text input doubles as simple text mode, and the drop target is always visible below it.
+    </div>
+  </div>
+
+</div>
+
+
+</body>
+</html>

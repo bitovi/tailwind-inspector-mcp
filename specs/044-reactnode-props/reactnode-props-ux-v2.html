@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>044 · ReactNode Props — UX Exploration (v2)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS (Bitovi dark theme) ───────────────────────── */
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --orange-hover: #C73D26;
+      --orange-dim:   rgba(245, 83, 45, 0.12);
+      --teal:         #00848B;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --green:        #2E7229;
+
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+      --t-med:        200ms ease-out;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px 40px 120px;
+    }
+
+    .page-header {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      line-height: 1.7;
+      max-width: 880px;
+    }
+
+    .page-subtitle strong { color: var(--text-mid); }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 52px 0 36px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+      max-width: 780px;
+    }
+
+    .variations {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      max-width: 420px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 420px;
+      line-height: 1.55;
+      margin-bottom: 6px;
+    }
+
+    /* ─── PANEL CHROME ─────────────────────────────────────── */
+    .panel {
+      width: 340px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+    }
+
+    .panel-body {
+      padding: 8px;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 5px 8px;
+      margin-bottom: 6px;
+    }
+
+    .search-bar svg { flex-shrink: 0; color: var(--muted); }
+
+    .search-bar input {
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      outline: none;
+      width: 100%;
+    }
+    .search-bar input::placeholder { color: var(--muted); }
+
+    /* ─── ANNOTATION ───────────────────────────────────────── */
+    .annotation {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--teal);
+      background: rgba(0, 132, 139, 0.12);
+      padding: 2px 6px;
+      border-radius: 3px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .annotation.orange {
+      color: var(--orange);
+      background: rgba(245, 83, 45, 0.12);
+    }
+
+    .annotation.neutral {
+      color: var(--text-mid);
+      background: var(--surface);
+    }
+
+    /* ─── FAKE PREVIEW ELEMENTS ────────────────────────────── */
+    .preview-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 999px;
+      color: white;
+    }
+    .preview-badge.red    { background: #ef4444; }
+
+    .preview-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      color: white;
+      cursor: default;
+    }
+    .preview-button.primary { background: #6366f1; }
+
+    .preview-card {
+      background: white;
+      border-radius: 8px;
+      padding: 14px;
+      color: #1a1a1a;
+      font-size: 11px;
+      line-height: 1.4;
+      width: 200px;
+    }
+    .preview-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .preview-card p { color: #64748b; font-size: 11px; }
+
+    /* ─── COMPONENT ROW ────────────────────────────────────── */
+    .comp-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: background var(--t-fast), border-color var(--t-fast);
+      position: relative;
+    }
+
+    .comp-row:hover {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    .comp-row.arming {
+      background: var(--orange-dim);
+      border-color: var(--orange);
+    }
+
+    .thumb {
+      width: 56px;
+      height: 40px;
+      background: var(--surface);
+      border-radius: 4px;
+      flex-shrink: 0;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb-inner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    .thumb-inner.scale-none {
+      transform: scale(1);
+      width: 56px;
+      height: 40px;
+    }
+
+    .row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .row-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .row-btn {
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-mid);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 0 8px;
+      transition: all var(--t-fast);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .row-btn:hover {
+      border-color: #555;
+      color: var(--text);
+      background: var(--surface-hi);
+    }
+
+    .row-btn.arming {
+      border-color: var(--orange);
+      color: white;
+      background: var(--orange);
+    }
+
+    .row-btn.arming:hover {
+      background: #d94425;
+    }
+
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ── Expanded preview/drawer ── */
+    .expanded-preview {
+      overflow: hidden;
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin: -2px 0 2px;
+    }
+
+    .expanded-inner {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .expanded-ghost {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Props editor ── */
+    .props-editor {
+      padding: 8px 10px 10px;
+    }
+
+    .props-header {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 0;
+    }
+
+    .prop-label {
+      font-size: 10px;
+      color: var(--muted);
+      width: 60px;
+      flex-shrink: 0;
+    }
+
+    .prop-control {
+      flex: 1;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+
+    select.prop-control {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    /* ─── REACTNODE FIELD ──────────────────────────────────── */
+    /* Two states: text input (default) or filled component chip */
+
+    /* Text input state — same as prop-control but slightly taller for multi-line HTML */
+    .rn-field-text {
+      flex: 1;
+      position: relative;
+    }
+
+    .rn-field-text input {
+      width: 100%;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-ui);
+      outline: none;
+      transition: border-color var(--t-fast);
+    }
+
+    .rn-field-text input:focus {
+      border-color: var(--teal);
+    }
+
+    .rn-field-text input::placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* When a component is armed, the text input gets a teal glow to indicate it's receptive */
+    .rn-field-text.receptive input {
+      border-color: var(--teal);
+      background: var(--teal-dim);
+      animation: receptive-pulse 2s ease-in-out infinite;
+    }
+
+    .rn-field-text.receptive input::placeholder {
+      color: var(--teal);
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    @keyframes receptive-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0, 132, 139, 0); }
+      50% { box-shadow: 0 0 0 3px rgba(0, 132, 139, 0.15); }
+    }
+
+    /* Filled state — component chip replacing the text input */
+    .rn-field-filled {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 6px;
+      min-height: 28px;
+    }
+
+    .rn-field-filled .chip-thumb {
+      width: 24px;
+      height: 18px;
+      background: var(--surface);
+      border-radius: 3px;
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rn-field-filled .chip-thumb .mini-preview {
+      transform: scale(0.7);
+      transform-origin: center;
+    }
+
+    .rn-field-filled .chip-name {
+      font-size: 10px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .rn-field-filled .chip-meta {
+      font-size: 9px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      flex: 1;
+    }
+
+    .rn-field-filled .chip-clear {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      transition: all var(--t-fast);
+      flex-shrink: 0;
+    }
+
+    .rn-field-filled .chip-clear:hover {
+      background: rgba(245, 83, 45, 0.15);
+      color: var(--orange);
+    }
+
+    /* ─── FLOW STEPS ───────────────────────────────────────── */
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .flow-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: var(--font-display);
+    }
+
+    .flow-num.orange { background: var(--orange); }
+
+    .flow-text {
+      font-size: 11px;
+      color: var(--text-mid);
+      line-height: 1.5;
+      padding-top: 2px;
+    }
+
+    .flow-text strong { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<h1 class="page-header">044 · ReactNode Props — UX Exploration (v2)</h1>
+<p class="page-subtitle">
+  Exploring how users populate <strong>ReactNode props</strong> (like Badge's <code>iconLeft</code> and <code>children</code>)
+  with text/HTML or other components. <strong>Simplified design:</strong> no mode tabs, no RN badges.
+  ReactNode fields are just text inputs that can also accept an armed component via click.
+  The <strong>arm → click</strong> pattern reuses the existing Insert button — it serves both page insertion and prop assignment.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">1 — ReactNode Field: Two States</div>
+<p class="section-subtitle">
+  ReactNode props render the same text input as any other prop. The difference: when a component
+  is armed, these fields become <strong>receptive</strong> (teal glow) and accept a click to assign the armed component.
+  Once assigned, the text input is replaced by a <strong>component chip</strong> showing the thumbnail, name, and a ✕ clear button.
+  Clearing reverts to the text input. No mode tabs, no special badges.
+</p>
+
+<div class="variations">
+
+  <!-- ── Default: text input ── -->
+  <div class="col">
+    <span class="col-label">A · Default — text input</span>
+    <p class="col-description">
+      Same as today. User types text or pastes HTML/SVG directly.
+      <code>children</code> has "New", <code>iconLeft</code> and <code>iconRight</code> are empty.
+      Nothing special about these fields — they look identical to other prop inputs.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header">
+            <span>Props</span>
+            <span style="font-size: 9px; font-weight: 400; color: var(--muted);">Live preview</span>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option><option>secondary</option><option>outline</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">roundness</span>
+            <select class="prop-control">
+              <option>default</option><option>round</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <div class="rn-field-text">
+              <input value="New">
+            </div>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">iconLeft</span>
+            <div class="rn-field-text">
+              <input value="" placeholder="(empty)">
+            </div>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">iconRight</span>
+            <div class="rn-field-text">
+              <input value="" placeholder="(empty)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Receptive: component is armed ── -->
+  <div class="col">
+    <span class="col-label">B · Receptive — an Icon component is armed</span>
+    <p class="col-description">
+      User armed an Icon component from the list. All ReactNode-eligible text inputs
+      glow teal with a subtle pulse and show "Click to set Icon" as placeholder.
+      Non-ReactNode props (<code>variant</code>, <code>roundness</code>) are unaffected.
+      One click on any glowing field assigns the armed Icon to that prop.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+        <span class="annotation orange" style="font-size: 8px;">Icon armed</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header">
+            <span>Props</span>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">roundness</span>
+            <select class="prop-control">
+              <option>round</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <div class="rn-field-text receptive">
+              <input value="Active" placeholder="Click to set Icon">
+            </div>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">iconLeft</span>
+            <div class="rn-field-text receptive">
+              <input value="" placeholder="Click to set Icon">
+            </div>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">iconRight</span>
+            <div class="rn-field-text receptive">
+              <input value="" placeholder="Click to set Icon">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Filled: component assigned ── -->
+  <div class="col">
+    <span class="col-label">C · Filled — Icon assigned to iconLeft</span>
+    <p class="col-description">
+      User clicked the <code>iconLeft</code> field while Icon was armed.
+      That field now shows a <strong>component chip</strong>: mini thumbnail, name, prop summary, and ✕ clear.
+      Clicking ✕ removes the assignment and restores the text input.
+      Other fields return to normal (arming cleared after one assignment).
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header">
+            <span>Props</span>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control">
+              <option>primary</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">roundness</span>
+            <select class="prop-control">
+              <option>round</option>
+            </select>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <div class="rn-field-text">
+              <input value="Active">
+            </div>
+          </div>
+
+          <!-- iconLeft — FILLED with Icon component -->
+          <div class="prop-row">
+            <span class="prop-label">iconLeft</span>
+            <div class="rn-field-filled">
+              <div class="chip-thumb">
+                <div class="mini-preview">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                </div>
+              </div>
+              <span class="chip-name">Icon</span>
+              <span class="chip-meta">name="check"</span>
+              <button class="chip-clear" title="Clear">✕</button>
+            </div>
+          </div>
+
+          <div class="prop-row">
+            <span class="prop-label">iconRight</span>
+            <div class="rn-field-text">
+              <input value="" placeholder="(empty)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">2 — Full Flow: Arm → Click-to-Set</div>
+<p class="section-subtitle">
+  The complete interaction for assigning an Icon component to Badge's <code>iconLeft</code> prop.
+  Uses the <strong>same Insert button</strong> that already exists for page insertion — it now serves both purposes.
+  Arming <strong>clears after one assignment</strong>.
+</p>
+
+<div class="flow-steps" style="max-width: 600px; margin-bottom: 32px;">
+  <div class="flow-step">
+    <div class="flow-num">1</div>
+    <div class="flow-text">
+      <strong>Expand Badge</strong> — click Customize. See the props editor with text inputs for
+      <code>children</code>, <code>iconLeft</code>, <code>iconRight</code>.
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">2</div>
+    <div class="flow-text">
+      <strong>Find and configure Icon</strong> in the component list. Expand it, set <code>name="check"</code>, <code>size="sm"</code>.
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num orange">3</div>
+    <div class="flow-text">
+      <strong>Arm the Icon</strong> — click "Insert" on the Icon row. It turns orange ("Inserting").
+      Badge's ReactNode fields instantly glow teal (receptive). The page <em>also</em> accepts clicks — same armed state serves both targets.
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">4</div>
+    <div class="flow-text">
+      <strong>Click Badge's <code>iconLeft</code> field</strong> — the armed Icon is assigned.
+      Field switches to the component chip. Badge's ghost re-renders showing the check icon.
+      Arming clears. All other fields return to normal.
+    </div>
+  </div>
+  <div class="flow-step">
+    <div class="flow-num">5</div>
+    <div class="flow-text">
+      <strong>Done.</strong> Arm Badge itself and place it on the page. The agent receives:
+      <code style="display: block; margin-top: 4px; color: var(--teal);">&lt;Badge variant="primary" iconLeft={&lt;Icon name="check" size="sm" /&gt;}&gt;Active&lt;/Badge&gt;</code>
+    </div>
+  </div>
+</div>
+
+
+<div class="variations">
+
+  <!-- ── Steps 1–2: Badge expanded, Icon not yet armed ── -->
+  <div class="col">
+    <span class="col-label">Steps 1–2 · Badge expanded, Icon configured below</span>
+    <p class="col-description">
+      Badge is expanded with text inputs for all props. Icon row is visible below —
+      user has configured its props but hasn't armed it yet.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <!-- Badge — EXPANDED -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">Active</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props · expanded</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-badge red">Active</span>
+            </div>
+            <div class="props-editor">
+              <div class="props-header"><span>Props</span></div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control"><option>primary</option></select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children</span>
+                <div class="rn-field-text">
+                  <input value="Active">
+                </div>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">iconLeft</span>
+                <div class="rn-field-text">
+                  <input value="" placeholder="(empty)">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Icon — collapsed, ready to arm -->
+        <div class="comp-row">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Icon</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Step 3: Icon armed, fields receptive ── -->
+  <div class="col">
+    <span class="col-label">Step 3 · Icon armed — ReactNode fields glow teal</span>
+    <p class="col-description">
+      User clicked "Insert" on Icon → it turned orange ("Inserting").
+      Badge's <code>iconLeft</code> and <code>children</code> fields glow teal (receptive).
+      <code>variant</code> (a select, not ReactNode) is unaffected.
+      <strong>The page also accepts clicks</strong> — same armed state.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation orange" style="font-size: 8px;">Icon armed</span>
+      </div>
+      <div class="panel-body">
+        <!-- Badge — EXPANDED, fields receptive -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">Active</span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props · expanded</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview">
+          <div class="expanded-inner">
+            <div class="expanded-ghost">
+              <span class="preview-badge red">Active</span>
+            </div>
+            <div class="props-editor">
+              <div class="props-header"><span>Props</span></div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control"><option>primary</option></select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children</span>
+                <div class="rn-field-text receptive">
+                  <input value="Active" placeholder="Click to set Icon">
+                </div>
+              </div>
+              <!-- iconLeft — RECEPTIVE -->
+              <div class="prop-row">
+                <span class="prop-label">iconLeft</span>
+                <div class="rn-field-text receptive">
+                  <input value="" placeholder="Click to set Icon">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Icon — ARMED (orange) -->
+        <div class="comp-row arming">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Icon</div>
+            <div class="row-meta">name="check" · size="sm"</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn arming">Inserting</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Steps 4–5: Icon assigned, composed preview ── -->
+  <div class="col">
+    <span class="col-label">Steps 4–5 · Icon assigned — composed preview</span>
+    <p class="col-description">
+      User clicked <code>iconLeft</code>. The text input is replaced by a component chip.
+      Badge's ghost re-renders with the <strong>check icon stitched in</strong>.
+      Arming cleared — Icon row back to normal. Badge is ready to place on the page.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Components</span>
+        <span class="annotation neutral" style="font-size: 8px;">no selection</span>
+      </div>
+      <div class="panel-body">
+        <!-- Badge — EXPANDED, iconLeft filled, composed ghost -->
+        <div class="comp-row" style="background: var(--surface); border-color: var(--border); border-radius: var(--radius) var(--radius) 0 0;">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-badge red">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                Active
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Badge</div>
+            <div class="row-meta">5 props · expanded</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn" style="border-color: #555; color: var(--text);">▲ Collapse</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+
+        <div class="expanded-preview">
+          <div class="expanded-inner">
+            <!-- Ghost shows COMPOSED result: badge with icon -->
+            <div class="expanded-ghost">
+              <span class="preview-badge red" style="font-size: 13px; padding: 5px 14px; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                Active
+              </span>
+            </div>
+            <div class="props-editor">
+              <div class="props-header"><span>Props</span></div>
+              <div class="prop-row">
+                <span class="prop-label">variant</span>
+                <select class="prop-control"><option>primary</option></select>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">children</span>
+                <div class="rn-field-text">
+                  <input value="Active">
+                </div>
+              </div>
+              <!-- iconLeft — FILLED with component chip -->
+              <div class="prop-row">
+                <span class="prop-label">iconLeft</span>
+                <div class="rn-field-filled">
+                  <div class="chip-thumb">
+                    <div class="mini-preview">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                    </div>
+                  </div>
+                  <span class="chip-name">Icon</span>
+                  <span class="chip-meta">check</span>
+                  <button class="chip-clear" title="Clear">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Icon — no longer armed -->
+        <div class="comp-row">
+          <div class="thumb">
+            <div class="thumb-inner scale-none">
+              <span class="preview-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+            </div>
+          </div>
+          <div class="row-info">
+            <div class="row-name">Icon</div>
+            <div class="row-meta">2 props</div>
+          </div>
+          <div class="row-actions">
+            <button class="row-btn">Customize</button>
+            <button class="row-btn">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">3 — Bottom-Up Composition: Nested Depth</div>
+<p class="section-subtitle">
+  The same arm-and-click pattern supports <strong>arbitrary nesting</strong>. Configure Icon → assign to Badge's iconLeft →
+  arm Badge → assign to Card's children. Each level is the same flat text-input-or-chip UI.
+</p>
+
+<div class="variations">
+
+  <div class="col">
+    <span class="col-label">Card with Badge(Icon) nested inside</span>
+    <p class="col-description">
+      Card's <code>children</code> has a configured Badge assigned (which itself has an Icon in <code>iconLeft</code>).
+      The ghost preview shows the full composed result. The agent receives:
+    </p>
+    <div style="margin-bottom: 12px; background: var(--surface); border-radius: 4px; padding: 8px 10px; font-family: var(--font-mono); font-size: 10px; color: var(--teal); line-height: 1.6;">
+      &lt;Card title="Status"&gt;<br>
+      &nbsp;&nbsp;&lt;Badge variant="primary" iconLeft={&lt;Icon name="check" /&gt;}&gt;<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;Active<br>
+      &nbsp;&nbsp;&lt;/Badge&gt;<br>
+      &lt;/Card&gt;
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Card — Props (expanded)</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header"><span>Props</span></div>
+
+          <div class="prop-row">
+            <span class="prop-label">title</span>
+            <input class="prop-control" value="Status">
+          </div>
+
+          <!-- children — filled with configured Badge -->
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <div class="rn-field-filled">
+              <div class="chip-thumb">
+                <div class="mini-preview">
+                  <span style="display: inline-flex; align-items: center; gap: 2px; background: #ef4444; color: white; font-size: 6px; font-weight: 700; padding: 1px 4px; border-radius: 99px;">
+                    <svg width="5" height="5" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+                    Active
+                  </span>
+                </div>
+              </div>
+              <span class="chip-name">Badge</span>
+              <span class="chip-meta">+ Icon</span>
+              <button class="chip-clear" title="Clear">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ghost preview: full composed Card -->
+        <div style="padding: 12px; border-top: 1px solid var(--border);">
+          <div style="font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;">Preview</div>
+          <div class="preview-card" style="width: 180px; margin: 0 auto;">
+            <h4 style="font-size: 13px;">Status</h4>
+            <div style="margin-top: 6px;">
+              <span class="preview-badge red" style="font-size: 10px; padding: 2px 8px; gap: 4px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                Active
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">4 — HTML/SVG in Text Input</div>
+<p class="section-subtitle">
+  Since there's no separate "HTML mode", <strong>pasting HTML or SVG directly into the text input just works</strong>.
+  The text is used as-is in the ghost (stitched into the slot) and converted to JSX for the agent.
+  This covers inline SVG icons, <code>&lt;strong&gt;</code> wrappers, and other simple markup.
+</p>
+
+<div class="variations">
+
+  <div class="col">
+    <span class="col-label">SVG pasted into iconLeft text input</span>
+    <p class="col-description">
+      User pasted an SVG check icon directly into the <code>iconLeft</code> text input.
+      The ghost preview shows the SVG rendered in the badge's left icon slot.
+      No mode switch needed — the text input accepts anything.
+    </p>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-label">Badge — Props</span>
+      </div>
+      <div class="panel-body">
+        <div class="props-editor">
+          <div class="props-header"><span>Props</span></div>
+          <div class="prop-row">
+            <span class="prop-label">variant</span>
+            <select class="prop-control"><option>primary</option></select>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">children</span>
+            <div class="rn-field-text">
+              <input value="Active">
+            </div>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">iconLeft</span>
+            <div class="rn-field-text">
+              <input value='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>' style="font-family: var(--font-mono); font-size: 10px; color: var(--teal);">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div class="section-title">5 — Decisions</div>
+
+<div style="max-width: 680px; display: flex; flex-direction: column; gap: 12px;">
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--teal); margin-bottom: 4px;">
+      ✓ Arming clears after one assignment
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      Arm Icon → click one prop field → Icon assigned, arming cleared. Simple and predictable.
+      To assign the same component to multiple slots, arm again.
+    </div>
+  </div>
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--teal); margin-bottom: 4px;">
+      ✓ Same Insert button serves page and prop slots
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      One armed state. User can click the page to insert OR click a ReactNode field to assign.
+      Wherever the click lands, that's where the component goes. No separate "Use as Prop" button.
+    </div>
+  </div>
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--teal); margin-bottom: 4px;">
+      ✓ No mode tabs — text input is the default, component chip replaces it
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      ReactNode fields are just text inputs. HTML/SVG can be pasted directly. When a component is
+      assigned via arming, the text input swaps to a chip. ✕ clears back to text. Zero extra UI chrome.
+    </div>
+  </div>
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; border-color: #555;">
+    <div style="font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 4px;">
+      ? Open: How does the field know a click means "assign" vs normal text editing?
+    </div>
+    <div style="font-size: 11px; color: var(--text-mid); line-height: 1.5;">
+      When a component is armed AND the user clicks a receptive field, it assigns.
+      When nothing is armed, clicks behave as normal (focus, cursor placement, text selection).
+      The teal glow makes the "receptive" state visually obvious.
+    </div>
+  </div>
+
+</div>
+
+
+</body>
+</html>

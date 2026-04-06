@@ -45,7 +45,6 @@ export function connect(): void {
 }
 
 export function send(data: object): void {
-  console.log('[panel-debug] WS send', { connected, hasSocket: !!socket, data });
   if (connected && socket) {
     socket.send(JSON.stringify(data));
   }

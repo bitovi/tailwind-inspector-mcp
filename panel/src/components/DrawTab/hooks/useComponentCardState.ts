@@ -126,9 +126,12 @@ export function cardReducer(state: CardState, action: CardAction): CardState {
 
     // ── Ghost ──────────────────────────────────────────────────────────
     case 'GHOST_EXTRACTED': {
-      if (state.phase !== 'ready' && state.phase !== 'loading') return state;
+      // Accept from probe-done (shared extractor skips slot/iframe phases),
+      // loading, or ready (re-extraction after arg changes).
+      if (state.phase !== 'ready' && state.phase !== 'loading' && state.phase !== 'probe-done') return state;
       return {
         ...state,
+        phase: 'ready',
         liveGhostHtml: action.ghostHtml,
         liveGhostCss: action.ghostCss,
         storyBackground: action.storyBackground ?? state.storyBackground,

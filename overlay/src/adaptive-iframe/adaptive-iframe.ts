@@ -63,6 +63,7 @@ export class AdaptiveIframe extends HTMLElement {
   }
 
   private observer: MutationObserver | null = null;
+  private settleTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   connectedCallback() {
     document.body.appendChild(this.hiddenIframe);
@@ -98,8 +99,9 @@ export class AdaptiveIframe extends HTMLElement {
     this.observer?.disconnect();
     this.observer = null;
 
-    // Clear any pending load timeout and polling interval
+    // Clear any pending load timeout, settle timeout, and polling interval
     if (this.loadTimeoutId) clearTimeout(this.loadTimeoutId);
+    if (this.settleTimeoutId) { clearTimeout(this.settleTimeoutId); this.settleTimeoutId = null; }
     if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
     this.hasLoaded = false;
     this._loadedDispatched = false;
@@ -180,6 +182,72 @@ export class AdaptiveIframe extends HTMLElement {
       const doc = this.hiddenIframe.contentDocument;
       if (doc) this.extractAndApply(doc);
     }, 300);
+  }
+
+  /**
+   * Navigates to a different story using Storybook's setCurrentStory channel
+   * message. This avoids a full page reload — Storybook re-renders the
+   * component in-place. The caller is responsible for timeouts/fallbacks.
+   *
+   * On success, dispatches `ghost-extracted` (and `iframe-loaded` if first
+   * extraction after navigation). On failure (e.g. no #storybook-root),
+   * dispatches `iframe-error`.
+   */
+  navigateToStory(storyId: string): void {
+    const win = this.hiddenIframe.contentWindow;
+    const doc = this.hiddenIframe.contentDocument;
+    if (!win || !doc) {
+      this.reportError('Cannot navigate: iframe not available');
+      return;
+    }
+
+    // Clean up previous watchers
+    this._loadedDispatched = false;
+    this.observer?.disconnect();
+    this.observer = null;
+    if (this.pollId) { clearInterval(this.pollId); this.pollId = null; }
+    if (this.loadTimeoutId) { clearTimeout(this.loadTimeoutId); this.loadTimeoutId = null; }
+    if (this.settleTimeoutId) { clearTimeout(this.settleTimeoutId); this.settleTimeoutId = null; }
+
+    const storybookRoot = doc.querySelector('#storybook-root');
+    if (!storybookRoot) {
+      this.reportError('Cannot navigate: #storybook-root not found');
+      return;
+    }
+
+    // Send setCurrentStory to the Storybook channel
+    win.postMessage(
+      JSON.stringify({
+        key: 'storybook-channel',
+        event: { type: 'setCurrentStory', args: [{ storyId }] },
+      }),
+      '*',
+    );
+
+    // Watch for DOM changes in #storybook-root — debounce until mutations
+    // settle, then extract. This avoids extracting mid-render.
+    let settled = false;
+
+    const observer = new MutationObserver(() => {
+      if (settled) return;
+      if (this.settleTimeoutId) clearTimeout(this.settleTimeoutId);
+      this.settleTimeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        observer.disconnect();
+        this.observer = null;
+        this.settleTimeoutId = null;
+        this.extractAndApply(doc);
+      }, 200);
+    });
+
+    this.observer = observer;
+    observer.observe(storybookRoot, { childList: true, subtree: true, characterData: true });
+
+    // Also observe body for portal content (Radix dialogs, etc.)
+    if (doc.body && storybookRoot !== doc.body) {
+      observer.observe(doc.body, { childList: true });
+    }
   }
 
   /**

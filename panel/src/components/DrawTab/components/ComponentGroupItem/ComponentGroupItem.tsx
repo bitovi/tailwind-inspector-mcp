@@ -7,6 +7,8 @@ import { ArgsForm } from '../ArgsForm';
 import { ComponentRowThumb } from '../ComponentRowThumb';
 import { ShadowGhost } from '../../../ShadowGhost';
 import { cardReducer, INITIAL_STATE } from '../../hooks/useComponentCardState';
+import { USE_SHARED_EXTRACTOR } from '../../hooks/extractorConfig';
+import { useSharedExtraction } from '../../hooks/useSharedExtraction';
 import type { AdaptiveIframe } from '../../../../../../overlay/src/adaptive-iframe/adaptive-iframe';
 import '../../../../../../overlay/src/adaptive-iframe';
 
@@ -92,14 +94,17 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
     }
   }, [probing, bestStoryFromProbe, argTypes, defaultArgs, state.phase]);
 
-  // ── Phase 3: Iframe queue ──────────────────────────────────────────────
+  // ── Phase 3: Iframe queue (per-component) ────────────────────────────
+  // When using the shared extractor, the per-component queue is only needed
+  // for live args editing (loadLiveRequested).
 
-  const queueEnabled =
+  const perComponentQueueEnabled =
+    (!USE_SHARED_EXTRACTOR || state.loadLiveRequested) &&
     (state.phase === 'probe-done' || state.phase === 'loading') &&
     !!state.bestStory &&
     (!cachedGhostHtml || state.loadLiveRequested);
 
-  const { canLoad, releaseSlot } = useIframeSlot(queueEnabled);
+  const { canLoad, releaseSlot } = useIframeSlot(perComponentQueueEnabled);
 
   // Bridge: slot acquired → reducer
   useEffect(() => {
@@ -107,6 +112,50 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
       dispatch({ type: 'SLOT_ACQUIRED' });
     }
   }, [canLoad, state.phase]);
+
+  // ── Phase 3b: Shared extraction (single-iframe) ────────────────────
+  // When enabled, the shared extractor handles initial ghost extraction
+  // for all components via a single reused iframe.
+
+  const sharedExtractionEnabled =
+    USE_SHARED_EXTRACTOR &&
+    state.phase === 'probe-done' &&
+    !!state.bestStory &&
+    !state.loadLiveRequested &&
+    (!cachedGhostHtml);
+
+  const { ghostData: sharedGhostData } = useSharedExtraction(
+    state.bestStory?.id ?? null,
+    sharedExtractionEnabled,
+  );
+
+  // Bridge: shared extraction result → reducer + cache
+  useEffect(() => {
+    if (!sharedGhostData || !USE_SHARED_EXTRACTOR) return;
+
+    dispatch({
+      type: 'GHOST_EXTRACTED',
+      ghostHtml: sharedGhostData.ghostHtml,
+      ghostCss: sharedGhostData.ghostCss,
+      storyBackground: sharedGhostData.storyBackground,
+      naturalWidth: sharedGhostData.naturalWidth,
+      naturalHeight: sharedGhostData.naturalHeight,
+    });
+
+    if (state.bestStory) {
+      onGhostExtracted?.({
+        storyId: state.bestStory.id,
+        args: {},
+        ghostHtml: sharedGhostData.ghostHtml,
+        ghostCss: sharedGhostData.ghostCss,
+        hostStyles: sharedGhostData.hostStyles,
+        storyBackground: sharedGhostData.storyBackground,
+        componentName: group.name,
+        componentPath: group.componentPath,
+        argCount: Object.keys(state.argTypes).length || undefined,
+      });
+    }
+  }, [sharedGhostData]);
 
   // ── Phase 4: Iframe src assignment ─────────────────────────────────────
 
@@ -202,8 +251,8 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
       return;
     }
     const el = ghostRef.current as unknown as AdaptiveIframe;
-    const ghostHtml = el?.getComponentHtml?.() ?? cachedGhostHtml ?? '';
-    const ghostCss = el?.getComponentCss?.() ?? cachedGhostCss ?? '';
+    const ghostHtml = el?.getComponentHtml?.() ?? state.liveGhostHtml ?? cachedGhostHtml ?? '';
+    const ghostCss = el?.getComponentCss?.() ?? state.liveGhostCss ?? cachedGhostCss ?? '';
     onArm(ghostHtml, ghostCss, state.args);
 
     dispatch({ type: 'REQUEST_LIVE_REFRESH' });
@@ -249,10 +298,13 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   const insertLabel = insertMode === 'replace' ? 'Replace' : 'Place';
   const armingLabel = insertMode === 'replace' ? 'Replacing' : 'Placing';
 
-  // The adaptive-iframe is always rendered (hidden) once we have a bestStory
+  // The adaptive-iframe is always rendered (hidden) once we have a bestStory.
+  // With shared extractor, only mount per-component iframe for live args editing.
   const isVisible = state.phase !== 'idle';
   const bestStory = state.bestStory ?? bestStoryFromProbe;
-  const mountIframe = isVisible && !state.error && !probing && bestStory;
+  const mountIframe = USE_SHARED_EXTRACTOR
+    ? isVisible && !state.error && bestStory && state.loadLiveRequested
+    : isVisible && !state.error && !probing && bestStory;
 
   // ── Render ─────────────────────────────────────────────────────────────
 
@@ -289,9 +341,21 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
 
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
-          <div className="text-[12px] font-semibold text-bv-text leading-tight truncate">
-            {group.name}
-          </div>
+          {group.stories[0] ? (
+            <a
+              href={`/storybook/?path=/story/${group.stories[0].id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[12px] text-bv-text hover:text-bv-orange hover:underline transition-colors leading-tight truncate block"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ComponentTitle fullTitle={group.fullTitle} />
+            </a>
+          ) : (
+            <div className="text-[12px] text-bv-text leading-tight truncate">
+              <ComponentTitle fullTitle={group.fullTitle} />
+            </div>
+          )}
           <div className="text-[10px] text-bv-muted mt-0.5">
             {state.phase === 'loading' && !ghostHtml ? (
               <span className="text-bv-teal">Loading preview…</span>
@@ -382,5 +446,21 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
         />
       )}
     </li>
+  );
+}
+
+function ComponentTitle({ fullTitle }: { fullTitle: string }) {
+  const segments = fullTitle.split('/');
+  if (segments.length === 1) {
+    return <span className="font-semibold">{segments[0]}</span>;
+  }
+  const path = segments.slice(0, -1);
+  const name = segments.at(-1);
+  return (
+    <>
+      <span className="text-bv-muted font-normal">{path.join(' / ')}</span>
+      <span className="text-bv-muted font-normal"> / </span>
+      <span className="font-semibold">{name}</span>
+    </>
   );
 }
