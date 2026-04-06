@@ -40,12 +40,7 @@ export const Receptive: Story = {
   args: {
     name: 'iconLeft',
     value: undefined,
-    armedComponentData: {
-      componentName: 'Icon',
-      storyId: 'components-icon--default',
-      ghostHtml: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>',
-      ghostCss: '',
-    },
+    isReceptive: true,
   },
 };
 

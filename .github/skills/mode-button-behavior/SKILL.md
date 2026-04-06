@@ -131,6 +131,34 @@ These rules always hold:
 - **Component button is orange** (armed): Escape disarms the component (gray), returns to the tab with no page interaction active.
 - **Global button is orange** (browse/crosshair): Escape turns off the mode entirely, returns to landing page.
 - **Global button is teal** (insert point or element locked): Escape unlocks the target, returns to orange (browse/crosshair mode).
+- **ReactNode field is teal** (receptive): Escape clears the receptive field, returns all buttons to normal Place/Replace labels.
+
+## Flow E: Set ReactNode Prop — pick target field, then pick component
+
+This flow is entirely within the panel — no page interaction or overlay involvement. It uses the Place/Replace tab's component list but redirects the action to a prop field instead of the page.
+
+| Step | User action | ReactNode field | Component button label | Component button color | Page interaction |
+|---|---|---|---|---|---|
+| 1 | Expand Button, see `leftIcon` field | Gray input | Place | Gray | None |
+| 2 | Click `leftIcon` field's arm button | **Teal** (locked target) | **Set Prop** | **Orange** | None |
+| 3 | Click "Set Prop" on Icon | Chip: `Icon` with ✕ | Place | Gray | None |
+| 4 | (Optional) Click ✕ on chip | Gray input | Place | Gray | None |
+
+### Flow E cancel paths
+
+| Cancel action | ReactNode field | Component button | Result |
+|---|---|---|---|
+| Press Escape | Returns to gray | Returns to Place/Replace (gray) | Receptive state cleared |
+| Click outside the expanded drawer | Returns to gray | Returns to Place/Replace (gray) | Receptive state cleared |
+| Click a different ReactNode field | Old field → gray, new field → **teal** | Stays **Set Prop** (orange) | Target switches |
+
+### Flow E invariants
+
+1. **Only one ReactNode field can be receptive (teal) at a time.** Clicking a second field deactivates the first.
+2. **"Set Prop" mode does not involve the page.** No overlay messages, no crosshair, no browse mode.
+3. **Global mode buttons are unaffected.** Select/Insert state does not change during Set Prop.
+4. **Normal Place/Replace flows are unaffected** when no ReactNode field is receptive.
+5. **"Set Prop" label appears on ALL component rows** when a field is receptive — any component can be assigned.
 
 ## Modifying These Flows
 

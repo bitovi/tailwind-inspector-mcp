@@ -1,9 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ArgType, ComponentGroup, StoryEntry, ArmedComponentData } from './types';
 import type { InsertMode } from '../../../../shared/types';
 import { ComponentGroupItem } from './components/ComponentGroupItem';
 import { sendTo, onMessage } from '../../ws';
 import { useGhostCache } from '../../hooks/useGhostCache';
+
+interface ReceptiveFieldTarget {
+  groupName: string;
+  propName: string;
+}
 
 interface DrawTabProps {
   /** Controls the insertMode sent with COMPONENT_ARM: 'replace' or default drop behavior */
@@ -21,7 +26,50 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
   const [armedComponentData, setArmedComponentData] = useState<ArmedComponentData | null>(null);
   const { getCachedGhost, submitToCache } = useGhostCache();
 
+  // ── Receptive field state (Flow E: Set Prop) ────────────────────────
+  const [receptiveField, setReceptiveField] = useState<ReceptiveFieldTarget | null>(null);
+  const setPropCallbackRef = useRef<((data: ArmedComponentData) => void) | null>(null);
+
+  const armField = useCallback((groupName: string, propName: string, callback: (data: ArmedComponentData) => void) => {
+    // Clear any page-armed component first
+    if (armedGroup) {
+      setArmedGroup(null);
+      setArmedComponentData(null);
+      onArmedChange?.(false);
+      sendTo('overlay', { type: 'COMPONENT_DISARM' });
+    }
+    setReceptiveField({ groupName, propName });
+    setPropCallbackRef.current = callback;
+  }, [armedGroup, onArmedChange]);
+
+  const handleSetProp = useCallback((data: ArmedComponentData) => {
+    if (setPropCallbackRef.current) {
+      setPropCallbackRef.current(data);
+      setPropCallbackRef.current = null;
+      setReceptiveField(null);
+    }
+  }, []);
+
+  const clearReceptive = useCallback(() => {
+    setReceptiveField(null);
+    setPropCallbackRef.current = null;
+  }, []);
+
+  // Escape clears receptive field
+  useEffect(() => {
+    if (!receptiveField) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        clearReceptive();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [receptiveField, clearReceptive]);
+
   const arm = useCallback((group: ComponentGroup, ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => {
+    // Clear receptive field when arming for page placement
+    clearReceptive();
     setArmedGroup(group.name);
     setArmedComponentData({
       componentName: group.name,
@@ -143,7 +191,10 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
                   onGhostExtracted={submitToCache}
                   insertMode={insertMode}
                   hasPageSelection={hasPageSelection}
-                  armedComponentData={armedComponentData}
+                  receptiveField={receptiveField}
+                  onArmField={armField}
+                  onSetProp={handleSetProp}
+                  onClearReceptive={clearReceptive}
                 />
               );
             })}

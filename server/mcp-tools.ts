@@ -36,6 +36,7 @@ interface ReactNodeArgValue {
   type: 'text' | 'component';
   value?: string;
   componentName?: string;
+  componentPath?: string;
   args?: Record<string, unknown>;
 }
 
@@ -60,6 +61,30 @@ function reactNodeToProp(value: ReactNodeArgValue): string {
   // type === 'component'
   const jsx = buildJsx(value.componentName ?? 'Component', value.args);
   return `{${jsx}}`;
+}
+
+/**
+ * Recursively collect all nested component imports from args.
+ * Returns an array of { componentName, componentPath } for each
+ * ReactNodeArgValue with type === 'component' found in the args tree.
+ */
+function collectNestedImports(args?: Record<string, unknown>): Array<{ componentName: string; componentPath?: string }> {
+  if (!args) return [];
+  const result: Array<{ componentName: string; componentPath?: string }> = [];
+  for (const value of Object.values(args)) {
+    if (!isReactNodeArgValue(value)) continue;
+    if (value.type === 'component' && value.componentName) {
+      result.push({
+        componentName: value.componentName,
+        componentPath: value.componentPath,
+      });
+      // Recurse into nested component's own args
+      if (value.args) {
+        result.push(...collectNestedImports(value.args));
+      }
+    }
+  }
+  return result;
 }
 
 function buildJsx(componentName: string, args?: Record<string, unknown>): string {
@@ -191,7 +216,16 @@ ${patch.canvasComponents.map((c: any, i: number) => {
       patchList += `### ${stepNum}. Component drop \`${patch.id}\`
 - **Insert:** \`${jsx}\` **${insertMode}** ${targetDesc}
 ${importPath ? `- **Import:** \`import { ${comp} } from '${importPath}'\`` : `- **Component:** \`${comp}\` (resolve import path manually)`}
-${parentComp ? `\n- **Parent component:** \`${parentComp}\` — edit this component's source file` : ''}
+${(() => {
+  const nested = collectNestedImports(patch.componentArgs);
+  if (nested.length === 0) return '';
+  return nested.map(n => {
+    const p = n.componentPath?.replace(/\.tsx?$/, '');
+    return p
+      ? `- **Import:** \`import { ${n.componentName} } from '${p}'\``
+      : `- **Import:** \`${n.componentName}\` (resolve import path manually)`;
+  }).join('\n') + '\n';
+})()}${parentComp ? `\n- **Parent component:** \`${parentComp}\` — edit this component's source file` : ''}
 ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 ⚠️ Do NOT paste rendered HTML. Import and render the React component with the props shown above.
 

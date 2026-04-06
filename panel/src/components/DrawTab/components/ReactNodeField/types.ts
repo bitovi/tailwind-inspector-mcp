@@ -1,4 +1,4 @@
-import type { ReactNodeArgValue, ArmedComponentData } from '../../types';
+import type { ReactNodeArgValue } from '../../types';
 
 export interface ReactNodeFieldProps {
   /** Prop name, used for display and as "Click to set X" placeholder */
@@ -6,8 +6,8 @@ export interface ReactNodeFieldProps {
   /** Current value — text content, raw HTML, or an assigned component */
   value: ReactNodeArgValue | undefined;
   onChange: (value: ReactNodeArgValue) => void;
-  /** When non-null, a component is armed and this field is receptive */
-  armedComponentData?: ArmedComponentData | null;
-  /** Call to disarm the armed component after assignment */
-  onDisarm?: () => void;
+  /** Whether this specific field is the current receptive target (teal glow) */
+  isReceptive?: boolean;
+  /** Call to arm this field as the receptive target */
+  onArmSelf?: () => void;
 }

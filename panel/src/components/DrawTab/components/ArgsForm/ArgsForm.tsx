@@ -1,4 +1,4 @@
-import type { ArgType, ArmedComponentData } from '../../types';
+import type { ArgType } from '../../types';
 import type { ReactNodeArgValue } from '../../types';
 import { ReactNodeField } from '../ReactNodeField';
 import type { ArgsFormProps } from './types';
@@ -14,7 +14,7 @@ function isReactNodeProp(name: string, argType: ArgType): boolean {
   return false;
 }
 
-export function ArgsForm({ argTypes, args, onArgsChange, armedComponentData, onDisarm }: ArgsFormProps) {
+export function ArgsForm({ argTypes, args, onArgsChange, receptivePropName, onArmField, onClearReceptive }: ArgsFormProps) {
   const entries = Object.entries(argTypes);
   if (entries.length === 0) return null;
 
@@ -32,8 +32,15 @@ export function ArgsForm({ argTypes, args, onArgsChange, armedComponentData, onD
           value={args[name]}
           onChange={(v) => handleChange(name, v)}
           isReactNode={isReactNodeProp(name, argType)}
-          armedComponentData={armedComponentData}
-          onDisarm={onDisarm}
+          isReceptive={receptivePropName === name}
+          onArmSelf={onArmField ? () => {
+            // Toggle: if this field is already receptive, clear it
+            if (receptivePropName === name) {
+              onClearReceptive?.();
+            } else {
+              onArmField(name);
+            }
+          } : undefined}
         />
       ))}
     </div>
@@ -46,16 +53,16 @@ function ArgField({
   value,
   onChange,
   isReactNode,
-  armedComponentData,
-  onDisarm,
+  isReceptive,
+  onArmSelf,
 }: {
   name: string;
   argType: ArgType;
   value: unknown;
   onChange: (value: unknown) => void;
   isReactNode: boolean;
-  armedComponentData?: ArmedComponentData | null;
-  onDisarm?: () => void;
+  isReceptive: boolean;
+  onArmSelf?: () => void;
 }) {
   // Handle both string and object control formats
   const control = typeof argType.control === 'string'
@@ -72,8 +79,8 @@ function ArgField({
           name={name}
           value={value as ReactNodeArgValue | undefined}
           onChange={(v) => onChange(v)}
-          armedComponentData={armedComponentData}
-          onDisarm={onDisarm}
+          isReceptive={isReceptive}
+          onArmSelf={onArmSelf}
         />
       ) : control === 'select' && argType.options ? (
         <select

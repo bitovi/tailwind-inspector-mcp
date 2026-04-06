@@ -1,13 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ReactNodeField } from './ReactNodeField';
-import type { ArmedComponentData } from '../../types';
-
-const armedData: ArmedComponentData = {
-  componentName: 'Icon',
-  storyId: 'components-icon--default',
-  ghostHtml: '<svg width="12" height="12"></svg>',
-  ghostCss: '',
-};
 
 test('renders empty text input by default', () => {
   render(<ReactNodeField name="iconLeft" value={undefined} onChange={() => {}} />);
@@ -26,41 +18,43 @@ test('calls onChange with text value on typing', () => {
   expect(onChange).toHaveBeenCalledWith({ type: 'text', value: 'New text' });
 });
 
-test('shows receptive placeholder when armed', () => {
+test('shows receptive placeholder when field is receptive', () => {
   render(
     <ReactNodeField
       name="iconLeft"
       value={undefined}
       onChange={() => {}}
-      armedComponentData={armedData}
+      isReceptive={true}
     />
   );
-  expect(screen.getByPlaceholderText('Click to set Icon')).toBeInTheDocument();
+  expect(screen.getByPlaceholderText('Pick a component →')).toBeInTheDocument();
 });
 
-test('assigns component on click when armed', () => {
-  const onChange = vi.fn();
-  const onDisarm = vi.fn();
+test('arm button calls onArmSelf', () => {
+  const onArmSelf = vi.fn();
   render(
     <ReactNodeField
       name="iconLeft"
       value={undefined}
-      onChange={onChange}
-      armedComponentData={armedData}
-      onDisarm={onDisarm}
+      onChange={() => {}}
+      onArmSelf={onArmSelf}
     />
   );
-  fireEvent.click(screen.getByPlaceholderText('Click to set Icon'));
-  expect(onChange).toHaveBeenCalledWith({
-    type: 'component',
-    componentName: 'Icon',
-    storyId: 'components-icon--default',
-    componentPath: undefined,
-    args: undefined,
-    ghostHtml: '<svg width="12" height="12"></svg>',
-    ghostCss: '',
-  });
-  expect(onDisarm).toHaveBeenCalled();
+  fireEvent.click(screen.getByTitle('Set iconLeft to a component'));
+  expect(onArmSelf).toHaveBeenCalled();
+});
+
+test('arm button shows Cancel title when receptive', () => {
+  render(
+    <ReactNodeField
+      name="iconLeft"
+      value={undefined}
+      onChange={() => {}}
+      isReceptive={true}
+      onArmSelf={() => {}}
+    />
+  );
+  expect(screen.getByTitle('Cancel')).toBeInTheDocument();
 });
 
 test('renders component chip when filled', () => {

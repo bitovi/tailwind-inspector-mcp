@@ -9,34 +9,21 @@ function getTextValue(value: ReactNodeArgValue | undefined): string {
   return '';
 }
 
-export function ReactNodeField({ name, value, onChange, armedComponentData, onDisarm }: ReactNodeFieldProps) {
-  const isArmed = !!armedComponentData;
+export function ReactNodeField({ name, value, onChange, isReceptive, onArmSelf }: ReactNodeFieldProps) {
   const isFilled = value?.type === 'component';
 
   function handleTextChange(raw: string) {
     onChange({ type: 'text', value: raw });
   }
 
-  function handleAssign(e: React.MouseEvent) {
-    if (!armedComponentData) return;
-    // Stop propagation so the global disarm handler on document doesn't fire.
-    // (The props editor wrapper already stops propagation, but belt-and-suspenders.)
-    e.stopPropagation();
-    onChange({
-      type: 'component',
-      componentName: armedComponentData.componentName,
-      storyId: armedComponentData.storyId,
-      componentPath: armedComponentData.componentPath,
-      args: armedComponentData.args,
-      ghostHtml: armedComponentData.ghostHtml,
-      ghostCss: armedComponentData.ghostCss,
-    });
-    onDisarm?.();
-  }
-
   function handleClear(e: React.MouseEvent) {
     e.stopPropagation();
     onChange({ type: 'text', value: '' });
+  }
+
+  function handleArmClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onArmSelf?.();
   }
 
   if (isFilled && value?.type === 'component') {
@@ -45,7 +32,7 @@ export function ReactNodeField({ name, value, onChange, armedComponentData, onDi
         {/* Mini ghost thumbnail */}
         {value.ghostHtml && (
           <div
-            className="w-6 h-[18px] bg-bv-surface rounded shrink-0 overflow-hidden flex items-center justify-center pointer-events-none"
+            className="w-6 h-[18px] bg-white rounded shrink-0 overflow-hidden flex items-center justify-center pointer-events-none"
             dangerouslySetInnerHTML={{ __html: value.ghostHtml }}
           />
         )}
@@ -70,20 +57,33 @@ export function ReactNodeField({ name, value, onChange, armedComponentData, onDi
     );
   }
 
-  // Text input — receptive when armed
+  // Text input with arm button
   return (
-    <input
-      type="text"
-      className={`flex-1 bg-bv-surface border rounded px-1.5 py-0.5 text-[10px] text-bv-text outline-none transition-all ${
-        isArmed
-          ? 'border-bv-teal bg-bv-teal/10 animate-[receptive-pulse_2s_ease-in-out_infinite] cursor-pointer'
-          : 'border-bv-border focus:border-bv-teal'
-      }`}
-      value={getTextValue(value)}
-      placeholder={isArmed ? `Click to set ${armedComponentData!.componentName}` : '(empty)'}
-      readOnly={isArmed}
-      onChange={isArmed ? undefined : (e) => handleTextChange(e.target.value)}
-      onClick={isArmed ? handleAssign : undefined}
-    />
+    <div className="flex-1 flex items-center gap-1">
+      <input
+        type="text"
+        className={`flex-1 bg-bv-surface border rounded px-1.5 py-0.5 text-[10px] text-bv-text outline-none transition-all ${
+          isReceptive
+            ? 'border-bv-teal bg-bv-teal/10'
+            : 'border-bv-border focus:border-bv-teal'
+        }`}
+        value={getTextValue(value)}
+        placeholder={isReceptive ? 'Pick a component →' : '(empty)'}
+        readOnly={isReceptive}
+        onChange={isReceptive ? undefined : (e) => handleTextChange(e.target.value)}
+      />
+      <button
+        type="button"
+        title={isReceptive ? 'Cancel' : `Set ${name} to a component`}
+        className={`w-5 h-5 rounded flex items-center justify-center text-[11px] transition-all shrink-0 ${
+          isReceptive
+            ? 'bg-bv-teal/20 text-bv-teal border border-bv-teal'
+            : 'bg-bv-surface border border-bv-border text-bv-muted hover:border-bv-teal hover:text-bv-teal'
+        }`}
+        onClick={handleArmClick}
+      >
+        ⊞
+      </button>
+    </div>
   );
 }

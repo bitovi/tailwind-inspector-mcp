@@ -39,11 +39,17 @@ export interface ComponentGroupItemProps {
   insertMode?: 'replace' | 'place';
   /** Whether a page element is currently selected */
   hasPageSelection?: boolean;
-  /** When non-null, a component is armed — passed to ReactNode fields to make them receptive */
-  armedComponentData?: ArmedComponentData | null;
+  /** Which ReactNode field is receptive (teal target) across all components */
+  receptiveField?: { groupName: string; propName: string } | null;
+  /** Arm a ReactNode field as the receptive target */
+  onArmField?: (groupName: string, propName: string, callback: (data: ArmedComponentData) => void) => void;
+  /** Called when "Set Prop" is clicked — routes component data to the receptive field */
+  onSetProp?: (data: ArmedComponentData) => void;
+  /** Clear the receptive field */
+  onClearReceptive?: () => void;
 }
 
-export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedGhostCss, cachedHostStyles, cachedStoryBackground, cachedArgCount, onGhostExtracted, insertMode, hasPageSelection, armedComponentData }: ComponentGroupItemProps) {
+export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedGhostCss, cachedHostStyles, cachedStoryBackground, cachedArgCount, onGhostExtracted, insertMode, hasPageSelection, receptiveField, onArmField, onSetProp, onClearReceptive }: ComponentGroupItemProps) {
   const [state, dispatch] = useReducer(cardReducer, {
     ...INITIAL_STATE,
     storyBackground: cachedStoryBackground,
@@ -288,6 +294,25 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
     }
   }, [isArmed, onArm, onDisarm, state.args, state.bestStory, state.storyBackground, cachedGhostHtml, cachedGhostCss, cachedHostStyles, group.name, group.componentPath, onGhostExtracted]);
 
+  // ── Set Prop (Flow E) ──────────────────────────────────────────────────
+
+  const handleSetPropClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onSetProp) return;
+    const el = ghostRef.current as unknown as AdaptiveIframe;
+    const rawGhostHtml = el?.getComponentHtml?.() ?? state.liveGhostHtml ?? cachedGhostHtml ?? '';
+    const rawGhostCss = el?.getComponentCss?.() ?? state.liveGhostCss ?? cachedGhostCss ?? '';
+    const { ghostHtml, ghostCss } = stitchGhostSlots(rawGhostHtml, rawGhostCss, state.args);
+    onSetProp({
+      componentName: group.name,
+      storyId: state.bestStory?.id ?? '',
+      componentPath: group.componentPath,
+      args: state.args,
+      ghostHtml,
+      ghostCss,
+    });
+  }, [onSetProp, state.liveGhostHtml, state.liveGhostCss, state.args, state.bestStory, cachedGhostHtml, cachedGhostCss, group.name, group.componentPath]);
+
   // ── Customize / expand toggle ──────────────────────────────────────────
 
   const handleCustomizeClick = useCallback((e: React.MouseEvent) => {
@@ -310,8 +335,9 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   const ghostHtml = state.liveGhostHtml ?? cachedGhostHtml;
   const ghostCss = state.liveGhostCss ?? cachedGhostCss;
 
-  // Button label matches the tab context
-  const insertLabel = insertMode === 'replace' ? 'Replace' : 'Place';
+  // Button label matches the tab context — or "Set Prop" when a field is receptive
+  const isSetPropMode = !!receptiveField;
+  const insertLabel = isSetPropMode ? 'Set Prop' : (insertMode === 'replace' ? 'Replace' : 'Place');
   const armingLabel = insertMode === 'replace' ? 'Replacing' : 'Placing';
 
   // The adaptive-iframe is always rendered (hidden) once we have a bestStory.
@@ -327,9 +353,11 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   // Button state classes
   const selectBtnClass = isArmed
     ? 'border-bv-orange text-white bg-bv-orange hover:bg-[#d94425]'
-    : hasPageSelection
-      ? 'border-bv-teal text-bv-teal bg-bv-teal/10 hover:bg-bv-teal/20 hover:text-white'
-      : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi';
+    : isSetPropMode
+      ? 'border-bv-orange text-bv-orange bg-bv-orange/10 hover:bg-bv-orange/20 hover:text-white'
+      : hasPageSelection
+        ? 'border-bv-teal text-bv-teal bg-bv-teal/10 hover:bg-bv-teal/20 hover:text-white'
+        : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi';
 
   return (
     <li ref={cardRef} className="flex flex-col">
@@ -397,7 +425,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
           <button
             type="button"
             className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all cursor-pointer ${selectBtnClass}`}
-            onClick={handleInsertClick}
+            onClick={isSetPropMode ? handleSetPropClick : handleInsertClick}
           >
             {isArmed ? armingLabel : insertLabel}
           </button>
@@ -437,8 +465,25 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
                 argTypes={effectiveArgTypes}
                 args={state.args}
                 onArgsChange={handleArgsChange}
-                armedComponentData={armedComponentData}
-                onDisarm={onDisarm}
+                receptivePropName={receptiveField?.groupName === group.name ? receptiveField.propName : null}
+                onArmField={onArmField ? (propName: string) => {
+                  // Register a callback that sets the value on this component's args
+                  onArmField(group.name, propName, (data) => {
+                    handleArgsChange({
+                      ...state.args,
+                      [propName]: {
+                        type: 'component',
+                        componentName: data.componentName,
+                        storyId: data.storyId,
+                        componentPath: data.componentPath,
+                        args: data.args,
+                        ghostHtml: data.ghostHtml,
+                        ghostCss: data.ghostCss,
+                      },
+                    });
+                  });
+                } : undefined}
+                onClearReceptive={onClearReceptive}
               />
             </div>
           )}
