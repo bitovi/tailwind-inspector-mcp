@@ -19,11 +19,15 @@ function normalizeArgTypes(
       : typeof rt.control === 'object' && rt.control !== null
         ? (rt.control as Record<string, unknown>).type as string ?? 'text'
         : 'text';
+    const typeInfo = rt.type as Record<string, unknown> | undefined;
     result[key] = {
       control,
       options: Array.isArray(rt.options) ? rt.options as string[] : undefined,
       description: typeof rt.description === 'string' ? rt.description : undefined,
       defaultValue: rt.defaultValue,
+      type: typeInfo && typeof typeInfo.name === 'string'
+        ? { name: typeInfo.name, required: typeof typeInfo.required === 'boolean' ? typeInfo.required : undefined }
+        : undefined,
     };
   }
   return result;

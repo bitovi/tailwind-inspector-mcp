@@ -32,12 +32,43 @@ const KEEPALIVE_INTERVAL_MS = 60_000;
 // JSX builder: converts componentArgs to a JSX string like <Button variant="primary">Click me</Button>
 // ---------------------------------------------------------------------------
 
+interface ReactNodeArgValue {
+  type: 'text' | 'component';
+  value?: string;
+  componentName?: string;
+  args?: Record<string, unknown>;
+}
+
+function isReactNodeArgValue(v: unknown): v is ReactNodeArgValue {
+  if (!v || typeof v !== 'object') return false;
+  const obj = v as Record<string, unknown>;
+  return obj.type === 'text' || obj.type === 'component';
+}
+
+/**
+ * Convert a ReactNodeArgValue (or raw string) to a JSX prop value string.
+ * - text/HTML: wrap markup in {}, plain text in ""
+ * - component: recursively build nested JSX
+ */
+function reactNodeToProp(value: ReactNodeArgValue): string {
+  if (value.type === 'text') {
+    const str = value.value ?? '';
+    if (!str) return '""';
+    if (str.trim().startsWith('<')) return `{${str.trim()}}`;
+    return `"${str.replace(/"/g, '\\"')}"`;
+  }
+  // type === 'component'
+  const jsx = buildJsx(value.componentName ?? 'Component', value.args);
+  return `{${jsx}}`;
+}
+
 function buildJsx(componentName: string, args?: Record<string, unknown>): string {
   if (!args || Object.keys(args).length === 0) return `<${componentName} />`;
 
   const { children, ...rest } = args;
   const props = Object.entries(rest)
     .map(([key, value]) => {
+      if (isReactNodeArgValue(value)) return `${key}=${reactNodeToProp(value)}`;
       if (typeof value === 'string') return `${key}="${value}"`;
       if (typeof value === 'boolean') return value ? key : `${key}={false}`;
       return `${key}={${JSON.stringify(value)}}`;
@@ -47,7 +78,20 @@ function buildJsx(componentName: string, args?: Record<string, unknown>): string
   const propsStr = props ? ` ${props}` : '';
 
   if (children != null && children !== '') {
-    const childStr = typeof children === 'string' ? children : `{${JSON.stringify(children)}}`;
+    let childStr: string;
+    if (isReactNodeArgValue(children)) {
+      const propVal = reactNodeToProp(children);
+      // Unwrap the outer braces/quotes for inner content
+      if (propVal.startsWith('{') && propVal.endsWith('}')) {
+        childStr = propVal.slice(1, -1);
+      } else if (propVal.startsWith('"') && propVal.endsWith('"')) {
+        childStr = propVal.slice(1, -1);
+      } else {
+        childStr = propVal;
+      }
+    } else {
+      childStr = typeof children === 'string' ? children : `{${JSON.stringify(children)}}`;
+    }
     return `<${componentName}${propsStr}>${childStr}</${componentName}>`;
   }
   return `<${componentName}${propsStr} />`;

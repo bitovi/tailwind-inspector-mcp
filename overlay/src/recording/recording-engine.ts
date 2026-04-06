@@ -14,6 +14,8 @@ export interface RecordingEngineOptions {
   serverOrigin?: string;
   /** Callback when a new snapshot meta is available (for live push to panel) */
   onNewSnapshot?: (meta: SnapshotMeta) => void;
+  /** Called on every SPA navigation (pushState/replaceState/popstate/full-page) */
+  onNavigation?: () => void;
   /** Return true to suppress recording a click (e.g. during select/insert/pick mode) */
   isClickSuppressed?: () => boolean;
 }
@@ -191,5 +193,7 @@ export class RecordingEngine {
         url: snapshot.url,
       });
     }
+
+    this.options.onNavigation?.();
   }
 }

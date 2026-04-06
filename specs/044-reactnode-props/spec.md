@@ -127,6 +127,43 @@ The interaction reuses the existing arm pattern but targets a **prop slot** inst
 7. Badge's ghost re-renders with the composed result (Icon stitched into the `iconLeft` position)
 8. **Arming clears** — all fields return to normal. To assign the same component to another slot, arm again.
 
+### Dual-target arming: panel fields vs page
+
+Today, clicking Insert sends `COMPONENT_ARM` to the overlay immediately. The overlay sets crosshair cursor and listens for page clicks. The panel retains `armedGroup` state but not the ghost data.
+
+For ReactNode prop assignment, both the page and panel fields need to accept the armed component. This works naturally because the **panel is in a separate iframe** — the overlay's capture-phase click listener on the page document never intercepts panel clicks. No click conflict.
+
+The change: **panel retains a copy of the armed component's ghost data** alongside `armedGroup`. When a ReactNode field is clicked while armed:
+
+1. Panel reads the stashed `{ ghostHtml, ghostCss, args, componentName }` from DrawTab state
+2. Assigns it to the clicked field as a `ReactNodeArgValue` of type `'component'`
+3. Calls `onDisarm()` to clear `armedGroup`
+4. Sends `COMPONENT_DISARM` to overlay → overlay calls `cleanup()` (resets crosshair, removes click listeners)
+
+When the **page** is clicked instead (existing flow), the overlay handles placement as today and sends `COMPONENT_DISARMED` back to the panel, which clears `armedGroup`.
+
+```
+Panel (iframe)                          Overlay (page)
+────────────                            ───────────────
+User clicks Insert on Icon
+  ├─ setArmedGroup("Icon")
+  ├─ stash { ghostHtml, ghostCss, args }   ← NEW
+  └─ sendTo('overlay', COMPONENT_ARM) ───→ armInsert()
+                                            ├─ cursor = crosshair
+                                            └─ addEventListener('click')
+
+  ┌─ User clicks panel field (ReactNode)    │
+  │  ├─ assign stashed data to field        │
+  │  ├─ setArmedGroup(null)                 │
+  │  └─ sendTo('overlay', COMPONENT_DISARM) → cleanup()
+  │                                         │
+  OR                                        │
+  │                                         ├─ User clicks page element
+  │                                         │  ├─ handleComponentInsertClick()
+  │  COMPONENT_DISARMED ←───────────────────│  ├─ insert ghost, create patch
+  ├─ setArmedGroup(null)                    │  └─ cleanup()
+```
+
 ### Field states
 
 | State | Appearance |
@@ -250,10 +287,12 @@ In the `args` record, ReactNode props store `ReactNodeArgValue` objects instead 
 
 ### Phase 2: Arm → Click-to-Set Flow
 
-1. When any component is armed, all visible ReactNode fields become receptive (teal glow)
-2. Clicking a receptive field assigns the armed component's ghost + args to that slot, clears arming
-3. Filled fields show component chip with mini thumbnail + name + ✕ clear
-4. Nested ghost extraction for the assigned sub-component
+1. Stash armed component data (`ghostHtml`, `ghostCss`, `args`, `componentName`) in DrawTab state alongside `armedGroup`
+2. Thread `armedComponentData` from DrawTab → ComponentGroupItem → ArgsForm → ReactNodeField
+3. When armed, all visible ReactNode fields become receptive (teal glow via CSS)
+4. On ReactNodeField click while armed: assign stashed data to field, call `onDisarm()`, send `COMPONENT_DISARM` to overlay
+5. Add `COMPONENT_DISARM` message handler in overlay's `index.ts` → calls existing `cleanup()` on the drop zone
+6. Filled fields show component chip with mini thumbnail + name + ✕ clear
 
 ### Phase 3: Ghost Stitching Pipeline
 
@@ -272,8 +311,10 @@ In the `args` record, ReactNode props store `ReactNodeArgValue` objects instead 
 | `panel/src/components/DrawTab/hooks/useStoryProbe.ts` | Preserve `type` field during normalization |
 | `panel/src/components/DrawTab/components/ArgsForm/ArgsForm.tsx` | Conditional ReactNodeField rendering |
 | `panel/src/components/DrawTab/components/ReactNodeField/` | **New modlet** — text input + component chip |
+| `panel/src/components/DrawTab/DrawTab.tsx` | Stash armed component data, thread to children |
 | `panel/src/components/DrawTab/components/ComponentGroupItem/ComponentGroupItem.tsx` | Slot marker substitution + stitching |
 | `panel/src/components/DrawTab/utils/stitch-ghost-slots.ts` | **New** — marker replacement utility |
+| `overlay/src/index.ts` | Handle `COMPONENT_DISARM` message → cleanup drop zone |
 | `server/storybook.ts` | Add `type` to `ArgTypeInfo` |
 | `server/mcp-tools.ts` | `buildJsx()` nested JSX output |
 | `shared/html-utils.ts` | **New** — `htmlToJsx()` conversion |

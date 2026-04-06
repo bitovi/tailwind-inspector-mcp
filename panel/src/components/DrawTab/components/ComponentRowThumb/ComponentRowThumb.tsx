@@ -96,10 +96,16 @@ export function ComponentRowThumb({
     : 1.0;
   const scale = Math.max(rawScale, MIN_SCALE);
 
+  // Default to white when no story background or transparent — matches Storybook's
+  // default canvas and keeps dark-on-dark content visible against the panel surface.
+  const effectiveBg = storyBackground && storyBackground !== 'rgba(0, 0, 0, 0)'
+    ? storyBackground
+    : '#ffffff';
+
   return (
     <div
-      className="w-14 h-10 rounded bg-bv-surface overflow-hidden relative cursor-pointer shrink-0"
-      style={storyBackground ? { backgroundColor: storyBackground } : undefined}
+      className="w-14 h-10 rounded overflow-hidden relative cursor-pointer shrink-0"
+      style={{ backgroundColor: effectiveBg }}
       onClick={onClick}
     >
       <div

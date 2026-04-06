@@ -12,6 +12,7 @@ export interface ArgTypeInfo {
   options?: string[];
   description?: string;
   defaultValue?: unknown;
+  type?: { name: string; required?: boolean };
 }
 
 /**

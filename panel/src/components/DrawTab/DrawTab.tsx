@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { ArgType, ComponentGroup, StoryEntry } from './types';
+import type { ArgType, ComponentGroup, StoryEntry, ArmedComponentData } from './types';
 import type { InsertMode } from '../../../../shared/types';
 import { ComponentGroupItem } from './components/ComponentGroupItem';
 import { sendTo, onMessage } from '../../ws';
@@ -18,10 +18,19 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
   const { groups, loading, error, refetch } = useComponentGroups();
   const [armedGroup, setArmedGroup] = useState<string | null>(null);
   const [armedCanvas, setArmedCanvas] = useState(false);
+  const [armedComponentData, setArmedComponentData] = useState<ArmedComponentData | null>(null);
   const { getCachedGhost, submitToCache } = useGhostCache();
 
   const arm = useCallback((group: ComponentGroup, ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => {
     setArmedGroup(group.name);
+    setArmedComponentData({
+      componentName: group.name,
+      storyId: group.stories[0]?.id ?? '',
+      componentPath: group.componentPath,
+      args,
+      ghostHtml,
+      ghostCss,
+    });
     onArmedChange?.(true);
     sendTo('overlay', {
       type: 'COMPONENT_ARM',
@@ -37,6 +46,7 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
 
   const disarm = useCallback(() => {
     setArmedGroup(null);
+    setArmedComponentData(null);
     onArmedChange?.(false);
     sendTo('overlay', { type: 'COMPONENT_DISARM' });
   }, [onArmedChange]);
@@ -47,6 +57,7 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
       if (msg.type === 'COMPONENT_DISARMED') {
         setArmedGroup(null);
         setArmedCanvas(false);
+        setArmedComponentData(null);
         onArmedChange?.(false);
       }
     });
@@ -59,6 +70,7 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
     const handler = () => {
       setArmedGroup(null);
       setArmedCanvas(false);
+      setArmedComponentData(null);
       onArmedChange?.(false);
       sendTo('overlay', { type: 'COMPONENT_DISARM' });
     };
@@ -131,6 +143,7 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
                   onGhostExtracted={submitToCache}
                   insertMode={insertMode}
                   hasPageSelection={hasPageSelection}
+                  armedComponentData={armedComponentData}
                 />
               );
             })}

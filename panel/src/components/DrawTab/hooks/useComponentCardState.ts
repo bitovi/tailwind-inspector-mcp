@@ -112,7 +112,7 @@ export function cardReducer(state: CardState, action: CardAction): CardState {
 
     // ── Queue / Loading ────────────────────────────────────────────────
     case 'SLOT_ACQUIRED': {
-      if (state.phase !== 'probe-done') return state;
+      if (state.phase !== 'probe-done' && state.phase !== 'ready') return state;
       return { ...state, phase: 'loading' };
     }
     case 'IFRAME_LOADED': {

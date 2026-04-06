@@ -25,7 +25,6 @@ import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler 
 import { showDrawButton, positionWithFlip, positionBothMenus, isToolbarDragged, initToolbar } from "./element-toolbar";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
-import { createNavigationInterceptor } from "./recording/navigation-interceptor";
 import type { BugReportElement } from "../../shared/types";
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
@@ -433,6 +432,10 @@ function getDefaultContainer(): ContainerName {
 }
 
 function init(): void {
+	// Running inside the VyBit panel itself — do not activate the overlay.
+	// This prevents infinite nesting when the panel is embedded in a sidebar.
+	if ((window as any).__VYBIT_PANEL__) return;
+
 	// Ghost frames used for component extraction must not run the overlay —
 	// they would send spurious RESET_SELECTION messages. Ghost frames get
 	// ?vybit-ghost=1 from AdaptiveIframe.
@@ -472,11 +475,6 @@ function init(): void {
 		btn.style.display = 'none';
 	}
 	state.shadowRoot.appendChild(btn);
-
-	// SPA navigation — reset all interaction state and return to select mode
-	createNavigationInterceptor(() => {
-		if (state.active) resetOnNavigation();
-	});
 
 	// Storybook story change — reset all interaction state and return to select mode
 	window.addEventListener('message', (event) => {
@@ -888,6 +886,9 @@ const recordingEngine = new RecordingEngine({
 	serverOrigin: SERVER_ORIGIN,
 	onNewSnapshot: (meta) => {
 		sendTo("panel", { type: "RECORDING_SNAPSHOT_META", meta });
+	},
+	onNavigation: () => {
+		if (state.active) resetOnNavigation();
 	},
 	isClickSuppressed: () => state.selectModeOn || state.currentMode === 'insert' || bugReportPickCleanup !== null,
 });

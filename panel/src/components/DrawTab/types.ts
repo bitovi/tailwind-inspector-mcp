@@ -3,6 +3,30 @@ export interface ArgType {
   options?: string[];
   description?: string;
   defaultValue?: unknown;
+  type?: { name: string; required?: boolean };
+}
+
+/** A value stored in a ReactNode-eligible prop field */
+export type ReactNodeArgValue =
+  | { type: 'text'; value: string }
+  | {
+      type: 'component';
+      componentName: string;
+      storyId: string;
+      componentPath?: string;
+      args?: Record<string, unknown>;
+      ghostHtml?: string;
+      ghostCss?: string;
+    };
+
+/** Data stashed in DrawTab when a component is armed, threaded to receptive fields */
+export interface ArmedComponentData {
+  componentName: string;
+  storyId: string;
+  componentPath?: string;
+  args?: Record<string, unknown>;
+  ghostHtml: string;
+  ghostCss: string;
 }
 
 export interface StoryEntry {

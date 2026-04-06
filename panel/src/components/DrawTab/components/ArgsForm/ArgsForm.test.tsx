@@ -48,6 +48,7 @@ describe('ArgsForm', () => {
     );
     const input = screen.getByRole('textbox');
     expect(input).toBeInTheDocument();
+    // children is detected as ReactNode; plain string value is displayed via backward-compat path
     expect(input).toHaveValue('Hello');
   });
 
@@ -61,7 +62,8 @@ describe('ArgsForm', () => {
       />
     );
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'World' } });
-    expect(onChange).toHaveBeenCalledWith({ children: 'World' });
+    // children is a ReactNode field — emits ReactNodeArgValue
+    expect(onChange).toHaveBeenCalledWith({ children: { type: 'text', value: 'World' } });
   });
 
   test('renders a checkbox for boolean control type', () => {
