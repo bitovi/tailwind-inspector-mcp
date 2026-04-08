@@ -12,6 +12,7 @@ interface TextEditDeps {
   currentEquivalentNodes: HTMLElement[];
   buildTextContext: (target: HTMLElement, originalClassMap: Map<HTMLElement, string>) => string;
   positionToolbar: () => void;
+  repositionHighlights: () => void;
   shadowRoot: ShadowRoot;
   onDone?: () => void;
 }
@@ -27,9 +28,22 @@ let cleanupAutoUpdate: (() => void) | null = null;
 // Listeners stored for cleanup
 let keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 let blurHandler: (() => void) | null = null;
+let inputHandler: (() => void) | null = null;
 
 export function isTextEditing(): boolean {
   return isEditing;
+}
+
+/**
+ * If text editing is active, suppress the click so page handlers
+ * (button onClick, <a> navigation, form submit) don't fire.
+ * Cursor placement uses mousedown, not click, so editing is unaffected.
+ */
+export function handleTextEditingClick(e: MouseEvent): boolean {
+  if (!isEditing) return false;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  return true;
 }
 
 export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps): void {
@@ -79,6 +93,13 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
     }, 200);
   };
   targetEl.addEventListener('blur', blurHandler);
+
+  // Reposition highlights + action bar as text content changes element size
+  inputHandler = () => {
+    deps!.repositionHighlights();
+    deps!.positionToolbar();
+  };
+  targetEl.addEventListener('input', inputHandler);
 
   // Notify panel
   deps.sendTo('panel', { type: 'TEXT_EDIT_ACTIVE' });
@@ -131,6 +152,10 @@ export function endTextEdit(confirm: boolean): void {
   if (blurHandler) {
     editTarget.removeEventListener('blur', blurHandler);
     blurHandler = null;
+  }
+  if (inputHandler) {
+    editTarget.removeEventListener('input', inputHandler);
+    inputHandler = null;
   }
   if (blurTimer != null) {
     clearTimeout(blurTimer);

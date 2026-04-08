@@ -229,7 +229,15 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
         setGroups(prev => {
           const allMetas = flattenToMetas(prev);
           allMetas.push(msg.meta as SnapshotMeta);
-          return buildGroups(allMetas);
+          const rebuilt = buildGroups(allMetas);
+          // Preserve checked state from previous groups
+          const prevCheckedIds = new Set(prev.filter(g => g.checked).map(g => g.primary.id));
+          for (const g of rebuilt) {
+            if (prevCheckedIds.has(g.primary.id)) {
+              g.checked = true;
+            }
+          }
+          return rebuilt;
         });
       } else if (msg.type === 'BUG_REPORT_ELEMENT_PICKED') {
         setPickedElement(msg.element);

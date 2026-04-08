@@ -2,7 +2,7 @@
 // Extracted from index.ts. Contains showDrawButton() and showGroupPicker().
 
 import { computePosition, flip, offset, shift } from "@floating-ui/dom";
-import { cancelInsert, clearLockedInsert, startBrowse } from "./drop-zone";
+import { cancelInsert, clearLockedInsert, getLockedInsert, startBrowse } from "./drop-zone";
 import { highlightElement, clearHighlights, removeDrawButton } from "./element-highlight";
 import { computeNearGroups, findSamePathElements } from "./grouping";
 import type { PathMatchResult } from "./grouping";
@@ -10,7 +10,7 @@ import { state, resolveTab, clearSelectionState } from "./overlay-state";
 import { revertPreview } from "./patcher";
 import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
-import { buildTextContext } from "./context";
+import { buildContext, buildTextContext } from "./context";
 import { send, sendTo } from "./ws";
 
 // Detect Web Speech API (Chrome/Edge: webkitSpeechRecognition, Safari: SpeechRecognition)
@@ -332,6 +332,10 @@ export function showDrawButton(targetEl: HTMLElement): void {
 						currentEquivalentNodes: state.currentEquivalentNodes,
 						buildTextContext,
 						positionToolbar: () => positionWithFlip(targetEl, toolbar),
+						repositionHighlights: () => {
+							clearHighlights();
+							state.currentEquivalentNodes.forEach((n) => highlightElement(n));
+						},
 						shadowRoot: state.shadowRoot,
 						onDone: () => showDrawButton(targetEl),
 					});
@@ -457,12 +461,27 @@ function createMsgRow(
 		const text = msgInput.value.trim();
 		if (!text) return;
 		const id = crypto.randomUUID();
+
+		// Build placement context from the current target element
+		const targetEl = state.currentTargetEl;
+		const locked = getLockedInsert();
+		const target = targetEl
+			? { tag: targetEl.tagName.toLowerCase(), classes: typeof targetEl.className === 'string' ? targetEl.className : '', innerText: targetEl.innerText?.slice(0, 100) ?? '' }
+			: undefined;
+		const context = targetEl ? buildContext(targetEl, '', '', new Map()) : undefined;
+		const insertMode = locked?.position;
+		const pageUrl = window.location.href;
+
 		send({
 			type: "MESSAGE_STAGE",
 			id,
 			message: text,
 			elementKey: boundary?.componentName ?? "",
 			component: boundary ? { name: boundary.componentName } : undefined,
+			target,
+			context,
+			insertMode,
+			pageUrl,
 		});
 		msgInput.value = "";
 		msgInput.style.height = "auto";

@@ -1,5 +1,5 @@
 import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor } from "./drop-zone";
-import { isTextEditing, endTextEdit } from "./text-edit";
+import { isTextEditing, handleTextEditingClick, endTextEdit } from "./text-edit";
 import type { ContainerName } from "./containers/IContainer";
 import { ModalContainer } from "./containers/ModalContainer";
 import { PopoverContainer } from "./containers/PopoverContainer";
@@ -11,7 +11,7 @@ import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { findExactMatches } from "./grouping";
-import { getFiber, findComponentBoundary, extractComponentProps } from "./fiber";
+import { getFiber, findComponentBoundary, extractComponentProps, getDOMNode } from "./fiber";
 import type { InsertMode } from "./messages";
 import {
 	applyPreview,
@@ -142,6 +142,9 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	const composed = e.composedPath();
 	if (composed.some((el) => el === state.shadowHost)) { return; }
 
+	// While text editing, suppress page click handlers (buttons, links, etc.)
+	if (handleTextEditingClick(e)) return;
+
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
 
@@ -154,12 +157,15 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	)
 		return;
 
+	// When select mode is off, only intercept shift+clicks for multi-select
+	if (!state.selectModeOn && !e.shiftKey) return;
+
 	e.preventDefault();
 	e.stopPropagation();
 
 	const target = e.target as Element;
 	const targetEl = target as HTMLElement;
-	const classString =
+	let classString =
 		typeof targetEl.className === "string" ? targetEl.className : "";
 
 	// ── Add-mode: toggle element in/out of selection ──
@@ -293,6 +299,18 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 		const boundary = findComponentBoundary(fiber);
 		if (boundary) {
 			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
+			componentName = boundary.componentName;
+
+			// Use the component root element's className instead of e.target's
+			// so clicks on inner elements (e.g. spans inside a Button) still
+			// send the full component class string to the panel.
+			const rootEl = getDOMNode(boundary.componentFiber);
+			if (rootEl && rootEl !== targetEl) {
+				const rootClassName = rootEl.className;
+				if (typeof rootClassName === "string" && rootClassName) {
+					classString = rootClassName;
+				}
+			}
 		}
 	}
 
@@ -347,7 +365,8 @@ function setSelectMode(on: boolean): void {
 		document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
 	} else {
 		document.documentElement.style.cursor = "";
-		document.removeEventListener("click", clickHandler, { capture: true });
+		// Keep clickHandler registered for shift+click multi-select;
+		// it will early-return for non-shift clicks when selectModeOn is false
 		document.removeEventListener("mousemove", mouseMoveHandler);
 		clearHoverPreview();
 	}

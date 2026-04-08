@@ -58,6 +58,12 @@ export function findComponentBoundary(fiber: any): ComponentInfo | null {
   let current = fiber.return;
   while (current) {
     const t = current.type;
+    // Skip host fibers (DOM elements like div, button, span) — only match
+    // actual React components (functions, forwardRef, memo, classes).
+    if (typeof t === 'string') {
+      current = current.return;
+      continue;
+    }
     const name = resolveComponentName(t);
     if (name) {
       return { componentType: t, componentName: name, componentFiber: current };

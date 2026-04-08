@@ -161,9 +161,13 @@ function buildCommitInstructions(commit: Commit, remainingCount: number): string
 ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 `;
     } else if (patch.kind === 'message') {
+      const comp = patch.component?.name;
+      const tag = patch.target?.tag;
+      const context = patch.context ?? '';
+      const insertMode = patch.insertMode;
       patchList += `### ${stepNum}. User message
 > ${patch.message}
-${patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
+${comp ? `- **Component:** \`${comp}\`\n` : ''}${tag ? `- **Element:** \`<${tag}>\`\n` : ''}${insertMode ? `- **Insert position:** ${insertMode} the element\n` : ''}${patch.pageUrl ? `- **Page:** ${patch.pageUrl}\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}${!comp && patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
 `;
     } else if (patch.kind === 'design') {
       const comp = patch.component?.name ?? 'unknown component';

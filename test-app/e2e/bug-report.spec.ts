@@ -66,7 +66,7 @@ test.describe('Bug Report Mode', () => {
     await page.waitForTimeout(500);
 
     // Should show the bug report mode UI
-    await expect(frame.getByText('Bug Report')).toBeVisible({ timeout: 5000 });
+    await expect(frame.getByText('Bug Report', { exact: true })).toBeVisible({ timeout: 5000 });
     await expect(frame.getByPlaceholder('Describe the bug…')).toBeVisible({ timeout: 5000 });
   });
 
@@ -198,26 +198,32 @@ test.describe('Bug Report Mode', () => {
       ).length;
     });
 
-    // If there are events, clicking one should check it
+    // If there are events, clicking one should toggle it
     if (eventCount > 0) {
-      // Click the first event's primary row (the div with cursor-pointer)
+      // Read the initial selected count
+      const initialCount = await frame.evaluate(() => {
+        const el = Array.from(document.querySelectorAll('span')).find(s => /^\d+$/.test(s.textContent ?? ''));
+        return el ? parseInt(el.textContent!, 10) : -1;
+      });
+
+      // Click the primary row using evaluate
       await frame.evaluate(() => {
         const allDivs = Array.from(document.querySelectorAll('div'));
-        // Find the primary row — contains a trigger badge and cursor-pointer
         const primaryRow = allDivs.find(d => {
           const style = d.className || '';
           return style.includes('cursor-pointer') && d.querySelector('span');
         });
         if (primaryRow) primaryRow.click();
       });
-      await page.waitForTimeout(500);
 
-      // The selected event group should now have a teal left border
-      const hasCheckedGroup = await frame.evaluate(() => {
-        const divs = Array.from(document.querySelectorAll('div'));
-        return divs.some(d => d.className?.includes('border-l-[#00848B]'));
-      });
-      expect(hasCheckedGroup).toBe(true);
+      // Wait for the selected count to change
+      if (initialCount > 0) {
+        // Event was auto-checked; clicking unchecks it
+        await expect(frame.getByText(new RegExp(`${initialCount - 1} events? selected`))).toBeVisible({ timeout: 5000 });
+      } else {
+        // No events checked; clicking checks one
+        await expect(frame.getByText(/[1-9]\d* events? selected/)).toBeVisible({ timeout: 5000 });
+      }
     }
   });
 });

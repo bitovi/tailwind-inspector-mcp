@@ -26,11 +26,11 @@ async function getCountBadgeText(page: Page): Promise<string> {
   });
 }
 
-/** Return the number of group rows in the currently open group picker. */
+/** Return the number of group rows (with checkboxes) in the currently open group picker. */
 async function getGroupRowCount(page: Page): Promise<number> {
   return page.evaluate(() => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    return host.shadowRoot!.querySelectorAll('.el-group-row').length;
+    return host.shadowRoot!.querySelectorAll('label.el-group-row').length;
   });
 }
 
@@ -38,8 +38,8 @@ async function getGroupRowCount(page: Page): Promise<number> {
 async function toggleGroupRow(page: Page, index: number) {
   await page.evaluate((idx) => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const rows = host.shadowRoot!.querySelectorAll('.el-group-row');
-    const cb = rows[idx]?.querySelector('input[type=checkbox]') as HTMLInputElement;
+    const checkboxes = host.shadowRoot!.querySelectorAll('.el-group-row input[type=checkbox]');
+    const cb = checkboxes[idx] as HTMLInputElement;
     if (!cb) throw new Error(`Group row ${idx} checkbox not found`);
     cb.click();
   }, index);
@@ -68,7 +68,7 @@ async function hoverGroupRow(page: Page, index: number) {
   // We need to dispatch mouseenter via JS since the element is in shadow DOM
   await page.evaluate((idx) => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const rows = host.shadowRoot!.querySelectorAll('.el-group-row');
+    const rows = host.shadowRoot!.querySelectorAll('label.el-group-row');
     const row = rows[idx] as HTMLElement;
     if (!row) throw new Error(`Group row ${idx} not found`);
     row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
@@ -79,7 +79,7 @@ async function hoverGroupRow(page: Page, index: number) {
 async function unhoverGroupRow(page: Page, index: number) {
   await page.evaluate((idx) => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const rows = host.shadowRoot!.querySelectorAll('.el-group-row');
+    const rows = host.shadowRoot!.querySelectorAll('label.el-group-row');
     const row = rows[idx] as HTMLElement;
     if (!row) throw new Error(`Group row ${idx} not found`);
     row.dispatchEvent(new MouseEvent('mouseleave', { bubbles: false }));

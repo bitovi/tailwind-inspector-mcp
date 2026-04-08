@@ -74,6 +74,10 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
             timestamp: new Date().toISOString(),
             message: msg.message,
             component: msg.component,
+            target: msg.target,
+            context: msg.context,
+            insertMode: msg.insertMode,
+            pageUrl: msg.pageUrl,
           });
           console.error(`[ws] Message patch staged: #${patch.id}`);
           broadcastPatchUpdate();
