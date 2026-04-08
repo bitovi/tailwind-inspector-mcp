@@ -1,13 +1,20 @@
 // Shared types for the PATCH protocol.
 // Imported by overlay (esbuild), panel (Vite), and server (tsx).
 
-/** Cached ghost HTML + host styles for instant component preview placeholders. */
+/** Serialized representation of a React element extracted from fiber memoizedProps.
+ *  Used as a cross-boundary contract between overlay (serialization) and panel (deserialization). */
+export interface SerializedReactElement {
+  __reactElement: true;
+  componentName: string;
+  props?: Record<string, unknown>;
+}
+
+/** Cached ghost HTML for instant component preview placeholders. */
 export interface GhostCacheEntry {
   storyId: string;
   argsHash: string;
   ghostHtml: string;
   ghostCss?: string;
-  hostStyles: Record<string, string>;
   storyBackground?: string;
   componentName: string;
   componentPath?: string;
@@ -109,6 +116,9 @@ export interface PatchSummary {
   parentComponent?: { name: string };
   targetComponentName?: string;
   targetPatchId?: string;
+  componentArgs?: Record<string, unknown>;
+  componentStoryId?: string;
+  componentPath?: string;
   // Text-change display fields:
   originalHtml?: string;
   newHtml?: string;
@@ -140,6 +150,10 @@ export interface ElementSelectedMessage {
   instanceCount: number;
   classes: string;
   tailwindConfig: any;
+  /** Serialized React Fiber memoizedProps from the nearest component boundary */
+  componentProps?: Record<string, unknown>;
+  /** When the selected element is a ghost (inserted component), the patch ID that created it */
+  ghostPatchId?: string;
 }
 
 export interface ClearHighlightsMessage {
@@ -374,6 +388,16 @@ export interface ComponentDisarmMessage {
 export interface ComponentDisarmedMessage {
   type: 'COMPONENT_DISARMED';
   to: 'panel';
+}
+
+/** Panel → Overlay (via server): update a ghost element's HTML/CSS in the page DOM */
+export interface GhostUpdateMessage {
+  type: 'GHOST_UPDATE';
+  to: 'overlay';
+  patchId: string;
+  componentName?: string;
+  ghostHtml: string;
+  ghostCss?: string;
 }
 
 // ---------------------------------------------------------------------------

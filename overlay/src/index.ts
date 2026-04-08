@@ -1,4 +1,4 @@
-import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive } from "./drop-zone";
+import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor } from "./drop-zone";
 import { isTextEditing, endTextEdit } from "./text-edit";
 import type { ContainerName } from "./containers/IContainer";
 import { ModalContainer } from "./containers/ModalContainer";
@@ -11,6 +11,7 @@ import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { findExactMatches } from "./grouping";
+import { getFiber, findComponentBoundary, extractComponentProps } from "./fiber";
 import type { InsertMode } from "./messages";
 import {
 	applyPreview,
@@ -137,10 +138,9 @@ function normalizeToHex(cssColor: string): string | null {
 }
 
 async function clickHandler(e: MouseEvent): Promise<void> {
-	console.log('[overlay-debug] clickHandler fired', { target: (e.target as Element)?.tagName, selectModeOn: state.selectModeOn, active: state.active });
 	// Ignore clicks on our own shadow DOM UI
 	const composed = e.composedPath();
-	if (composed.some((el) => el === state.shadowHost)) { console.log('[overlay-debug] click ignored: shadowHost'); return; }
+	if (composed.some((el) => el === state.shadowHost)) { return; }
 
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
@@ -231,7 +231,19 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 
 	// ── Normal click: select single element ──
 	const result = findExactMatches(targetEl, state.shadowHost);
-	const componentName = result.componentName ?? targetEl.tagName.toLowerCase();
+	let componentName = result.componentName ?? targetEl.tagName.toLowerCase();
+
+	// ── Ghost element detection ──
+	// Ghost elements are raw HTML (no React fiber), but carry data attributes
+	// that link them back to their component-drop patch.
+	const isGhostTarget = !!targetEl.dataset.twDroppedComponent;
+	const ghostAncestorEl = !isGhostTarget ? findGhostAncestor(targetEl) : null;
+	const ghostEl = isGhostTarget ? targetEl : ghostAncestorEl;
+	const ghostPatchId = ghostEl?.dataset.twDroppedPatchId ?? undefined;
+	const ghostComponentName = ghostEl?.dataset.twDroppedComponent;
+	if (ghostComponentName) {
+		componentName = ghostComponentName;
+	}
 
 	clearHighlights();
 	// Only highlight the clicked element (not all exact matches)
@@ -273,12 +285,25 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	// Send element data to Panel via WS
 	// Resolve CSS variable color values using the live DOM context
 	const resolvedConfig = config ? resolveConfigCssVars(config) : config;
+
+	// Extract component props from React Fiber if available
+	let componentProps: Record<string, unknown> | undefined;
+	const fiber = getFiber(targetEl);
+	if (fiber) {
+		const boundary = findComponentBoundary(fiber);
+		if (boundary) {
+			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
+		}
+	}
+
 	sendTo("panel", {
 		type: "ELEMENT_SELECTED",
 		componentName,
 		instanceCount: 1,
 		classes: classString,
 		tailwindConfig: resolvedConfig,
+		componentProps,
+		ghostPatchId,
 	});
 }
 
@@ -315,7 +340,6 @@ function rebuildSelectionFromSources(): void {
 export { rebuildSelectionFromSources };
 
 function setSelectMode(on: boolean): void {
-	console.log('[overlay-debug] setSelectMode', on, 'active:', state.active, 'currentMode:', state.currentMode);
 	state.selectModeOn = on;
 	if (on) {
 		document.documentElement.style.cursor = "crosshair";
@@ -527,7 +551,6 @@ function init(): void {
 
 	// Handle messages from Panel via WS
 	onMessage((msg: any) => {
-		console.log('[overlay-debug] WS message from panel:', msg.type, msg);
 		if (msg.type === "TOGGLE_SELECT_MODE") {
 			if (msg.active) {
 				state.active = true;
@@ -602,6 +625,40 @@ function init(): void {
 			// and commit it as the new baseline without telling the server.
 			applyPreview(state.currentEquivalentNodes, msg.oldClass, msg.newClass, SERVER_ORIGIN)
 				.then(() => commitPreview());
+		} else if (msg.type === "GHOST_UPDATE" && msg.patchId) {
+			// Update a ghost element's HTML/CSS in the page DOM
+			const ghostEl = document.querySelector(`[data-tw-dropped-patch-id="${msg.patchId}"]`) as HTMLElement | null;
+			if (ghostEl) {
+				const template = document.createElement('template');
+				template.innerHTML = msg.ghostHtml.trim();
+				const newContent = template.content.firstElementChild as HTMLElement | null;
+				if (newContent) {
+					// Preserve ghost tracking attributes on the replacement
+					newContent.dataset.twDroppedPatchId = msg.patchId;
+					newContent.dataset.twDroppedComponent = msg.componentName ?? ghostEl.dataset.twDroppedComponent ?? '';
+					ghostEl.replaceWith(newContent);
+					// Update current selection if we were pointing at this ghost
+					if (state.currentTargetEl === ghostEl) {
+						state.currentTargetEl = newContent;
+						state.currentEquivalentNodes = [newContent];
+						clearHighlights();
+						highlightElement(newContent);
+						showDrawButton(newContent);
+					}
+				}
+				// Update injected CSS
+				if (msg.ghostCss) {
+					const compName = msg.componentName ?? ghostEl.dataset.twDroppedComponent ?? 'unknown';
+					const styleId = `vybit-ghost-css-${compName}`;
+					let styleEl = document.getElementById(styleId);
+					if (!styleEl) {
+						styleEl = document.createElement('style');
+						styleEl.id = styleId;
+						document.head.appendChild(styleEl);
+					}
+					styleEl.textContent = msg.ghostCss;
+				}
+			}
 		} else if (
 			msg.type === "PATCH_STAGE" &&
 			state.currentTargetEl &&

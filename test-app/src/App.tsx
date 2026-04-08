@@ -1,6 +1,7 @@
 import { Button } from './components/Button'
 import { Card } from './components/Card'
 import { Badge } from './components/Badge'
+import { Icon } from './components/Icon'
 import { Tag } from './components/Tag'
 
 const CASES = [
@@ -79,12 +80,12 @@ function App() {
         {/* Buttons section — tests multiple instances with different variants */}
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Buttons (6 instances of Button)</h2>
         <div className="flex flex-wrap gap-3 mb-12">
-          <Button variant="primary">Primary</Button>
+          <Button variant="primary" leftIcon={<Icon name="star" />}>Primary</Button>
           <Button variant="secondary">Secondary</Button>
-          <Button variant="primary">Submit</Button>
-          <Button variant="secondary">Reset</Button>
-          <Button variant="primary">Confirm</Button>
-          <Button variant="secondary">Back</Button>
+          <Button variant="primary" leftIcon={<Icon name="check" />}>Submit</Button>
+          <Button variant="secondary" rightIcon={<Icon name="arrow-right" />}>Reset</Button>
+          <Button variant="primary" leftIcon={<Icon name="heart" />} rightIcon={<Icon name="arrow-right" />}>Confirm</Button>
+          <Button variant="secondary" leftIcon={<Icon name="arrow-left" />}>Back</Button>
         </div>
 
         {/* Badges — tests small inline components */}

@@ -33,7 +33,7 @@ export function ComponentRowThumb({
 
   // Measure the ghost content's intrinsic dimensions after the ShadowGhost
   // renders its shadow DOM.  This covers cached ghosts (which don't go
-  // through the adaptive-iframe and therefore have naturalWidth=0).
+  // through the story extractor and therefore have naturalWidth=0).
   useEffect(() => {
     if (!hasGhost || !innerRef.current) return;
     // If we already have iframe-measured dimensions, skip

@@ -3,14 +3,13 @@ import type { GhostCacheEntry } from '../../../shared/types';
 
 interface GhostCacheResult {
   /** Look up a cached ghost by storyId and optional args. */
-  getCachedGhost: (storyId: string, args?: Record<string, unknown>) => { ghostHtml: string; ghostCss?: string; hostStyles: Record<string, string>; storyBackground?: string; argCount?: number } | null;
+  getCachedGhost: (storyId: string, args?: Record<string, unknown>) => { ghostHtml: string; ghostCss?: string; storyBackground?: string; argCount?: number } | null;
   /** Submit (or refresh) a ghost in the server cache. Fire-and-forget. */
   submitToCache: (params: {
     storyId: string;
     args?: Record<string, unknown>;
     ghostHtml: string;
     ghostCss?: string;
-    hostStyles: Record<string, string>;
     storyBackground?: string;
     componentName: string;
     componentPath?: string;
@@ -60,7 +59,7 @@ export function useGhostCache(): GhostCacheResult {
     const key = cacheKey(storyId, args);
     const entry = cacheRef.current.get(key);
     if (!entry) return null;
-    return { ghostHtml: entry.ghostHtml, ghostCss: entry.ghostCss, hostStyles: entry.hostStyles, storyBackground: entry.storyBackground, argCount: entry.argCount };
+    return { ghostHtml: entry.ghostHtml, ghostCss: entry.ghostCss, storyBackground: entry.storyBackground, argCount: entry.argCount };
   }, []);
 
   const submitToCache = useCallback((params: {
@@ -68,7 +67,6 @@ export function useGhostCache(): GhostCacheResult {
     args?: Record<string, unknown>;
     ghostHtml: string;
     ghostCss?: string;
-    hostStyles: Record<string, string>;
     storyBackground?: string;
     componentName: string;
     componentPath?: string;
@@ -85,7 +83,6 @@ export function useGhostCache(): GhostCacheResult {
       argsHash: argsHashKey(params.args),
       ghostHtml: params.ghostHtml,
       ghostCss: params.ghostCss,
-      hostStyles: params.hostStyles,
       storyBackground: params.storyBackground,
       componentName: params.componentName,
       componentPath: params.componentPath,
@@ -105,7 +102,6 @@ export function useGhostCache(): GhostCacheResult {
         args: params.args,
         ghostHtml: params.ghostHtml,
         ghostCss: params.ghostCss,
-        hostStyles: params.hostStyles,
         storyBackground: params.storyBackground,
         componentName: params.componentName,
         componentPath: params.componentPath,

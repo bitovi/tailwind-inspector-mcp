@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     include: [
       'server/tests/**/*.test.ts',
-      'overlay/src/**/*.test.ts',
+      'overlay/src/**/*.test.{ts,tsx}',
     ],
     environment: 'node',
     pool: 'forks',

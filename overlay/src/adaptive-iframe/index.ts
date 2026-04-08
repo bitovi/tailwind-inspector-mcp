@@ -1,5 +1,4 @@
 export { AdaptiveIframe } from './adaptive-iframe';
-export { extractStyles, applyStylesToHost, injectChildStyles } from './style-cloner';
 
 import { AdaptiveIframe } from './adaptive-iframe';
 

@@ -34,6 +34,24 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
     });
   });
 
+  // Test pages for ghost extraction/stitching visual comparison
+  app.get("/ghost-comparison.html", (_req, res) => {
+    res.sendFile(path.join(packageRoot, "test-app", "ghost-comparison.html"), (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  });
+  app.get("/ghost-stitching.html", (_req, res) => {
+    res.sendFile(path.join(packageRoot, "test-app", "ghost-stitching.html"), (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  });
+  app.get("/story-extractor.js", (_req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.sendFile(path.join(packageRoot, "overlay", "dist", "story-extractor.js"), (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  });
+
   app.get("/api/info", async (_req, res) => {
     try {
       const tailwindVersion = await getTailwindVersion();
@@ -97,12 +115,12 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
   });
 
   app.post('/api/ghost-cache', express.json({ limit: '2mb' }), (req, res) => {
-    const { storyId, args, ghostHtml, ghostCss, hostStyles, storyBackground, componentName, componentPath, argCount } = req.body;
+    const { storyId, args, ghostHtml, ghostCss, storyBackground, componentName, componentPath, argCount } = req.body;
     if (!storyId || typeof ghostHtml !== 'string') {
       res.status(400).json({ error: 'storyId and ghostHtml are required' });
       return;
     }
-    setCachedGhost({ storyId, args, ghostHtml, ghostCss, hostStyles: hostStyles ?? {}, storyBackground, componentName: componentName ?? '', componentPath, argCount });
+    setCachedGhost({ storyId, args, ghostHtml, ghostCss, storyBackground, componentName: componentName ?? '', componentPath, argCount });
     res.json({ ok: true });
   });
 

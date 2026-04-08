@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerSwitcher } from "./components/ContainerSwitcher";
 import { DrawTab } from "./components/DrawTab";
 import { ModeToggle } from "./components/ModeToggle";
@@ -76,6 +76,15 @@ function InspectorApp() {
 	const isPicking = rawIsPicking && !isComponentArmed;
 	// Teal = target is locked (element selected or insert point set)
 	const isEngaged = !!elementData || !!insertPoint;
+
+	// When a ghost element is selected, resolve its componentArgs from the draft patch queue
+	const resolvedComponentProps = useMemo(() => {
+		if (elementData?.componentProps) return elementData.componentProps;
+		if (!elementData?.ghostPatchId) return undefined;
+		const ghostPatch = patchManager.queueState.draft.find(p => p.id === elementData.ghostPatchId);
+		if (ghostPatch?.componentArgs) return ghostPatch.componentArgs;
+		return undefined;
+	}, [elementData?.componentProps, elementData?.ghostPatchId, patchManager.queueState.draft]);
 
 	const handleArmedChange = useCallback((armed: boolean) => {
 		setIsComponentArmed(armed);
@@ -427,7 +436,7 @@ function InspectorApp() {
 								isEngaged={isEngaged}
 							/>
 							<div className="flex-1 min-w-0">
-								<span className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight">
+								<span className="font-display font-bold text-[13px] text-bv-text leading-tight">
 									Bug Report
 								</span>
 							</div>
@@ -493,9 +502,9 @@ function InspectorApp() {
 				<TabBar tabs={currentTabs} activeTab={activeTab} onTabChange={handleTabChange} />
 				<div className="flex-1 overflow-auto">
 				{activeTab === "replace" ? (
-					<DrawTab insertMode="replace" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
+					<DrawTab insertMode="replace" hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} />
 				) : activeTab === "place" ? (
-					<DrawTab insertMode="place" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
+					<DrawTab insertMode="place" hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} />
 				) : selectModeActive ? (
 						<div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
 							<div className="w-10 h-10 rounded-full bg-bv-teal text-white flex items-center justify-center">
@@ -580,9 +589,9 @@ function InspectorApp() {
 							isPicking={isPicking}
 								isEngaged={isEngaged}
 						/>
-						<div className="font-[family-name:var(--font-display)] font-bold text-[13px] text-bv-text leading-tight truncate">
+						<div className="font-display font-bold text-[13px] text-bv-text leading-tight truncate">
 							{elementData.componentName}{" "}
-							<span className="font-[family-name:var(--font-ui)] font-normal text-bv-text-mid">
+							<span className="font-ui font-normal text-bv-text-mid">
 								— {elementData.instanceCount} instance
 								{elementData.instanceCount !== 1 ? "s" : ""}
 							</span>
@@ -610,10 +619,10 @@ function InspectorApp() {
 					/>
 				)}
 				{activeTab === "replace" && (
-					<DrawTab insertMode="replace" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
+					<DrawTab insertMode="replace" hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} />
 				)}
 				{activeTab === "place" && (
-					<DrawTab insertMode="place" hasPageSelection={!!elementData || !!insertPoint} onArmedChange={handleArmedChange} />
+					<DrawTab insertMode="place" hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} />
 				)}
 			</div>
 			{queueFooter}

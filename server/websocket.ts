@@ -3,7 +3,7 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server } from "http";
 
-import { addPatch, addAndCommit, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit, attachMessageToPatch } from "./queue.js";
+import { addPatch, addAndCommit, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit, attachMessageToPatch, updateDraftPatch } from "./queue.js";
 import type { Patch } from "../shared/types.js";
 
 export interface WebSocketDeps {
@@ -141,6 +141,18 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
           const patch = addPatch({ ...msg.patch, kind: msg.patch.kind ?? 'component-drop' });
           console.error(`[ws] Component-drop patch staged: #${patch.id}`);
           broadcastPatchUpdate();
+        } else if (msg.type === "PATCH_UPDATE") {
+          const { patchId, updates } = msg;
+          if (patchId && updates) {
+            const updated = updateDraftPatch(patchId, updates);
+            if (updated) {
+              console.error(`[ws] Draft patch updated: #${patchId}`);
+              broadcastPatchUpdate();
+            }
+          }
+        } else if (msg.type === "GHOST_UPDATE") {
+          // Forward ghost DOM update to overlay(s)
+          broadcastTo("overlay", msg, ws);
         } else if (msg.type === "BUG_REPORT_STAGE") {
           const commit = addAndCommit({ ...msg.patch, kind: 'bug-report' });
           console.error(`[ws] Bug-report auto-committed: commit #${commit.id}`);

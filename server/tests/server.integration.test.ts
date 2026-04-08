@@ -21,6 +21,8 @@ import {
   markImplemented,
   onCommitted,
   getQueueUpdate,
+  addPatch,
+  updateDraftPatch,
 } from '../queue.js';
 
 import type { Patch } from '../../shared/types.js';
@@ -696,5 +698,67 @@ describe('Server integration tests', () => {
     expect(finalMsg.implementedCount).toBe(1);
 
     designWs.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateDraftPatch unit tests
+// ---------------------------------------------------------------------------
+
+describe('updateDraftPatch', () => {
+  beforeEach(() => {
+    clearAll();
+  });
+
+  it('updates fields on a staged draft patch', () => {
+    const patch = makePatch({ kind: 'component-drop', componentArgs: { label: 'Hello' } } as any);
+    addPatch(patch);
+
+    const updated = updateDraftPatch(patch.id, { componentArgs: { label: 'World' } } as any);
+    expect(updated).toBe(true);
+
+    const drafts = getByStatus('staged');
+    const found = drafts.find(p => p.id === patch.id);
+    expect(found?.componentArgs).toEqual({ label: 'World' });
+  });
+
+  it('returns false when patch ID does not exist', () => {
+    const updated = updateDraftPatch('nonexistent-id', { componentArgs: { label: 'test' } } as any);
+    expect(updated).toBe(false);
+  });
+
+  it('does not allow overwriting id or status', () => {
+    const patch = makePatch({ kind: 'component-drop' } as any);
+    addPatch(patch);
+
+    updateDraftPatch(patch.id, { id: 'hacked-id', status: 'committed' } as any);
+
+    const drafts = getByStatus('staged');
+    const found = drafts.find(p => p.id === patch.id);
+    expect(found?.id).toBe(patch.id);
+    expect(found?.status).toBe('staged');
+  });
+
+  it('updates ghostHtml, ghostCss, and componentStoryId', () => {
+    const patch = makePatch({
+      kind: 'component-drop',
+      ghostHtml: '<div>old</div>',
+      ghostCss: '.old {}',
+      componentStoryId: 'old-story',
+    });
+    addPatch(patch);
+
+    const updated = updateDraftPatch(patch.id, {
+      ghostHtml: '<div>new</div>',
+      ghostCss: '.new {}',
+      componentStoryId: 'new-story',
+    });
+    expect(updated).toBe(true);
+
+    const drafts = getByStatus('staged');
+    const found = drafts.find(p => p.id === patch.id);
+    expect(found?.ghostHtml).toBe('<div>new</div>');
+    expect(found?.ghostCss).toBe('.new {}');
+    expect(found?.componentStoryId).toBe('new-story');
   });
 });

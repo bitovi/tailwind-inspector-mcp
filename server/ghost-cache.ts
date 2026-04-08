@@ -126,7 +126,6 @@ export function setCachedGhost(entry: Omit<GhostCacheEntry, "argsHash" | "extrac
     argsHash,
     ghostHtml: entry.ghostHtml,
     ghostCss: entry.ghostCss,
-    hostStyles: entry.hostStyles,
     storyBackground: entry.storyBackground,
     componentName: entry.componentName,
     componentPath: entry.componentPath,

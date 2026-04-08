@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ghost Extraction Comparison</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f8f9fa;
+      color: #1a1a1a;
+    }
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .progress {
+      margin-bottom: 24px;
+      font-size: 0.875rem;
+      color: #666;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #00848b;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .story-row {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .story-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    .story-status {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .status-queued { background: #f0f0f0; color: #888; }
+    .status-loading { background: #fff3cd; color: #856404; }
+    .status-done { background: #d4edda; color: #155724; }
+    .status-error { background: #f8d7da; color: #721c24; }
+    .story-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #eee;
+      min-height: 120px;
+    }
+    .pane {
+      background: white;
+      padding: 8px;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .pane-label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    .source-pane {
+      min-height: 200px;
+      color: #999;
+      font-size: 0.8rem;
+    }
+    .source-pane iframe {
+      width: 100%;
+      max-width: 100%;
+      height: 200px;
+      border: none;
+    }
+    .ghost-pane {
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ghost Extraction Comparison</h1>
+  <div class="progress">
+    <span id="progress-text">Loading stories...</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <div id="stories"></div>
+
+  <script src="/story-extractor.js"></script>
+  <script>
+    // -----------------------------------------------------------------------
+    // Render ghost HTML + CSS into a shadow DOM container.
+    // @property fallbacks are already baked into ghostCss by the extractor.
+    // -----------------------------------------------------------------------
+    function renderShadowGhost(container, ghostHtml, ghostCss, storyBackground) {
+      var host = document.createElement('div');
+      host.style.minHeight = '40px';
+      var shadow = host.attachShadow({ mode: 'open' });
+
+      var style = document.createElement('style');
+      style.textContent = ':host{color:CanvasText;font-family:system-ui,sans-serif;font-size:16px;line-height:1.5}\n' + (ghostCss || '');
+      shadow.appendChild(style);
+
+      var wrapper = document.createElement('div');
+      wrapper.style.padding = '8px';
+      if (storyBackground && storyBackground !== 'rgba(0, 0, 0, 0)') {
+        wrapper.style.background = storyBackground;
+      } else {
+        wrapper.style.background = 'white';
+      }
+      wrapper.innerHTML = ghostHtml || '<em style="color:#999">No ghost HTML</em>';
+      shadow.appendChild(wrapper);
+
+      container.innerHTML = '';
+      container.appendChild(host);
+    }
+
+    // -----------------------------------------------------------------------
+    // Story fixture list
+    // -----------------------------------------------------------------------
+    var STORIES = [
+      { id: 'components-button--primary', label: 'Button (primary)' },
+      { id: 'components-button--secondary', label: 'Button (secondary)' },
+      { id: 'components-badge--blue', label: 'Badge (blue)' },
+      { id: 'components-badge--green', label: 'Badge (green)' },
+      { id: 'components-card--default', label: 'Card (has nested Badge)' },
+      { id: 'components-icon--star', label: 'Icon (SVG)' },
+      { id: 'components-icon--heart', label: 'Icon (SVG heart)' },
+      { id: 'components-tag--blue', label: 'Tag (blue)' },
+      { id: 'components-tag--red', label: 'Tag (red)' },
+    ];
+
+    var storiesDiv = document.getElementById('stories');
+    var progressText = document.getElementById('progress-text');
+    var progressFill = document.getElementById('progress-fill');
+
+    // -----------------------------------------------------------------------
+    // Build placeholder rows
+    // -----------------------------------------------------------------------
+    var rows = STORIES.map(function (story, idx) {
+      var sourceId = 'source-' + idx;
+      var row = document.createElement('div');
+      row.className = 'story-row';
+      row.dataset.storyId = story.id;
+      row.innerHTML =
+        '<div class="story-header">' +
+          '<span>' + story.label + '</span>' +
+          '<span class="story-status status-queued" data-status-el>Queued</span>' +
+        '</div>' +
+        '<div class="story-comparison">' +
+          '<div class="pane">' +
+            '<div class="pane-label">Source (Storybook iframe)</div>' +
+            '<div class="source-pane" id="' + sourceId + '">Waiting...</div>' +
+          '</div>' +
+          '<div class="pane">' +
+            '<div class="pane-label">Ghost (extracted clone)</div>' +
+            '<div class="ghost-pane" data-ghost-pane>Waiting...</div>' +
+          '</div>' +
+        '</div>';
+      storiesDiv.appendChild(row);
+      return { story: story, row: row, sourceId: sourceId };
+    });
+
+    // -----------------------------------------------------------------------
+    // Sequential extraction — one story at a time
+    // -----------------------------------------------------------------------
+    var completed = 0;
+
+    function updateProgress() {
+      var total = STORIES.length;
+      var pct = Math.round((completed / total) * 100);
+      progressText.textContent = completed + '/' + total + ' stories extracted';
+      progressFill.style.width = pct + '%';
+      if (completed === total) {
+        progressText.textContent += ' — done!';
+        document.body.dataset.status = 'done';
+      }
+    }
+    updateProgress();
+
+    function extractStory(entry) {
+      var statusEl = entry.row.querySelector('[data-status-el]');
+      var ghostPane = entry.row.querySelector('[data-ghost-pane]');
+      var sourcePane = document.getElementById(entry.sourceId);
+
+      statusEl.textContent = 'Loading...';
+      statusEl.className = 'story-status status-loading';
+      sourcePane.textContent = '';
+
+      // Create extractor with iframe visible in the source pane
+      var ext = createStoryExtractor({ iframeContainer: sourcePane });
+      var src = '/storybook/iframe.html?id=' + encodeURIComponent(entry.story.id) + '&viewMode=story&vybit-ghost=1';
+
+      return new Promise(function (resolve) {
+        var timeout = setTimeout(function () {
+          statusEl.textContent = 'Timeout';
+          statusEl.className = 'story-status status-error';
+          completed++;
+          updateProgress();
+          resolve();
+        }, 30000);
+
+        ext.load(src, {
+          onExtracted: function (data) {
+            clearTimeout(timeout);
+            renderShadowGhost(ghostPane, data.ghostHtml, data.ghostCss, data.storyBackground);
+            statusEl.textContent = 'Done';
+            statusEl.className = 'story-status status-done';
+            completed++;
+            updateProgress();
+            resolve();
+          },
+          onError: function (msg) {
+            clearTimeout(timeout);
+            statusEl.textContent = 'Error: ' + msg;
+            statusEl.className = 'story-status status-error';
+            completed++;
+            updateProgress();
+            resolve();
+          },
+        });
+      });
+    }
+
+    async function runAll() {
+      for (var i = 0; i < rows.length; i++) {
+        await extractStory(rows[i]);
+        await new Promise(function (r) { setTimeout(r, 200); });
+      }
+    }
+
+    runAll();
+  </script>
+</body>
+</html>

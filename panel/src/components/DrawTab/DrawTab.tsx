@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ArgType, ComponentGroup, StoryEntry, ArmedComponentData } from './types';
 import type { InsertMode } from '../../../../shared/types';
 import { ComponentGroupItem } from './components/ComponentGroupItem';
-import { sendTo, onMessage } from '../../ws';
+import { sendTo, send, onMessage } from '../../ws';
 import { useGhostCache } from '../../hooks/useGhostCache';
 
 interface ReceptiveFieldTarget {
@@ -15,11 +15,17 @@ interface DrawTabProps {
   insertMode?: 'replace' | 'place';
   /** Whether a page element is currently selected (enables "Replace" mode on all rows) */
   hasPageSelection?: boolean;
+  /** Component name from the selected element's React Fiber boundary */
+  selectedComponentName?: string;
+  /** Serialized props from the selected element's React Fiber memoizedProps */
+  selectedComponentProps?: Record<string, unknown>;
+  /** When the selected element is a ghost, the patch ID of the component-drop that created it */
+  ghostPatchId?: string;
   /** Called when a component is armed or disarmed */
   onArmedChange?: (armed: boolean) => void;
 }
 
-export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTabProps) {
+export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, selectedComponentProps, ghostPatchId, onArmedChange }: DrawTabProps) {
   const { groups, loading, error, refetch } = useComponentGroups();
   const [armedGroup, setArmedGroup] = useState<string | null>(null);
   const [armedCanvas, setArmedCanvas] = useState(false);
@@ -29,6 +35,20 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
   // ── Receptive field state (Flow E: Set Prop) ────────────────────────
   const [receptiveField, setReceptiveField] = useState<ReceptiveFieldTarget | null>(null);
   const setPropCallbackRef = useRef<((data: ArmedComponentData) => void) | null>(null);
+
+  /** Resolve a component name to its first story's metadata (storyId + componentPath).
+   *  Ghost HTML is NOT included — it will be extracted async with the correct
+   *  child props by useResolveChildGhosts. */
+  const resolveComponentGhost = useCallback((componentName: string): { storyId: string; componentPath?: string } | null => {
+    const match = groups.find(g => g.name === componentName);
+    if (!match) return null;
+    const firstStory = match.stories[0];
+    if (!firstStory) return null;
+    return {
+      storyId: firstStory.id,
+      componentPath: match.componentPath,
+    };
+  }, [groups]);
 
   const armField = useCallback((groupName: string, propName: string, callback: (data: ArmedComponentData) => void) => {
     // Clear any page-armed component first
@@ -70,6 +90,34 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
   const arm = useCallback((group: ComponentGroup, ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => {
     // Clear receptive field when arming for page placement
     clearReceptive();
+
+    // If we're editing an existing ghost element, update in-place instead of arming a new drop
+    if (ghostPatchId) {
+      // Update the server's draft patch
+      send({
+        type: 'PATCH_UPDATE',
+        patchId: ghostPatchId,
+        updates: {
+          componentStoryId: group.stories[0]?.id,
+          componentPath: group.componentPath,
+          componentArgs: args,
+          ghostHtml,
+          ghostCss,
+          component: { name: group.name },
+        },
+      });
+      // Update the ghost DOM in the overlay
+      send({
+        type: 'GHOST_UPDATE',
+        to: 'overlay',
+        patchId: ghostPatchId,
+        componentName: group.name,
+        ghostHtml,
+        ghostCss,
+      });
+      return;
+    }
+
     setArmedGroup(group.name);
     setArmedComponentData({
       componentName: group.name,
@@ -90,7 +138,7 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
       args,
       insertMode: insertMode === 'replace' ? 'replace' : undefined,
     });
-  }, [insertMode, onArmedChange]);
+  }, [insertMode, onArmedChange, ghostPatchId]);
 
   const disarm = useCallback(() => {
     setArmedGroup(null);
@@ -183,14 +231,21 @@ export function DrawTab({ insertMode, hasPageSelection, onArmedChange }: DrawTab
                   isArmed={armedGroup === group.name}
                   onArm={(ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => arm(group, ghostHtml, ghostCss, args)}
                   onDisarm={disarm}
-                  cachedGhostHtml={cached?.ghostHtml}
-                  cachedGhostCss={cached?.ghostCss}
-                  cachedHostStyles={cached?.hostStyles}
-                  cachedStoryBackground={cached?.storyBackground}
-                  cachedArgCount={cached?.argCount}
+                  cached={{
+                    ghostHtml: cached?.ghostHtml,
+                    ghostCss: cached?.ghostCss,
+                    storyBackground: cached?.storyBackground,
+                    argCount: cached?.argCount,
+                  }}
                   onGhostExtracted={submitToCache}
                   insertMode={insertMode}
                   hasPageSelection={hasPageSelection}
+                  selection={{
+                    matched: !!selectedComponentName && group.name === selectedComponentName,
+                    props: group.name === selectedComponentName ? selectedComponentProps : undefined,
+                    ghostPatchId: group.name === selectedComponentName ? ghostPatchId : undefined,
+                    resolveComponentGhost,
+                  }}
                   receptiveField={receptiveField}
                   onArmField={armField}
                   onSetProp={handleSetProp}

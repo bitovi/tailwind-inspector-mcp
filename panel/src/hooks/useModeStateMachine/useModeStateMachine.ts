@@ -385,6 +385,8 @@ export function useModeStateMachine(): ModeStateMachine {
               classes: msg.classes,
               parsedClasses: parseTokens(msg.classes, TAILWIND_PARSERS),
               tailwindConfig: msg.tailwindConfig,
+              componentProps: msg.componentProps,
+              ghostPatchId: msg.ghostPatchId,
             },
           });
           return true;

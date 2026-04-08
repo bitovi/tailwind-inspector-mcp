@@ -42,6 +42,8 @@ export function hasComponentSlots(args: Record<string, unknown>): boolean {
  * Stitch component slot markers back into the parent ghost HTML.
  * For each prop with a 'component' ReactNodeArgValue, replace every occurrence of
  * the ⊞propName marker in ghostHtml with the child's ghostHtml, and merge CSS.
+ * Runs up to 3 passes to resolve nested slots (e.g. a slotted component that
+ * itself has slotted children).
  */
 export function stitchGhostSlots(
   ghostHtml: string,
@@ -50,16 +52,25 @@ export function stitchGhostSlots(
 ): { ghostHtml: string; ghostCss: string } {
   let html = ghostHtml;
   let css = ghostCss;
+  const MAX_PASSES = 3;
 
-  for (const [key, value] of Object.entries(args)) {
-    if (!isReactNodeArgValue(value) || value.type !== 'component') continue;
-    const marker = `${SLOT_PREFIX}${key}`;
-    if (value.ghostHtml) {
-      html = html.split(marker).join(value.ghostHtml);
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    if (!html.includes(SLOT_PREFIX)) break;
+
+    let changed = false;
+    for (const [key, value] of Object.entries(args)) {
+      if (!isReactNodeArgValue(value) || value.type !== 'component') continue;
+      const marker = `${SLOT_PREFIX}${key}`;
+      if (!html.includes(marker)) continue;
+      if (value.ghostHtml) {
+        html = html.split(marker).join(value.ghostHtml);
+        changed = true;
+      }
+      if (value.ghostCss) {
+        css = mergeCss(css, value.ghostCss);
+      }
     }
-    if (value.ghostCss) {
-      css = mergeCss(css, value.ghostCss);
-    }
+    if (!changed) break;
   }
 
   return { ghostHtml: html, ghostCss: css };

@@ -30,3 +30,29 @@ export function rewriteHostToRoot(css: string): string {
  * styles in document-context rendering (rasterizeHtml).
  */
 export const GHOST_STYLE_RESET = 'color:CanvasText;font-family:system-ui,sans-serif;font-size:16px;line-height:1.5';
+
+/**
+ * Extract `@property` rules from CSS and convert them to explicit `:host *`
+ * variable declarations.  `@property` is a document-level feature that
+ * doesn't work inside shadow DOM `<style>` blocks — the `initial-value` is
+ * never applied.  Tailwind v4 relies on `@property` for defaults like
+ * `--tw-border-style: solid`, so without this conversion borders, shadows,
+ * and rings break inside shadow DOM ghosts.
+ *
+ * Returns CSS text like `:host, :host * { --tw-border-style: solid; ... }`.
+ */
+export function propertyRulesToFallbacks(css: string): string {
+  const regex = /@property\s+(--[\w-]+)\s*\{([^}]+)\}/g;
+  const declarations: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(css)) !== null) {
+    const name = match[1];
+    const body = match[2];
+    const ivMatch = body.match(/initial-value:\s*([^;]+)/);
+    if (ivMatch) {
+      declarations.push(`${name}:${ivMatch[1].trim()}`);
+    }
+  }
+  if (declarations.length === 0) return '';
+  return `:host,:host *{${declarations.join(';')}}`;
+}

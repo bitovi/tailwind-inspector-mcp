@@ -1,5 +1,4 @@
-import type { AdaptiveIframe } from '../../../../../overlay/src/adaptive-iframe/adaptive-iframe';
-import '../../../../../overlay/src/adaptive-iframe';
+import { createStoryExtractor, type StoryExtractor, type GhostData as ExtractorGhostData } from '../../../../../overlay/src/story-extractor';
 import { buildArgsUrl } from './useArgsUrl';
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -7,7 +6,6 @@ import { buildArgsUrl } from './useArgsUrl';
 export interface GhostData {
   ghostHtml: string;
   ghostCss: string;
-  hostStyles: Record<string, string>;
   storyBackground?: string;
   naturalWidth?: number;
   naturalHeight?: number;
@@ -15,6 +13,7 @@ export interface GhostData {
 
 interface QueueEntry {
   storyId: string;
+  args?: Record<string, unknown>;
   resolve: (data: GhostData) => void;
   reject: (error: Error) => void;
 }
@@ -37,60 +36,36 @@ export function getSharedGhostExtractor(): SharedGhostExtractor {
 // ── Class ────────────────────────────────────────────────────────────────
 
 /**
- * Manages a single hidden `<adaptive-iframe>` that extracts ghost data
- * for all components sequentially. First story loads via full page src;
- * subsequent stories navigate in-place via Storybook's `setCurrentStory`
- * postMessage — skipping the full Storybook bootstrap each time.
+ * Manages a single hidden iframe (via createStoryExtractor) that extracts
+ * ghost data for all components sequentially. First story loads via full
+ * page src; subsequent stories navigate in-place via Storybook's
+ * `setCurrentStory` postMessage — skipping the full Storybook bootstrap.
  *
- * Falls back to src change if `setCurrentStory` times out, and disables
- * in-place navigation after 2 consecutive failures.
+ * Falls back to src change if navigate times out, and disables in-place
+ * navigation after 2 consecutive failures.
  */
 class SharedGhostExtractor {
-  private iframe: AdaptiveIframe;
-  private el: HTMLElement;
+  private extractor: StoryExtractor;
   private queue: QueueEntry[] = [];
   private processing = false;
   private hasLoadedFirstStory = false;
   private navFailCount = 0;
 
-  /** After this many consecutive navigateToStory timeouts, stop trying. */
   private static MAX_NAV_FAILURES = 2;
-
-  /** Timeout for navigateToStory before falling back to src (ms). */
   private static NAV_TIMEOUT = 3000;
-
-  /** Timeout for src-based loading (ms). */
   private static SRC_TIMEOUT = 25000;
 
   constructor() {
-    const el = document.createElement('adaptive-iframe') as unknown as HTMLElement;
-    el.style.setProperty('position', 'fixed', 'important');
-    el.style.setProperty('width', '800px', 'important');
-    el.style.setProperty('height', '600px', 'important');
-    el.style.setProperty('left', '0', 'important');
-    el.style.setProperty('top', '0', 'important');
-    el.style.setProperty('opacity', '0', 'important');
-    el.style.setProperty('pointer-events', 'none', 'important');
-    el.style.setProperty('overflow', 'hidden', 'important');
-    el.style.setProperty('z-index', '-999999', 'important');
-    document.body.appendChild(el);
-
-    this.el = el;
-    this.iframe = el as unknown as AdaptiveIframe;
+    this.extractor = createStoryExtractor({ width: 800, height: 600 });
   }
 
-  /**
-   * Queue a ghost extraction for the given story. Returns a promise that
-   * resolves with the ghost data once extraction is complete.
-   */
-  extract(storyId: string): Promise<GhostData> {
+  extract(storyId: string, args?: Record<string, unknown>): Promise<GhostData> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ storyId, resolve, reject });
+      this.queue.push({ storyId, args, resolve, reject });
       this.processNext();
     });
   }
 
-  /** Remove a pending extraction request (e.g. on component unmount). */
   cancel(storyId: string): void {
     this.queue = this.queue.filter(r => r.storyId !== storyId);
   }
@@ -102,7 +77,7 @@ class SharedGhostExtractor {
     this.processing = true;
 
     const entry = this.queue.shift()!;
-    this.extractSingle(entry.storyId)
+    this.extractSingle(entry.storyId, entry.args)
       .then(data => entry.resolve(data))
       .catch(err => entry.reject(err))
       .finally(() => {
@@ -111,111 +86,89 @@ class SharedGhostExtractor {
       });
   }
 
-  private extractSingle(storyId: string): Promise<GhostData> {
+  private extractSingle(storyId: string, args?: Record<string, unknown>): Promise<GhostData> {
+    const hasArgs = args && Object.keys(args).length > 0;
     const useNav =
+      !hasArgs &&
       this.hasLoadedFirstStory &&
       this.navFailCount < SharedGhostExtractor.MAX_NAV_FAILURES;
 
     if (useNav) {
       return this.extractViaNavigate(storyId);
     }
-    return this.extractViaSrc(storyId);
+    return this.extractViaSrc(storyId, args);
+  }
+
+  private toGhostData(d: ExtractorGhostData): GhostData {
+    return {
+      ghostHtml: d.ghostHtml,
+      ghostCss: d.ghostCss,
+      storyBackground: d.storyBackground,
+      naturalWidth: d.naturalWidth,
+      naturalHeight: d.naturalHeight,
+    };
   }
 
   // ── Navigate-based extraction (fast, no page reload) ───────────────
 
   private extractViaNavigate(storyId: string): Promise<GhostData> {
     return new Promise((resolve, reject) => {
-      let cleaned = false;
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let settled = false;
 
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        this.el.removeEventListener('ghost-extracted', onExtracted);
-        this.el.removeEventListener('iframe-error', onError);
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-
-      const onExtracted = (e: Event) => {
-        cleanup();
-        this.hasLoadedFirstStory = true;
-        this.navFailCount = 0; // navigateToStory worked
-        const d = (e as CustomEvent).detail;
-        resolve({
-          ghostHtml: d.ghostHtml,
-          ghostCss: d.ghostCss,
-          hostStyles: d.hostStyles,
-          storyBackground: d.storyBackground,
-          naturalWidth: d.naturalWidth,
-          naturalHeight: d.naturalHeight,
-        });
-      };
-
-      const onError = (e: Event) => {
-        cleanup();
-        const msg = (e as CustomEvent<{ message: string }>).detail.message;
-        reject(new Error(msg));
-      };
-
-      this.el.addEventListener('ghost-extracted', onExtracted);
-      this.el.addEventListener('iframe-error', onError);
-
-      this.iframe.navigateToStory(storyId);
-
-      // Timeout → fall back to src
-      timeoutId = setTimeout(() => {
-        cleanup();
+      const navTimeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         this.navFailCount++;
         this.extractViaSrc(storyId).then(resolve, reject);
       }, SharedGhostExtractor.NAV_TIMEOUT);
+
+      this.extractor.navigate({
+        storyId,
+        onExtracted: (data) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(navTimeout);
+          this.hasLoadedFirstStory = true;
+          this.navFailCount = 0;
+          resolve(this.toGhostData(data));
+        },
+        onError: (msg) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(navTimeout);
+          reject(new Error(msg));
+        },
+      });
     });
   }
 
   // ── Src-based extraction (reliable, full page load) ────────────────
 
-  private extractViaSrc(storyId: string): Promise<GhostData> {
+  private extractViaSrc(storyId: string, args?: Record<string, unknown>): Promise<GhostData> {
     return new Promise((resolve, reject) => {
-      let cleaned = false;
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let settled = false;
 
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        this.el.removeEventListener('ghost-extracted', onExtracted);
-        this.el.removeEventListener('iframe-error', onError);
-        if (timeoutId) clearTimeout(timeoutId);
-      };
-
-      const onExtracted = (e: Event) => {
-        cleanup();
-        this.hasLoadedFirstStory = true;
-        const d = (e as CustomEvent).detail;
-        resolve({
-          ghostHtml: d.ghostHtml,
-          ghostCss: d.ghostCss,
-          hostStyles: d.hostStyles,
-          storyBackground: d.storyBackground,
-          naturalWidth: d.naturalWidth,
-          naturalHeight: d.naturalHeight,
-        });
-      };
-
-      const onError = (e: Event) => {
-        cleanup();
-        const msg = (e as CustomEvent<{ message: string }>).detail.message;
-        reject(new Error(msg));
-      };
-
-      this.el.addEventListener('ghost-extracted', onExtracted);
-      this.el.addEventListener('iframe-error', onError);
-
-      this.el.setAttribute('src', buildArgsUrl(storyId, {}));
-
-      timeoutId = setTimeout(() => {
-        cleanup();
+      const srcTimeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         reject(new Error(`Extraction timeout for story: ${storyId}`));
       }, SharedGhostExtractor.SRC_TIMEOUT);
+
+      this.extractor.load(buildArgsUrl(storyId, args ?? {}), {
+        onExtracted: (data) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(srcTimeout);
+          this.hasLoadedFirstStory = true;
+          resolve(this.toGhostData(data));
+        },
+        onError: (msg) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(srcTimeout);
+          reject(new Error(msg));
+        },
+      });
     });
   }
 }

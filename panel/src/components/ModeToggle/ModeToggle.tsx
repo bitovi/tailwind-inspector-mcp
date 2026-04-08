@@ -14,7 +14,7 @@ function buttonStyle(isActive: boolean, isPicking: boolean, isEngaged: boolean) 
 
 export function ModeToggle({ mode, onModeChange, isPicking = false, isEngaged = false }: ModeToggleProps) {
   return (
-    <div className="inline-flex items-center rounded-[6px] bg-[#1a1a1a] p-[2px] gap-[1px]">
+    <div className="inline-flex items-center rounded-md bg-[#1a1a1a] p-0.5 gap-px">
       <button
         type="button"
         onClick={() => onModeChange('select')}

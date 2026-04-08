@@ -1,6 +1,6 @@
 import { addons } from 'storybook/preview-api';
 
-// Ghost iframes are created by AdaptiveIframe for component extraction.
+// Ghost iframes are created by StoryExtractor for component extraction.
 // They must not inject the overlay or trigger story-rendered events.
 const isGhostIframe = new URLSearchParams(window.location.search).get('vybit-ghost') === '1';
 

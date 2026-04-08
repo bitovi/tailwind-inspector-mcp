@@ -23,6 +23,9 @@ function toSummary(p: Patch): PatchSummary {
     parentComponent: p.parentComponent,
     targetComponentName: p.targetComponentName,
     targetPatchId: p.targetPatchId,
+    componentArgs: p.componentArgs,
+    componentStoryId: p.componentStoryId,
+    componentPath: p.componentPath,
     originalHtml: p.originalHtml,
     newHtml: p.newHtml,
     bugDescription: p.bugDescription,
@@ -323,6 +326,20 @@ export function discardDraftPatch(id: string): boolean {
   draftPatches.length = 0;
   draftPatches.push(...remaining);
   return remaining.length < before;
+}
+
+/**
+ * Update fields on a staged draft patch in-place.
+ * Returns true if the patch was found and updated.
+ * Only works on patches still in the draft (status === 'staged').
+ */
+export function updateDraftPatch(id: string, updates: Partial<Patch>): boolean {
+  const patch = draftPatches.find(p => p.id === id && p.status === 'staged');
+  if (!patch) return false;
+  // Only allow safe field updates — never change id or status via this path
+  const { id: _id, status: _status, ...safeUpdates } = updates;
+  Object.assign(patch, safeUpdates);
+  return true;
 }
 
 /**

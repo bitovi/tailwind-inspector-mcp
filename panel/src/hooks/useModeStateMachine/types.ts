@@ -12,6 +12,10 @@ export interface ElementData {
   classes: string;
   parsedClasses: ParsedToken[];
   tailwindConfig: any;
+  /** Serialized React Fiber memoizedProps from the nearest component boundary */
+  componentProps?: Record<string, unknown>;
+  /** When the selected element is a ghost (inserted component), the patch ID that created it */
+  ghostPatchId?: string;
 }
 
 export interface InsertPoint {

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ghost Stitching Comparison</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f8f9fa;
+      color: #1a1a1a;
+    }
+    h1 { margin: 0 0 4px; font-size: 1.5rem; }
+    .subtitle { font-size: 0.875rem; color: #666; margin-bottom: 16px; }
+    .progress {
+      margin-bottom: 24px;
+      font-size: 0.875rem;
+      color: #666;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #F5532D;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    .test-row {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .test-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #eee;
+    }
+    .test-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    .test-meta {
+      font-size: 0.75rem;
+      color: #888;
+      font-family: monospace;
+    }
+    .test-status {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .status-queued { background: #f0f0f0; color: #888; }
+    .status-loading { background: #fff3cd; color: #856404; }
+    .status-done { background: #d4edda; color: #155724; }
+    .status-error { background: #f8d7da; color: #721c24; }
+    .test-comparison {
+      display: grid;
+      gap: 1px;
+      background: #eee;
+      min-height: 120px;
+    }
+    .test-comparison.has-stitch {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+    .test-comparison.no-stitch {
+      grid-template-columns: 1fr 1fr;
+    }
+    .pane {
+      background: white;
+      padding: 8px;
+      overflow: hidden;
+    }
+    .pane-label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    .ghost-render {
+      position: relative;
+    }
+    .args-display {
+      font-size: 0.7rem;
+      color: #666;
+      font-family: monospace;
+      padding: 4px 16px 8px;
+      background: #fafafa;
+      border-bottom: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ghost Stitching Comparison</h1>
+  <p class="subtitle">
+    Tests prop editing → ghost regeneration, including ReactNode slot stitching.
+    Each row loads a story with custom args, extracts the ghost, and optionally stitches slot markers.
+  </p>
+  <div class="progress">
+    <span id="progress-text">Loading...</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <div id="tests"></div>
+
+  <!-- Standalone story-extractor (not the full overlay) -->
+  <script src="/story-extractor.js"></script>
+  <script type="module">
+    // -----------------------------------------------------------------------
+    // Stitch test cases — add rows here for new edge cases
+    // -----------------------------------------------------------------------
+
+    /* Slot prefix character U+229E (⊞) */
+    const SLOT_PREFIX = '\u229E';
+
+    const STITCH_TEST_CASES = [
+      // Simple prop overrides (no stitching needed)
+      {
+        label: 'Badge: color=red',
+        storyId: 'components-badge--blue',
+        args: { color: 'red', children: 'Error' },
+      },
+      {
+        label: 'Button: variant=secondary',
+        storyId: 'components-button--primary',
+        args: { variant: 'secondary', children: 'Cancel' },
+      },
+      {
+        label: 'Badge: color=green, custom text',
+        storyId: 'components-badge--blue',
+        args: { color: 'green', children: 'Success' },
+      },
+
+      // ReactNode slot with text
+      {
+        label: 'Button: children as text override',
+        storyId: 'components-button--primary',
+        args: { variant: 'primary', children: 'Custom Label' },
+      },
+
+      // Card with prop overrides (internal Badge composition)
+      {
+        label: 'Card with custom title & tag',
+        storyId: 'components-card--default',
+        args: { title: 'Custom Title', description: 'Custom description text', tag: 'Urgent' },
+      },
+    ];
+
+    const testsDiv = document.getElementById('tests');
+    const progressText = document.getElementById('progress-text');
+    const progressFill = document.getElementById('progress-fill');
+
+    // -----------------------------------------------------------------------
+    // Build Storybook args URL format: key1:value1;key2:value2
+    // -----------------------------------------------------------------------
+    function buildArgsParam(args) {
+      const entries = Object.entries(args).filter(([, v]) => v !== undefined && v !== null);
+      if (entries.length === 0) return '';
+      return entries
+        .map(([k, v]) => {
+          // Handle ReactNodeArgValue objects
+          if (v && typeof v === 'object' && v.type === 'text') {
+            return `${encodeURIComponent(k)}:${encodeURIComponent(v.value)}`;
+          }
+          if (v && typeof v === 'object' && v.type === 'component') {
+            return `${encodeURIComponent(k)}:${encodeURIComponent(SLOT_PREFIX + k)}`;
+          }
+          return `${encodeURIComponent(k)}:${encodeURIComponent(String(v))}`;
+        })
+        .join(';');
+    }
+
+    // -----------------------------------------------------------------------
+    // Render placeholder rows
+    // -----------------------------------------------------------------------
+    const rows = STITCH_TEST_CASES.map((testCase, idx) => {
+      const sourceId = `stitch-source-${idx}`;
+      const hasStitch = Object.values(testCase.args).some(
+        v => v && typeof v === 'object' && v.type === 'component'
+      );
+      const row = document.createElement('div');
+      row.className = 'test-row';
+      row.innerHTML = `
+        <div class="test-header">
+          <div>
+            <div class="test-label">${testCase.label}</div>
+            <div class="test-meta">${testCase.storyId}</div>
+          </div>
+          <span class="test-status status-queued" data-status-el>Queued</span>
+        </div>
+        <div class="args-display">args: ${JSON.stringify(testCase.args)}</div>
+        <div class="test-comparison ${hasStitch ? 'has-stitch' : 'no-stitch'}">
+          <div class="pane">
+            <div class="pane-label">Source iframe (with args)</div>
+            <div class="source-pane" id="${sourceId}" style="min-height:200px;color:#999;font-size:0.8rem;">Waiting...</div>
+          </div>
+          <div class="pane">
+            <div class="pane-label">Ghost (extracted)</div>
+            <div class="ghost-pane" data-ghost-pane>Waiting...</div>
+          </div>
+          ${hasStitch ? `
+          <div class="pane">
+            <div class="pane-label">Stitched ghost</div>
+            <div data-stitch-pane style="color:#999;font-size:0.8rem;">Waiting...</div>
+          </div>
+          ` : ''}
+        </div>
+      `;
+      testsDiv.appendChild(row);
+      return { testCase, row, hasStitch, sourceId };
+    });
+
+    // -----------------------------------------------------------------------
+    // Sequential extraction queue
+    // -----------------------------------------------------------------------
+    let completed = 0;
+
+    function updateProgress() {
+      const total = STITCH_TEST_CASES.length;
+      const pct = Math.round((completed / total) * 100);
+      progressText.textContent = `${completed}/${total} tests complete`;
+      progressFill.style.width = `${pct}%`;
+      if (completed === total) {
+        progressText.textContent += ' — done!';
+        document.body.dataset.status = 'done';
+      }
+    }
+    updateProgress();
+
+    async function runTestCase({ testCase, row, sourceId }) {
+      const statusEl = row.querySelector('[data-status-el]');
+      const ghostPane = row.querySelector('[data-ghost-pane]');
+      const sourcePane = document.getElementById(sourceId);
+      statusEl.textContent = 'Loading...';
+      statusEl.className = 'test-status status-loading';
+      sourcePane.textContent = 'Loading iframe...';
+
+      const extractor = window.createStoryExtractor({ iframeContainer: sourcePane });
+
+      return new Promise((resolve) => {
+        let resolved = false;
+        const timeout = setTimeout(() => {
+          if (resolved) return;
+          resolved = true;
+          extractor.teardown();
+          statusEl.textContent = 'Timeout';
+          statusEl.className = 'test-status status-error';
+          completed++;
+          updateProgress();
+          resolve();
+        }, 30000);
+
+        // Build URL with args
+        const argsParam = buildArgsParam(testCase.args);
+        let src = `/storybook/iframe.html?id=${encodeURIComponent(testCase.storyId)}&viewMode=story&vybit-ghost=1`;
+        if (argsParam) {
+          src += `&args=${argsParam}`;
+        }
+
+        extractor.load(src, {
+          onExtracted: (data) => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(timeout);
+
+            // Render ghost in shadow DOM
+            const host = document.createElement('div');
+            const shadow = host.attachShadow({ mode: 'open' });
+            const style = document.createElement('style');
+            style.textContent = data.ghostCss;
+            shadow.appendChild(style);
+            shadow.innerHTML += data.ghostHtml;
+            ghostPane.innerHTML = '';
+            ghostPane.appendChild(host);
+
+            statusEl.textContent = 'Done';
+            statusEl.className = 'test-status status-done';
+            completed++;
+            updateProgress();
+            resolve();
+          },
+          onError: (msg) => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(timeout);
+            extractor.teardown();
+            statusEl.textContent = `Error: ${msg}`;
+            statusEl.className = 'test-status status-error';
+            completed++;
+            updateProgress();
+            resolve();
+          },
+        });
+      });
+    }
+
+    // Process one at a time
+    async function runAll() {
+      for (const entry of rows) {
+        await runTestCase(entry);
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+
+    setTimeout(runAll, 500);
+  </script>
+</body>
+</html>

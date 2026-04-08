@@ -7,40 +7,45 @@ import { ArgsForm } from '../ArgsForm';
 import { ComponentRowThumb } from '../ComponentRowThumb';
 import { ShadowGhost } from '../../../ShadowGhost';
 import { cardReducer, INITIAL_STATE } from '../../hooks/useComponentCardState';
+import { useResolveChildGhosts } from '../../hooks/useResolveChildGhosts';
 import { USE_SHARED_EXTRACTOR } from '../../hooks/extractorConfig';
 import { useSharedExtraction } from '../../hooks/useSharedExtraction';
-import { argsToStorybookArgs, stitchGhostSlots } from '../../utils/stitch-ghost-slots';
-import type { AdaptiveIframe } from '../../../../../../overlay/src/adaptive-iframe/adaptive-iframe';
-import '../../../../../../overlay/src/adaptive-iframe';
+import { useSelectionAutoPopulate } from '../../hooks/useSelectionAutoPopulate';
+import { argsToStorybookArgs, stitchGhostSlots, hasComponentSlots } from '../../utils/stitch-ghost-slots';
+import { getStitchedGhost } from '../../utils/getStitchedGhost';
+import { buildGhostCacheEntry } from '../../utils/buildGhostCacheEntry';
+import type { GhostCacheEntry } from '../../utils/buildGhostCacheEntry';
+import { createStoryExtractor, type StoryExtractor } from '../../../../../../overlay/src/story-extractor';
+
+export interface CachedGhostData {
+  ghostHtml?: string;
+  ghostCss?: string;
+  storyBackground?: string;
+  argCount?: number;
+}
+
+export interface SelectionContext {
+  matched?: boolean;
+  props?: Record<string, unknown>;
+  /** When the selected element is a ghost, the patch ID of the component-drop that created it */
+  ghostPatchId?: string;
+  resolveComponentGhost?: (componentName: string) => { storyId: string; ghostHtml?: string; ghostCss?: string; componentPath?: string } | null;
+}
 
 export interface ComponentGroupItemProps {
   group: ComponentGroup;
   isArmed: boolean;
   onArm: (ghostHtml: string, ghostCss: string, args?: Record<string, unknown>) => void;
   onDisarm: () => void;
-  cachedGhostHtml?: string;
-  cachedGhostCss?: string;
-  cachedHostStyles?: Record<string, string>;
-  cachedStoryBackground?: string;
-  /** Cached arg count from ghost cache — shown before probe completes */
-  cachedArgCount?: number;
-  onGhostExtracted?: (params: {
-    storyId: string;
-    args?: Record<string, unknown>;
-    ghostHtml: string;
-    ghostCss: string;
-    hostStyles: Record<string, string>;
-    storyBackground?: string;
-    componentName: string;
-    componentPath?: string;
-    argCount?: number;
-  }) => void;
+  cached?: CachedGhostData;
+  onGhostExtracted?: (params: GhostCacheEntry) => void;
   /** Which tab context: 'replace' or 'place' — drives the button label */
   insertMode?: 'replace' | 'place';
   /** Whether a page element is currently selected */
   hasPageSelection?: boolean;
   /** Which ReactNode field is receptive (teal target) across all components */
   receptiveField?: { groupName: string; propName: string } | null;
+  selection?: SelectionContext;
   /** Arm a ReactNode field as the receptive target */
   onArmField?: (groupName: string, propName: string, callback: (data: ArmedComponentData) => void) => void;
   /** Called when "Set Prop" is clicked — routes component data to the receptive field */
@@ -49,15 +54,21 @@ export interface ComponentGroupItemProps {
   onClearReceptive?: () => void;
 }
 
-export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhostHtml, cachedGhostCss, cachedHostStyles, cachedStoryBackground, cachedArgCount, onGhostExtracted, insertMode, hasPageSelection, receptiveField, onArmField, onSetProp, onClearReceptive }: ComponentGroupItemProps) {
+export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, onGhostExtracted, insertMode, hasPageSelection, selection, receptiveField, onArmField, onSetProp, onClearReceptive }: ComponentGroupItemProps) {
+  const { ghostHtml: cachedGhostHtml, ghostCss: cachedGhostCss, storyBackground: cachedStoryBackground, argCount: cachedArgCount } = cached ?? {};
+  const { matched: matchedBySelection, props: selectionProps, ghostPatchId: selectionGhostPatchId, resolveComponentGhost } = selection ?? {};
   const [state, dispatch] = useReducer(cardReducer, {
     ...INITIAL_STATE,
     storyBackground: cachedStoryBackground,
   });
   const cardRef = useRef<HTMLLIElement>(null);
-  const ghostRef = useRef<HTMLElement>(null);
+  const extractorRef = useRef<StoryExtractor | null>(null);
   const initialLoadDone = useRef(false);
   const [expanded, setExpanded] = useState(false);
+  // When the user clicks Replace/Place but the ghost is stale (component slots
+  // haven't been re-extracted yet), we defer arming and set this flag. Once
+  // the ghost catches up (ghostArgsVersion === argsVersion), we auto-arm.
+  const pendingArmRef = useRef<'insert' | 'setProp' | null>(null);
   // Keep a ref to the latest args so the ghost-extracted handler can access them
   // without needing to re-subscribe to the event on every args change.
   const argsRef = useRef<Record<string, unknown>>(state.args);
@@ -88,7 +99,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   const wantsProbe =
     state.phase !== 'idle' &&
     (state.phase === 'probing' || !cachedGhostHtml || expanded || state.loadLiveRequested) &&
-    !(state.phase === 'probe-done' || state.phase === 'loading' || state.phase === 'ready' || state.phase === 'loaded' || state.phase === 'error');
+    !(state.phase === 'probe-done' || state.phase === 'loading' || state.phase === 'ready' || state.phase === 'error');
 
   const { canProbe, releaseProbeSlot } = useProbeSlot(wantsProbe);
   const probeEnabled = wantsProbe && canProbe;
@@ -156,90 +167,92 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
     });
 
     if (state.bestStory) {
-      onGhostExtracted?.({
+      onGhostExtracted?.(buildGhostCacheEntry({
         storyId: state.bestStory.id,
         args: {},
         ghostHtml: sharedGhostData.ghostHtml,
         ghostCss: sharedGhostData.ghostCss,
-        hostStyles: sharedGhostData.hostStyles,
         storyBackground: sharedGhostData.storyBackground,
         componentName: group.name,
         componentPath: group.componentPath,
-        argCount: Object.keys(state.argTypes).length || undefined,
-      });
+        argTypes: state.argTypes,
+      }));
     }
   }, [sharedGhostData]);
 
   // ── Phase 4: Iframe src assignment ─────────────────────────────────────
 
+  // ── Phase 4+5: Create StoryExtractor, load URL, handle callbacks ─────
+
+  // Refs so callbacks always see the latest values without re-running the effect
+  const pendingArgsRef = useRef(state.pendingArgs);
+  pendingArgsRef.current = state.pendingArgs;
+  const bestStoryRef = useRef(state.bestStory);
+  bestStoryRef.current = state.bestStory;
+  const onGhostExtractedRef = useRef(onGhostExtracted);
+  onGhostExtractedRef.current = onGhostExtracted;
+  const argTypesRef = useRef(state.argTypes);
+  argTypesRef.current = state.argTypes;
+  const releaseSlotRef = useRef(releaseSlot);
+  releaseSlotRef.current = releaseSlot;
+
+  // Teardown extractor on unmount only — not on phase changes
   useEffect(() => {
-    if (state.phase !== 'loading' || !state.bestStory || !ghostRef.current || initialLoadDone.current) return;
-    initialLoadDone.current = true;
-    const url = buildArgsUrl(state.bestStory.id, {});
-    ghostRef.current.setAttribute('src', buildArgsUrl(state.bestStory.id, {}));
-  }, [state.phase, state.bestStory, state.loadLiveRequested]);
-
-  // ── Phase 5: Iframe events (loaded / error / ghost-extracted) ──────────
-
-  useEffect(() => {
-    const el = ghostRef.current as unknown as AdaptiveIframe | null;
-    if (!el?.addEventListener) return;
-
-    const handleLoaded = () => {
-      dispatch({ type: 'IFRAME_LOADED' });
-      releaseSlot();
-      // Apply any args that were queued before the iframe was ready
-      if (state.pendingArgs && state.bestStory) {
-        if (typeof el.updateArgs === 'function') {
-          el.updateArgs(state.bestStory.id, argsToStorybookArgs(state.pendingArgs));
-        }
-        dispatch({ type: 'CLEAR_PENDING_ARGS' });
-      }
-    };
-    const handleError = (e: Event) => {
-      const msg = (e as CustomEvent<{ message: string }>).detail.message;
-      dispatch({ type: 'IFRAME_ERROR', message: msg });
-      releaseSlot();
-    };
-    const handleExtracted = (e: Event) => {
-      const { ghostHtml: rawGhostHtml, ghostCss: rawGhostCss, hostStyles, storyBackground: bg, naturalWidth, naturalHeight } = (e as CustomEvent<{
-        ghostHtml: string;
-        ghostCss: string;
-        hostStyles: Record<string, string>;
-        storyBackground?: string;
-        naturalWidth?: number;
-        naturalHeight?: number;
-      }>).detail;
-
-      // Stitch any component slot markers into the extracted HTML
-      const { ghostHtml, ghostCss } = stitchGhostSlots(rawGhostHtml, rawGhostCss ?? '', argsRef.current);
-
-      if (bg || ghostHtml) dispatch({ type: 'GHOST_EXTRACTED', ghostHtml, ghostCss, storyBackground: bg, naturalWidth, naturalHeight });
-
-      if (state.bestStory) {
-        onGhostExtracted?.({
-          storyId: state.bestStory.id,
-          args: {},
-          ghostHtml,
-          ghostCss,
-          hostStyles,
-          storyBackground: bg,
-          componentName: group.name,
-          componentPath: group.componentPath,
-          argCount: Object.keys(state.argTypes).length || undefined,
-        });
-      }
-    };
-
-    el.addEventListener('iframe-loaded', handleLoaded);
-    el.addEventListener('iframe-error', handleError as EventListener);
-    el.addEventListener('ghost-extracted', handleExtracted as EventListener);
     return () => {
-      el.removeEventListener('iframe-loaded', handleLoaded);
-      el.removeEventListener('iframe-error', handleError as EventListener);
-      el.removeEventListener('ghost-extracted', handleExtracted as EventListener);
+      extractorRef.current?.teardown();
+      extractorRef.current = null;
     };
-  }, [state.phase, state.bestStory, state.pendingArgs, releaseSlot, group.name, group.componentPath, onGhostExtracted]);
+  }, []);
+
+  // Trigger load when phase reaches 'loading'
+  useEffect(() => {
+    if (state.phase !== 'loading' || !state.bestStory || initialLoadDone.current) return;
+    initialLoadDone.current = true;
+
+    const storyId = state.bestStory.id;
+    if (!extractorRef.current) {
+      extractorRef.current = createStoryExtractor({ width: 800, height: 600 });
+    }
+    const extractor = extractorRef.current;
+
+    extractor.load(buildArgsUrl(storyId, {}), {
+      onLoaded: () => {
+        dispatch({ type: 'IFRAME_LOADED' });
+        releaseSlotRef.current();
+        // Apply any args that were queued before the iframe was ready
+        const pa = pendingArgsRef.current;
+        const bs = bestStoryRef.current;
+        if (pa && bs) {
+          extractor.updateArgs(bs.id, argsToStorybookArgs(pa));
+          dispatch({ type: 'CLEAR_PENDING_ARGS' });
+        }
+      },
+      onExtracted: (data) => {
+        const { ghostHtml, ghostCss } = stitchGhostSlots(data.ghostHtml, data.ghostCss, argsRef.current);
+        const bg = data.storyBackground;
+
+        if (bg || ghostHtml) dispatch({ type: 'GHOST_EXTRACTED', ghostHtml, ghostCss, storyBackground: bg, naturalWidth: data.naturalWidth, naturalHeight: data.naturalHeight });
+
+        const bs = bestStoryRef.current;
+        if (bs) {
+          onGhostExtractedRef.current?.(buildGhostCacheEntry({
+            storyId: bs.id,
+            args: {},
+            ghostHtml,
+            ghostCss,
+            storyBackground: bg,
+            componentName: group.name,
+            componentPath: group.componentPath,
+            argTypes: argTypesRef.current,
+          }));
+        }
+      },
+      onError: (msg) => {
+        dispatch({ type: 'IFRAME_ERROR', message: msg });
+        releaseSlotRef.current();
+      },
+    });
+  }, [state.phase, state.bestStory, state.loadLiveRequested, group.name, group.componentPath]);
 
   // ── Args changes ───────────────────────────────────────────────────────
 
@@ -249,17 +262,22 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
     // even if React hasn't re-rendered yet before the iframe posts back.
     argsRef.current = newArgs;
 
-    if (!state.liveReady || !ghostRef.current || !state.bestStory) {
+    if (!state.liveReady || !extractorRef.current || !state.bestStory) {
       // Iframe not ready — queue args and request live load
       dispatch({ type: 'REQUEST_LIVE_REFRESH' });
       return;
     }
 
-    const el = ghostRef.current as unknown as AdaptiveIframe;
-    if (typeof el.updateArgs === 'function') {
-      el.updateArgs(state.bestStory.id, argsToStorybookArgs(newArgs));
+    const ext = extractorRef.current;
+    if (ext && state.bestStory) {
+      ext.updateArgs(state.bestStory.id, argsToStorybookArgs(newArgs));
     }
   }, [state.bestStory, state.liveReady]);
+
+  // ── Resolve child component ghosts (async extraction) ──────────────────
+  // When args contain ReactNodeArgValues with a storyId but no ghostHtml,
+  // trigger extraction via the shared extractor with the child's specific props.
+  useResolveChildGhosts(state.args, handleArgsChange);
 
   // ── Arm / disarm ───────────────────────────────────────────────────────
 
@@ -269,40 +287,47 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
       onDisarm();
       return;
     }
-    const el = ghostRef.current as unknown as AdaptiveIframe;
-    const rawGhostHtml = el?.getComponentHtml?.() ?? state.liveGhostHtml ?? cachedGhostHtml ?? '';
-    const rawGhostCss = el?.getComponentCss?.() ?? state.liveGhostCss ?? cachedGhostCss ?? '';
-    // Stitch any component slots into the ghost before arming so the overlay
-    // receives composed HTML instead of raw ⊞propName markers.
-    const { ghostHtml, ghostCss } = stitchGhostSlots(rawGhostHtml, rawGhostCss, state.args);
+
+    // If we have component-slot args but the ghost hasn't been re-extracted
+    // with slot markers yet (argsVersion > ghostArgsVersion), trigger a live
+    // refresh and wait — auto-arm once the ghost catches up.
+    if (hasComponentSlots(state.args) && state.argsVersion > state.ghostArgsVersion) {
+      pendingArmRef.current = 'insert';
+      dispatch({ type: 'REQUEST_LIVE_REFRESH' });
+      return;
+    }
+
+    const { ghostHtml, ghostCss } = getStitchedGhost(state.liveGhostHtml, state.liveGhostCss, cachedGhostHtml, cachedGhostCss, state.args);
     onArm(ghostHtml, ghostCss, state.args);
 
     dispatch({ type: 'REQUEST_LIVE_REFRESH' });
 
     if (onGhostExtracted && ghostHtml && state.bestStory) {
-      onGhostExtracted({
+      onGhostExtracted(buildGhostCacheEntry({
         storyId: state.bestStory.id,
         args: state.args,
         ghostHtml,
         ghostCss,
-        hostStyles: cachedHostStyles ?? {},
         storyBackground: state.storyBackground,
         componentName: group.name,
         componentPath: group.componentPath,
-        argCount: Object.keys(state.argTypes).length || undefined,
-      });
+        argTypes: state.argTypes,
+      }));
     }
-  }, [isArmed, onArm, onDisarm, state.args, state.bestStory, state.storyBackground, cachedGhostHtml, cachedGhostCss, cachedHostStyles, group.name, group.componentPath, onGhostExtracted]);
+  }, [isArmed, onArm, onDisarm, state.args, state.argsVersion, state.ghostArgsVersion, state.bestStory, state.storyBackground, state.liveGhostHtml, state.liveGhostCss, cachedGhostHtml, cachedGhostCss, group.name, group.componentPath, onGhostExtracted]);
 
   // ── Set Prop (Flow E) ──────────────────────────────────────────────────
 
   const handleSetPropClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onSetProp) return;
-    const el = ghostRef.current as unknown as AdaptiveIframe;
-    const rawGhostHtml = el?.getComponentHtml?.() ?? state.liveGhostHtml ?? cachedGhostHtml ?? '';
-    const rawGhostCss = el?.getComponentCss?.() ?? state.liveGhostCss ?? cachedGhostCss ?? '';
-    const { ghostHtml, ghostCss } = stitchGhostSlots(rawGhostHtml, rawGhostCss, state.args);
+    // Wait for fresh ghost if component slots haven't been re-extracted yet
+    if (hasComponentSlots(state.args) && state.argsVersion > state.ghostArgsVersion) {
+      pendingArmRef.current = 'setProp';
+      dispatch({ type: 'REQUEST_LIVE_REFRESH' });
+      return;
+    }
+    const { ghostHtml, ghostCss } = getStitchedGhost(state.liveGhostHtml, state.liveGhostCss, cachedGhostHtml, cachedGhostCss, state.args);
     onSetProp({
       componentName: group.name,
       storyId: state.bestStory?.id ?? '',
@@ -311,12 +336,47 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
       ghostHtml,
       ghostCss,
     });
-  }, [onSetProp, state.liveGhostHtml, state.liveGhostCss, state.args, state.bestStory, cachedGhostHtml, cachedGhostCss, group.name, group.componentPath]);
+  }, [onSetProp, state.liveGhostHtml, state.liveGhostCss, state.args, state.argsVersion, state.ghostArgsVersion, state.bestStory, cachedGhostHtml, cachedGhostCss, group.name, group.componentPath]);
+
+  // ── Auto-arm: when a deferred Replace/SetProp catches up ─────────────
+  useEffect(() => {
+    if (!pendingArmRef.current) return;
+    if (state.argsVersion > state.ghostArgsVersion) return; // still stale
+    const action = pendingArmRef.current;
+    pendingArmRef.current = null;
+
+    const { ghostHtml, ghostCss } = getStitchedGhost(state.liveGhostHtml, state.liveGhostCss, cachedGhostHtml, cachedGhostCss, state.args);
+    if (action === 'insert') {
+      onArm(ghostHtml, ghostCss, state.args);
+      dispatch({ type: 'REQUEST_LIVE_REFRESH' });
+      if (onGhostExtracted && ghostHtml && state.bestStory) {
+        onGhostExtracted(buildGhostCacheEntry({
+          storyId: state.bestStory.id,
+          args: state.args,
+          ghostHtml,
+          ghostCss,
+          storyBackground: state.storyBackground,
+          componentName: group.name,
+          componentPath: group.componentPath,
+          argTypes: state.argTypes,
+        }));
+      }
+    } else if (action === 'setProp' && onSetProp) {
+      onSetProp({
+        componentName: group.name,
+        storyId: state.bestStory?.id ?? '',
+        componentPath: group.componentPath,
+        args: state.args,
+        ghostHtml,
+        ghostCss,
+      });
+    }
+  }, [state.ghostArgsVersion]);
 
   // ── Customize / expand toggle ──────────────────────────────────────────
 
-  const handleCustomizeClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCustomizeClick = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setExpanded(prev => !prev);
     // Trigger live load if not yet loaded
     if (!state.liveReady && !state.loadLiveRequested) {
@@ -335,12 +395,36 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
   const ghostHtml = state.liveGhostHtml ?? cachedGhostHtml;
   const ghostCss = state.liveGhostCss ?? cachedGhostCss;
 
+  // ── Auto-expand + populate when matched by selection ───────────────────
+  // This effect must run AFTER effectiveArgTypes is computed (depends on
+  // state.argTypes which arrives via PROBE_COMPLETE).  It re-fires when
+  // argTypes change so that selection props are applied after probing
+  // completes — PROBE_COMPLETE resets args to defaultArgs, and we need to
+  // overlay the fiber props on top afterwards.
+
+  // ── Auto-expand + populate when matched by selection ───────────────────
+  useSelectionAutoPopulate({
+    matchedBySelection: !!matchedBySelection,
+    selectionProps,
+    effectiveArgTypes,
+    groupName: group.name,
+    liveReady: state.liveReady,
+    loadLiveRequested: state.loadLiveRequested,
+    args: state.args,
+    resolveComponentGhost: resolveComponentGhost ?? undefined,
+    propsAreStoryArgs: !!selectionGhostPatchId,
+    onExpand: () => setExpanded(true),
+    onRequestLiveRefresh: () => dispatch({ type: 'REQUEST_LIVE_REFRESH' }),
+    onArgsChange: handleArgsChange,
+    onScrollIntoView: () => cardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }),
+  });
+
   // Button label matches the tab context — or "Set Prop" when a field is receptive
   const isSetPropMode = !!receptiveField;
   const insertLabel = isSetPropMode ? 'Set Prop' : (insertMode === 'replace' ? 'Replace' : 'Place');
   const armingLabel = insertMode === 'replace' ? 'Replacing' : 'Placing';
 
-  // The adaptive-iframe is always rendered (hidden) once we have a bestStory.
+  // The per-component StoryExtractor is created once we have a bestStory.
   // With shared extractor, only mount per-component iframe for live args editing.
   const isVisible = state.phase !== 'idle';
   const bestStory = state.bestStory ?? bestStoryFromProbe;
@@ -360,7 +444,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
         : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi';
 
   return (
-    <li ref={cardRef} className="flex flex-col">
+    <li ref={cardRef} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bv-teal rounded-md' : ''}`}>
       {/* ── Compact row ── */}
       <div
         className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md cursor-pointer transition-all ${
@@ -488,27 +572,6 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cachedGhos
             </div>
           )}
         </div>
-      )}
-
-      {/* Hidden extraction engine — never visible, drives ghost-extracted events.
-          Uses ref callback to set !important styles because applyStylesToHost()
-          inside the adaptive-iframe overwrites normal inline styles with the
-          component's own computed styles (position, width, height, etc.). */}
-      {mountIframe && (
-        // @ts-expect-error — custom element not in JSX.IntrinsicElements
-        <adaptive-iframe
-          ref={(el: HTMLElement | null) => {
-            (ghostRef as React.MutableRefObject<HTMLElement | null>).current = el;
-            if (el) {
-              el.style.setProperty('position', 'absolute', 'important');
-              el.style.setProperty('width', '0', 'important');
-              el.style.setProperty('height', '0', 'important');
-              el.style.setProperty('opacity', '0', 'important');
-              el.style.setProperty('pointer-events', 'none', 'important');
-              el.style.setProperty('overflow', 'hidden', 'important');
-            }
-          }}
-        />
       )}
     </li>
   );

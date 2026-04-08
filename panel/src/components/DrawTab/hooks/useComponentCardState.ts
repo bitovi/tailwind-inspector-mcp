@@ -7,7 +7,7 @@ export type CardPhase =
   | 'cached'      // visible + cached ghost displayed, probing skipped
   | 'probing'     // probing stories for argTypes
   | 'probe-done'  // bestStory resolved, waiting for queue slot
-  | 'loading'     // adaptive-iframe rendering story
+  | 'loading'     // story extractor rendering story
   | 'ready'       // live ghost rendered OR cached ghost + live loaded
   | 'error';      // probe or iframe failed
 
@@ -22,7 +22,7 @@ export interface CardState {
   liveReady: boolean;
   storyBackground?: string;
   /**
-   * The most recently extracted ghost HTML from the live adaptive-iframe.
+   * The most recently extracted ghost HTML from the live story extractor.
    * This is the single source of truth for what the card preview displays
    * once the iframe has extracted styles — both the panel card and the
    * cached ghost HTML use this same string, so they always look identical.
@@ -39,8 +39,12 @@ export interface CardState {
   naturalHeight: number;
   error: string | null;
   pendingArgs: Record<string, unknown> | null;
-  /** True once the live adaptive-iframe has been triggered (even if still loading). */
+  /** True once the live story extractor has been triggered (even if still loading). */
   loadLiveRequested: boolean;
+  /** Monotonic counter, bumped on every ARGS_CHANGED. */
+  argsVersion: number;
+  /** The argsVersion at the time of the most recent GHOST_EXTRACTED. */
+  ghostArgsVersion: number;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────
@@ -74,6 +78,8 @@ export const INITIAL_STATE: CardState = {
   error: null,
   pendingArgs: null,
   loadLiveRequested: false,
+  argsVersion: 0,
+  ghostArgsVersion: 0,
 };
 
 // ── Reducer ──────────────────────────────────────────────────────────────
@@ -137,17 +143,19 @@ export function cardReducer(state: CardState, action: CardAction): CardState {
         storyBackground: action.storyBackground ?? state.storyBackground,
         naturalWidth: action.naturalWidth ?? state.naturalWidth,
         naturalHeight: action.naturalHeight ?? state.naturalHeight,
+        ghostArgsVersion: state.argsVersion,
       };
     }
 
     // ── Args ───────────────────────────────────────────────────────────
     case 'ARGS_CHANGED': {
+      const nextVersion = state.argsVersion + 1;
       if (state.liveReady) {
         // Iframe is ready — args can be applied immediately
-        return { ...state, args: action.args };
+        return { ...state, args: action.args, argsVersion: nextVersion };
       }
       // Iframe not ready — queue the args
-      return { ...state, args: action.args, pendingArgs: action.args };
+      return { ...state, args: action.args, pendingArgs: action.args, argsVersion: nextVersion };
     }
     case 'CLEAR_PENDING_ARGS': {
       return { ...state, pendingArgs: null };

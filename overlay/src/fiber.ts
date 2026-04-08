@@ -1,5 +1,7 @@
 // React fiber tree walking utilities
 
+import type { SerializedReactElement } from '../../shared/types';
+
 export interface ComponentInfo {
   componentType: any;
   componentName: string;
@@ -20,32 +22,44 @@ export function getFiber(domNode: Element): any | null {
 const REACT_FORWARD_REF = Symbol.for('react.forward_ref');
 const REACT_MEMO = Symbol.for('react.memo');
 
+/** Resolve a human-readable component name from a fiber type (function, forwardRef, memo, string). */
+export function resolveComponentName(type: unknown): string | null {
+  if (typeof type === 'function') {
+    return (type as any).displayName || (type as any).name || null;
+  }
+  if (typeof type === 'string') {
+    return type;
+  }
+  if (type && typeof type === 'object') {
+    const t = type as any;
+    // forwardRef
+    if (t.$$typeof === Symbol.for('react.forward_ref')) {
+      return t.displayName || t.render?.displayName || t.render?.name || null;
+    }
+    // memo
+    if (t.$$typeof === Symbol.for('react.memo')) {
+      const inner = t.type;
+      return t.displayName
+        || (typeof inner === 'function' ? inner.displayName || inner.name : null)
+        || (inner?.$$typeof === Symbol.for('react.forward_ref') ? inner.displayName || inner.render?.name : null)
+        || null;
+    }
+    // Generic object with displayName
+    return t.displayName || t.render?.displayName || t.render?.name
+      || (typeof t.type === 'function' ? t.type.displayName || t.type.name : null)
+      || null;
+  }
+  return null;
+}
+
 /** Walk .return up the fiber tree to find the nearest function/class component.
  *  Handles plain functions, forwardRef, and memo wrappers. */
 export function findComponentBoundary(fiber: any): ComponentInfo | null {
   let current = fiber.return;
   while (current) {
     const t = current.type;
-    if (typeof t === 'function') {
-      return {
-        componentType: t,
-        componentName: t.displayName || t.name || 'Unknown',
-        componentFiber: current,
-      };
-    }
-    // forwardRef: { $$typeof: Symbol(react.forward_ref), render: fn }
-    if (t && t.$$typeof === REACT_FORWARD_REF) {
-      const name = t.displayName || t.render?.displayName || t.render?.name || 'Unknown';
-      return { componentType: t, componentName: name, componentFiber: current };
-    }
-    // memo: { $$typeof: Symbol(react.memo), type: fn | forwardRef }
-    if (t && t.$$typeof === REACT_MEMO) {
-      const inner = t.type;
-      const name =
-        t.displayName ||
-        (typeof inner === 'function' ? inner.displayName || inner.name : null) ||
-        (inner?.$$typeof === REACT_FORWARD_REF ? inner.displayName || inner.render?.name : null) ||
-        'Unknown';
+    const name = resolveComponentName(t);
+    if (name) {
       return { componentType: t, componentName: name, componentFiber: current };
     }
     current = current.return;
@@ -381,4 +395,89 @@ export function findDOMEquivalents(el: HTMLElement): HTMLElement[] {
   if (outliers.length > 1) return [el];
 
   return siblings.filter((n) => n.className === majorityClass);
+}
+
+// ---------------------------------------------------------------------------
+// Fiber prop serialization — used to send component props to the panel
+// ---------------------------------------------------------------------------
+
+const REACT_ELEMENT = Symbol.for('react.element');
+const REACT_TRANSITIONAL_ELEMENT = Symbol.for('react.transitional.element');
+
+/**
+ * Serialize a value from fiber.memoizedProps into a JSON-safe representation.
+ * - Primitives pass through.
+ * - React elements become { __reactElement: true, componentName, props }.
+ * - Arrays are mapped recursively.
+ * - Functions, Symbols, DOM nodes are marked unsupported.
+ */
+export function serializeValue(value: unknown, depth: number): unknown {
+  if (depth > 4) return { __unsupported: true, type: 'too-deep' };
+
+  if (value === null || value === undefined) return value;
+
+  const t = typeof value;
+  if (t === 'string' || t === 'number' || t === 'boolean') return value;
+  if (t === 'function' || t === 'symbol') return undefined; // skip
+  if (typeof Element !== 'undefined' && value instanceof Element) return undefined; // skip DOM nodes
+
+  if (Array.isArray(value)) {
+    return value.map(v => serializeValue(v, depth + 1)).filter(v => v !== undefined);
+  }
+
+  // React element detection
+  const v = value as any;
+  if (v.$$typeof === REACT_ELEMENT || v.$$typeof === REACT_TRANSITIONAL_ELEMENT) {
+    const componentName = resolveComponentName(v.type);
+    const childProps = v.props ? serializeProps(v.props, depth + 1) : undefined;
+    const result: SerializedReactElement = {
+      __reactElement: true,
+      componentName: componentName || 'Unknown',
+      props: childProps,
+    };
+    return result;
+  }
+
+  // Plain object
+  if (t === 'object') {
+    const result: Record<string, unknown> = {};
+    let hasKeys = false;
+    for (const key of Object.keys(v)) {
+      const sv = serializeValue(v[key], depth + 1);
+      if (sv !== undefined) {
+        result[key] = sv;
+        hasKeys = true;
+      }
+    }
+    return hasKeys ? result : undefined;
+  }
+
+  return undefined;
+}
+
+/**
+ * Serialize a fiber's memoizedProps (or a nested props object) into a
+ * JSON-safe record. Skips `key` and `ref` (React internal plumbing).
+ */
+export function serializeProps(props: Record<string, unknown>, depth = 0): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(props)) {
+    if (key === 'key' || key === 'ref') continue;
+    const sv = serializeValue(props[key], depth);
+    if (sv !== undefined) {
+      result[key] = sv;
+    }
+  }
+  return result;
+}
+
+/**
+ * Extract serialized props from a component fiber's memoizedProps.
+ * Returns a JSON-safe record suitable for sending over WebSocket.
+ */
+export function extractComponentProps(componentFiber: any): Record<string, unknown> | null {
+  const props = componentFiber?.memoizedProps;
+  if (!props || typeof props !== 'object') return null;
+  const serialized = serializeProps(props);
+  return Object.keys(serialized).length > 0 ? serialized : null;
 }

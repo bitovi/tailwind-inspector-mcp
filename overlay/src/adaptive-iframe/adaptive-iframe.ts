@@ -1,8 +1,7 @@
-import { extractStyles, applyStylesToHost, injectChildStyles } from './style-cloner';
 import { collectIframeCss } from './css-collector';
 
 export class AdaptiveIframe extends HTMLElement {
-  static observedAttributes = ['src', 'srcdoc'];
+  static observedAttributes = ['src', 'srcdoc', 'debug'];
 
   private shadow: ShadowRoot;
   private ghostEl: HTMLDivElement;
@@ -66,7 +65,33 @@ export class AdaptiveIframe extends HTMLElement {
   private settleTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   connectedCallback() {
-    document.body.appendChild(this.hiddenIframe);
+    const debugSelector = this.getAttribute('debug');
+    if (debugSelector) {
+      // Debug mode: place the iframe visibly into the target element.
+      // The iframe is a normal document element (not in shadow DOM) so
+      // Storybook loads, CSS variables resolve, and extraction works
+      // exactly as in production. The user sees the live source iframe.
+      const target = document.querySelector(debugSelector);
+      if (target) {
+        Object.assign(this.hiddenIframe.style, {
+          position: 'relative',
+          left: 'auto',
+          top: 'auto',
+          width: '100%',
+          height: '100%',
+          opacity: '1',
+          pointerEvents: 'auto',
+          border: 'none',
+          zIndex: 'auto',
+        });
+        target.appendChild(this.hiddenIframe);
+      } else {
+        console.warn(`[AdaptiveIframe] debug target "${debugSelector}" not found, falling back to body`);
+        document.body.appendChild(this.hiddenIframe);
+      }
+    } else {
+      document.body.appendChild(this.hiddenIframe);
+    }
     this.syncIframeWidth();
     this.triggerLoad();
   }
@@ -468,46 +493,8 @@ export class AdaptiveIframe extends HTMLElement {
     const win = root ? (root.ownerDocument.defaultView ?? window) : window;
     if (!root) return;
 
-    // Extract computed styles and apply to host (drives layout flow)
-    const styles = extractStyles(root);
-
-    // For portal content (position:fixed dialogs, etc.), strip viewport-relative
-    // positioning and animation properties so the ghost renders inline and visible
-    // in the card. Entry animations (e.g. Radix animate-in/fade-in-0) can leave
-    // opacity at 0 at extraction time.
-    if (styles['position'] === 'fixed' || styles['position'] === 'absolute') {
-      const portalStripProps = [
-        // Positioning
-        'position', 'left', 'right', 'top', 'bottom',
-        'inset', 'inset-block', 'inset-block-start', 'inset-block-end',
-        'inset-inline', 'inset-inline-start', 'inset-inline-end',
-        'transform', 'translate', 'z-index',
-        // Animation / transition (entry animations can leave opacity=0)
-        'opacity',
-        'animation', 'animation-name', 'animation-duration', 'animation-delay',
-        'animation-fill-mode', 'animation-timing-function',
-        'transition', 'transition-property', 'transition-duration',
-        'transition-delay', 'transition-timing-function',
-      ];
-      for (const prop of portalStripProps) {
-        delete styles[prop];
-      }
-    }
-
-    applyStylesToHost(this, styles, parseInt(this.hiddenIframe.style.width) || 800);
-
-    // Clone story content into the ghost — use innerHTML (not outerHTML)
-    // because the host element already carries the root's styles (padding,
-    // background, border, etc.).  outerHTML would duplicate them.
+    // Clone story content into the ghost element
     this.ghostEl.innerHTML = root.innerHTML;
-
-    // Inline computed styles on every cloned child for visual fidelity
-    const rootChildren = root.children;
-    const ghostChildren = this.ghostEl.children;
-    const len = Math.min(rootChildren.length, ghostChildren.length);
-    for (let i = 0; i < len; i++) {
-      injectChildStyles(rootChildren[i], ghostChildren[i]);
-    }
 
     // Signal first successful render so the load queue can free its slot.
     if (!this._loadedDispatched) {
@@ -538,7 +525,7 @@ export class AdaptiveIframe extends HTMLElement {
     measurableRoot.style.display = prevDisplay;
 
     this.dispatchEvent(new CustomEvent('ghost-extracted', {
-      detail: { ghostHtml, ghostCss, hostStyles: styles, storyBackground, naturalWidth, naturalHeight },
+      detail: { ghostHtml, ghostCss, hostStyles: {}, storyBackground, naturalWidth, naturalHeight },
     }));
   }
 

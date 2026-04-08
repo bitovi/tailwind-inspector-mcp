@@ -804,7 +804,7 @@ function handleComponentInsertClick(e: MouseEvent): void {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function findGhostAncestor(el: HTMLElement): HTMLElement | null {
+export function findGhostAncestor(el: HTMLElement): HTMLElement | null {
   let current: HTMLElement | null = el.parentElement;
   while (current && current !== document.body) {
     if (current.dataset.twDroppedComponent) return current;
