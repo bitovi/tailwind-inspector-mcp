@@ -10,7 +10,7 @@ import { state, resolveTab, clearSelectionState } from "./overlay-state";
 import { revertPreview } from "./patcher";
 import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
-import { buildContext, buildTextContext } from "./context";
+import { buildContext, buildInsertContext, buildTextContext } from "./context";
 import { send, sendTo } from "./ws";
 
 // Detect Web Speech API (Chrome/Edge: webkitSpeechRecognition, Safari: SpeechRecognition)
@@ -468,8 +468,10 @@ function createMsgRow(
 		const target = targetEl
 			? { tag: targetEl.tagName.toLowerCase(), classes: typeof targetEl.className === 'string' ? targetEl.className : '', innerText: targetEl.innerText?.slice(0, 100) ?? '' }
 			: undefined;
-		const context = targetEl ? buildContext(targetEl, '', '', new Map()) : undefined;
 		const insertMode = locked?.position;
+		const context = targetEl
+			? (insertMode ? buildInsertContext(targetEl, insertMode) : buildContext(targetEl, '', '', new Map()))
+			: undefined;
 		const pageUrl = window.location.href;
 
 		send({

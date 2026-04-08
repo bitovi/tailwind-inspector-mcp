@@ -165,9 +165,13 @@ ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
       const tag = patch.target?.tag;
       const context = patch.context ?? '';
       const insertMode = patch.insertMode;
+      const targetContent = patch.target?.innerText?.replace(/\s+/g, ' ').trim().slice(0, 60) || '';
+      const targetDesc = tag
+        ? (targetContent ? `\`<${tag}>\` containing "${targetContent}"` : `\`<${tag}>\``)
+        : '';
       patchList += `### ${stepNum}. User message
 > ${patch.message}
-${comp ? `- **Component:** \`${comp}\`\n` : ''}${tag ? `- **Element:** \`<${tag}>\`\n` : ''}${insertMode ? `- **Insert position:** ${insertMode} the element\n` : ''}${patch.pageUrl ? `- **Page:** ${patch.pageUrl}\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}${!comp && patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
+${comp ? `- **Component:** \`${comp}\`\n` : ''}${insertMode && targetDesc ? `- **Placement:** Insert ${insertMode} ${targetDesc}\n` : (insertMode && tag ? `- **Insert position:** ${insertMode} the \`<${tag}>\` element\n` : '')}${patch.pageUrl ? `- **Page:** ${patch.pageUrl}\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}${!comp && patch.elementKey ? `\n_Scoped to: ${patch.elementKey}_\n` : ''}
 `;
     } else if (patch.kind === 'design') {
       const comp = patch.component?.name ?? 'unknown component';

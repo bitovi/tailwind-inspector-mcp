@@ -151,3 +151,172 @@ function getInnerText(el: HTMLElement): string {
   if (text.length > 60) text = text.slice(0, 57) + '...';
   return text;
 }
+
+// ── Insert-context helpers ───────────────────────────────────────────────
+
+/**
+ * Recursively collect all text content from an element, collapse whitespace,
+ * and return a short summary (≤ maxLen chars). Returns '' if no text found.
+ */
+function deepTextSummary(el: HTMLElement, maxLen = 40): string {
+  const raw = el.innerText || el.textContent || '';
+  const collapsed = raw.replace(/\s+/g, ' ').trim();
+  if (!collapsed) return '';
+  return collapsed.length > maxLen ? collapsed.slice(0, maxLen - 1) + '…' : collapsed;
+}
+
+/** Build an opening-tag string with id/class attrs for an element. */
+function openTag(el: HTMLElement): string {
+  const tag = el.tagName.toLowerCase();
+  let attrs = '';
+  if (el.id) attrs += ` id="${el.id}"`;
+  const cls = typeof el.className === 'string' ? el.className.trim() : '';
+  if (cls) attrs += ` class="${cls}"`;
+  return `<${tag}${attrs}>`;
+}
+
+/**
+ * Render a sibling element with deep-text annotation.
+ * Shows `<div class="space-y-2"> … Customer * …</div>` instead of `<div class="space-y-2">...</div>`.
+ */
+function renderSiblingWithDeepText(el: HTMLElement, indent: number): string {
+  const pad = '  '.repeat(indent);
+  const tag = el.tagName.toLowerCase();
+  const open = openTag(el);
+  const summary = deepTextSummary(el);
+  if (summary) {
+    return `${pad}${open} … ${summary} …</${tag}>`;
+  }
+  if (el.children.length > 0) {
+    return `${pad}${open}…</${tag}>`;
+  }
+  // Self-closing for truly empty elements
+  let attrs = '';
+  if (el.id) attrs += ` id="${el.id}"`;
+  const cls = typeof el.className === 'string' ? el.className.trim() : '';
+  if (cls) attrs += ` class="${cls}"`;
+  return `${pad}<${tag}${attrs} />`;
+}
+
+/**
+ * Render the target element expanded one level deep so the agent can see
+ * what's inside it (labels, inputs, etc.) rather than just `...`.
+ */
+function renderTargetExpanded(el: HTMLElement, indent: number, annotation: string): string {
+  const pad = '  '.repeat(indent);
+  const open = openTag(el);
+  const tag = el.tagName.toLowerCase();
+  const children = Array.from(el.children) as HTMLElement[];
+
+  if (children.length === 0) {
+    const text = deepTextSummary(el);
+    const textNode = text ? `\n${pad}  ${text}` : '';
+    return `${pad}${open} <!-- TARGET: ${annotation} -->${textNode}\n${pad}</${tag}>`;
+  }
+
+  let inner = '';
+  for (const child of children) {
+    const childTag = child.tagName.toLowerCase();
+    const childOpen = openTag(child);
+    const childText = deepTextSummary(child, 60);
+    if (childText) {
+      inner += `${pad}  ${childOpen}${childText}</${childTag}>\n`;
+    } else if (child.children.length > 0) {
+      inner += `${pad}  ${childOpen}…</${childTag}>\n`;
+    } else {
+      let childAttrs = '';
+      if (child.id) childAttrs += ` id="${child.id}"`;
+      const cls = typeof child.className === 'string' ? child.className.trim() : '';
+      if (cls) childAttrs += ` class="${cls}"`;
+      inner += `${pad}  <${childTag}${childAttrs} />\n`;
+    }
+  }
+
+  return `${pad}${open} <!-- TARGET: ${annotation} -->\n${inner}${pad}</${tag}>`;
+}
+
+type InsertPosition = 'before' | 'after' | 'first-child' | 'last-child';
+
+/**
+ * Build a pseudo-HTML context string optimised for insert/message patches.
+ *
+ * Differences from buildContext:
+ * - Annotates the target with `<!-- TARGET: insert BEFORE this -->` (etc.)
+ * - Expands the target element one level deep so its contents are visible
+ * - Siblings get a deep-text summary so the agent can distinguish them
+ *   even when they share the same classes (e.g. `… Customer * …`)
+ */
+export function buildInsertContext(
+  target: HTMLElement,
+  insertMode: InsertPosition,
+): string {
+  const annotation = `insert ${insertMode.toUpperCase()} this`;
+  const ancestors: HTMLElement[] = [];
+  let current: HTMLElement | null = target;
+  while (current && current !== document.documentElement) {
+    ancestors.push(current);
+    current = current.parentElement;
+  }
+  ancestors.reverse(); // body → ... → target
+
+  return buildInsertLevel(ancestors, 0, target, annotation, insertMode, 0);
+}
+
+function buildInsertLevel(
+  ancestors: HTMLElement[],
+  ancestorIndex: number,
+  target: HTMLElement,
+  annotation: string,
+  insertMode: InsertPosition,
+  indent: number,
+): string {
+  const el = ancestors[ancestorIndex];
+  const pad = '  '.repeat(indent);
+  const tag = el.tagName.toLowerCase();
+
+  let attrs = '';
+  if (el.id) attrs += ` id="${el.id}"`;
+  const classStr = typeof el.className === 'string' ? el.className.trim() : '';
+  if (classStr) attrs += ` class="${classStr}"`;
+
+  const isTarget = el === target;
+
+  if (isTarget) {
+    return renderTargetExpanded(el, indent, annotation);
+  }
+
+  if (ancestorIndex >= ancestors.length - 1) {
+    return `${pad}<${tag}${attrs} />`;
+  }
+
+  const nextAncestor = ancestors[ancestorIndex + 1];
+  const children = Array.from(el.children) as HTMLElement[];
+  const relevantIndex = children.indexOf(nextAncestor);
+
+  let inner = '';
+
+  if (relevantIndex === -1) {
+    inner = buildInsertLevel(ancestors, ancestorIndex + 1, target, annotation, insertMode, indent + 1);
+  } else {
+    const start = Math.max(0, relevantIndex - 3);
+    const end = Math.min(children.length - 1, relevantIndex + 3);
+
+    if (start > 0) {
+      inner += `${pad}  …\n`;
+    }
+
+    for (let i = start; i <= end; i++) {
+      if (i === relevantIndex) {
+        inner += buildInsertLevel(ancestors, ancestorIndex + 1, target, annotation, insertMode, indent + 1) + '\n';
+      } else {
+        inner += renderSiblingWithDeepText(children[i], indent + 1) + '\n';
+      }
+    }
+
+    if (end < children.length - 1) {
+      inner += `${pad}  …\n`;
+    }
+  }
+
+  return `${pad}<${tag}${attrs}>\n${inner}${pad}</${tag}>`;
+}
