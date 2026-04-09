@@ -1,5 +1,6 @@
 # VyBit
 
+[![CI](https://img.shields.io/github/actions/workflow/status/bitovi/vybit/ci.yml?branch=main&label=CI)](https://github.com/bitovi/vybit/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@bitovi/vybit)](https://www.npmjs.com/package/@bitovi/vybit)
 [![npm downloads](https://img.shields.io/npm/dm/@bitovi/vybit)](https://www.npmjs.com/package/@bitovi/vybit)
 [![License: MIT](https://img.shields.io/npm/l/@bitovi/vybit)](https://github.com/bitovi/vybit/blob/main/LICENSE)
