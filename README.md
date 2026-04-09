@@ -1,5 +1,11 @@
 # VyBit
 
+[![npm version](https://img.shields.io/npm/v/@bitovi/vybit)](https://www.npmjs.com/package/@bitovi/vybit)
+[![npm downloads](https://img.shields.io/npm/dm/@bitovi/vybit)](https://www.npmjs.com/package/@bitovi/vybit)
+[![License: MIT](https://img.shields.io/npm/l/@bitovi/vybit)](https://github.com/bitovi/vybit/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/bitovi/vybit)](https://github.com/bitovi/vybit/stargazers)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
+
 Suggest features, change designs, draw mockups, and report bugs __in your browser__ and send them to your favorite coding agent (Claude, Cursor, Copilot, etc) to be implemented. VyBit works with React or Angular apps built with Tailwind v3 or v4. 
 
 ![VyBit - Click and Change - HD 1080p](https://github.com/user-attachments/assets/df8d7c56-68af-4580-b046-c84a943f6b68)
