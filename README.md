@@ -1,10 +1,12 @@
 # VyBit
 
-Change designs, draw mockups, provide suggestions, and report bugs __in your browser__ and send them to your favorite coding agent (Claude, Cursor, Copilot, etc) to be implemented. VyBit works with React or Angular apps built with Tailwind v3 or v4. 
+Suggest features, change designs, draw mockups, and report bugs __in your browser__ and send them to your favorite coding agent (Claude, Cursor, Copilot, etc) to be implemented. VyBit works with React or Angular apps built with Tailwind v3 or v4. 
+
+![VyBit - Click and Change - HD 1080p](https://github.com/user-attachments/assets/df8d7c56-68af-4580-b046-c84a943f6b68)
 
 [Watch a video going over its features](https://www.youtube.com/watch?v=dE2rYcyC2xk)
 
-[![Watch the video](https://github.com/user-attachments/assets/99961c66-e2c9-48e3-9e7d-c23d6eda37ca)](https://www.youtube.com/watch?v=dE2rYcyC2xk)
+[![Watch the video](https://github.com/user-attachments/assets/c6b866a8-c917-4ff3-a0e4-536d334e3d1a)](https://www.youtube.com/watch?v=dE2rYcyC2xk)
 
 
 `VyBit` changes how you can design and build an app or website. Instead of building your design system and page designs in Sketch or Figma and then implementing it in code, you:
