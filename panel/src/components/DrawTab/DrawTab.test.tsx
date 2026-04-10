@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { DrawTab } from './DrawTab';
 
 const mockFetch = vi.fn();
@@ -121,8 +121,9 @@ describe('probe iframe', () => {
     renderDrawTab();
     await screen.findByText('Button');
 
-    const iframe = document.querySelector('iframe[src*="components-button--primary"]');
-    expect(iframe).toBeTruthy();
+    await waitFor(() => {
+      expect(document.querySelector('iframe[src*="components-button--primary"]')).toBeTruthy();
+    });
   });
 
   test('shows component name while probing', async () => {
