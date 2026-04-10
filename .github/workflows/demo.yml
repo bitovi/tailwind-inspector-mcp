@@ -32,7 +32,7 @@ jobs:
         run: cd demo && npm ci
 
       - name: Install storybook-test/v10 dependencies
-        run: cd storybook-test/v10 && npm ci
+        run: cd storybook-test/v10 && npm install
 
       - name: Build demo
         env:
