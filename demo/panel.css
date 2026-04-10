@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  /* Bitovi design tokens — dark theme */
+  --color-bv-bg: #2c2c2c;
+  --color-bv-surface: #383838;
+  --color-bv-surface-hi: #404040;
+  --color-bv-border: #3a3a3a;
+  --color-bv-text: #e5e5e5;
+  --color-bv-text-mid: #b3b3b3;
+  --color-bv-muted: #999999;
+  --color-bv-orange: #F5532D;
+  --color-bv-orange-hover: #C73D26;
+  --color-bv-teal: #00848B;
+  --color-bv-teal-dark: #00464A;
+  --color-bv-green: #2E7229;
+  --font-display: 'Poppins', sans-serif;
+  --font-ui: 'Inter', sans-serif;
+  --font-mono: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+}
+
+/* Dark scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 3px; }
+
+/* Source detection: tell Tailwind v4 to scan panel components */
+@source "../panel/src/**/*.tsx";
+@source "../panel/src/**/*.ts";

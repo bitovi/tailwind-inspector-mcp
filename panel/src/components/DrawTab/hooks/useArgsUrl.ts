@@ -1,3 +1,5 @@
+import { STORYBOOK_BASE } from './storybookBase';
+
 /**
  * Builds a Storybook iframe URL with optional args query parameter.
  *
@@ -7,7 +9,7 @@
 export function buildArgsUrl(
   storyId: string,
   args: Record<string, unknown> = {},
-  base = '/storybook',
+  base = STORYBOOK_BASE,
 ): string {
   const url = `${base}/iframe.html?id=${encodeURIComponent(storyId)}&viewMode=story&vybit-ghost=1`;
   const entries = Object.entries(args).filter(([, v]) => v !== undefined && v !== null);

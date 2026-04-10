@@ -16,6 +16,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import path from "path";
+import { printContentParts } from "../shared/mcp-format.js";
 
 const PORT = 3333;
 const serverScript = path.resolve("..", "server/index.ts");
@@ -46,25 +47,6 @@ function log(label: string, ...args: any[]) {
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-function printContentParts(content: any[]) {
-  console.log(`\n  Content parts: ${content.length}`);
-  for (let i = 0; i < content.length; i++) {
-    const part = content[i] as any;
-    console.log(`\n  --- Part ${i + 1} (type: ${part.type}) ---`);
-    if (part.type === "text") {
-      try {
-        console.log(JSON.stringify(JSON.parse(part.text), null, 2));
-      } catch {
-        console.log(part.text);
-      }
-    } else if (part.type === "image") {
-      console.log(`  [image: ${part.mimeType}, ${part.data.length} chars base64]`);
-    } else {
-      console.log(JSON.stringify(part, null, 2));
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------

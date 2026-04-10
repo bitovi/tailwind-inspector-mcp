@@ -3,6 +3,7 @@ import type { ComponentGroup, ArmedComponentData } from '../../types';
 import { useStoryProbe } from '../../hooks/useStoryProbe';
 import { useIframeSlot, useProbeSlot } from '../../hooks/useIframeQueue';
 import { buildArgsUrl } from '../../hooks/useArgsUrl';
+import { STORYBOOK_BASE } from '../../hooks/storybookBase';
 import { ArgsForm } from '../ArgsForm';
 import { ComponentRowThumb } from '../ComponentRowThumb';
 import { ShadowGhost } from '../../../ShadowGhost';
@@ -471,7 +472,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
         <div className="flex-1 min-w-0">
           {group.stories[0] ? (
             <a
-              href={`/storybook/?path=/story/${group.stories[0].id}`}
+              href={`${STORYBOOK_BASE}/?path=/story/${group.stories[0].id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[12px] text-bv-text hover:text-bv-orange hover:underline transition-colors leading-tight inline"

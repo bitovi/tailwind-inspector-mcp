@@ -1,4 +1,5 @@
 import type { ComponentGroup } from '../../types';
+import { STORYBOOK_BASE } from '../../hooks/storybookBase';
 
 interface ComponentCardFooterProps {
   isArmed: boolean;
@@ -22,7 +23,7 @@ export function ComponentCardFooter({
       ) : (
         group.stories[0] ? (
           <a
-            href={`/storybook/?path=/story/${group.stories[0].id}`}
+            href={`${STORYBOOK_BASE}/?path=/story/${group.stories[0].id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[11px] text-bv-text hover:text-bv-orange hover:underline transition-colors"
