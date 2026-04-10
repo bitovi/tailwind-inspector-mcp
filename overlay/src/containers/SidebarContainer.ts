@@ -1,5 +1,6 @@
 import type { IContainer } from './IContainer';
 import { css, CONTAINER_HOST, PANEL_SHADOW, IFRAME_FLEX, RESIZE_HANDLE_H } from '../styles';
+import { captureScrollPosition } from '../preserve-scroll';
 
 export class SidebarContainer implements IContainer {
   readonly name = 'sidebar' as const;
@@ -13,6 +14,9 @@ export class SidebarContainer implements IContainer {
 
   open(panelUrl: string): void {
     if (this.host) return;
+
+    // Capture scroll position before restructuring the DOM
+    const restoreScroll = captureScrollPosition();
 
     // Create a fixed page wrapper that leaves room on the right for the sidebar
     // and becomes the scrollable area. This moves the visible scrollbar to the
@@ -51,6 +55,9 @@ export class SidebarContainer implements IContainer {
     document.body.style.overflow = 'hidden';
     this.pageWrapper = wrapper;
 
+    // Restore scroll position on the new wrapper
+    restoreScroll(wrapper);
+
     const host = document.createElement('div');
     host.className = 'container-sidebar';
     host.style.cssText = css({
@@ -85,8 +92,22 @@ export class SidebarContainer implements IContainer {
     if (this.host) {
       this.host.remove();
       this.host = null;
-      // Restore page wrapper and body overflow
+      // Capture scroll position from the wrapper before moving children back
+      let restoreScroll: ((target: Element) => void) | null = null;
       if (this.pageWrapper) {
+        const wrapper = this.pageWrapper;
+        const maxScroll = wrapper.scrollHeight - wrapper.clientHeight;
+        const ratio = maxScroll > 0 ? wrapper.scrollTop / maxScroll : 0;
+        restoreScroll = () => {
+          requestAnimationFrame(() => {
+            const scrollEl = document.scrollingElement ?? document.documentElement;
+            const newMax = scrollEl.scrollHeight - scrollEl.clientHeight;
+            if (newMax > 0) {
+              scrollEl.scrollTop = Math.round(ratio * newMax);
+            }
+          });
+        };
+
         // Move children back to body (before the overlay host)
         const children = Array.from(this.pageWrapper.childNodes);
         const shadowHost = document.getElementById('tw-visual-editor-host');
@@ -101,6 +122,9 @@ export class SidebarContainer implements IContainer {
         this.pageWrapper = null;
       }
       document.body.style.overflow = this.originalBodyOverflow || '';
+
+      // Restore scroll position on the page now that children are back in body
+      if (restoreScroll) restoreScroll();
     }
   }
 

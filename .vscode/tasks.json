@@ -280,6 +280,39 @@
       "dependsOrder": "parallel",
       "presentation": { "reveal": "always" },
       "problemMatcher": []
+    },
+    {
+      "label": "Demo: Build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": { "cwd": "${workspaceFolder}/demo" },
+      "presentation": { "panel": "dedicated", "reveal": "always" }
+    },
+    {
+      "label": "Demo: Watch",
+      "type": "shell",
+      "command": "npx vite build --watch",
+      "options": { "cwd": "${workspaceFolder}/demo" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite-demo",
+        "pattern": { "regexp": "^(.*):(\\d+):(\\d+): (error|warning): (.*)$", "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5 },
+        "background": { "activeOnStart": true, "beginsPattern": "vite", "endsPattern": "built in" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "silent" }
+    },
+    {
+      "label": "Demo: Serve (port 4000)",
+      "type": "shell",
+      "command": "npx http-server dist -p 4000 -c-1",
+      "options": { "cwd": "${workspaceFolder}/demo" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "http-server",
+        "pattern": { "regexp": "^(.*)$", "message": 1 },
+        "background": { "activeOnStart": true, "beginsPattern": "Starting up", "endsPattern": "Hit CTRL-C" }
+      },
+      "presentation": { "panel": "dedicated", "reveal": "silent" }
     }
   ]
 }

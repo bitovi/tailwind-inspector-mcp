@@ -34,6 +34,7 @@ export class RecordingEngine {
   private snapshotStore: SnapshotStore;
   private options: RecordingEngineOptions;
   private running = false;
+  private lastSnapshotTimestamp: string = new Date(0).toISOString();
 
   constructor(options: RecordingEngineOptions = {}) {
     this.options = options;
@@ -113,16 +114,25 @@ export class RecordingEngine {
   ): Promise<void> {
     if (!this.running) return;
 
+    // Yield one macrotask so that click handlers (console.error, fetch, etc.)
+    // triggered by the same user event have time to run and land in the
+    // interceptor buffers before we collect them.
+    await new Promise(r => setTimeout(r, 0));
+
+    const timestamp = new Date().toISOString();
+    const since = this.lastSnapshotTimestamp;
+    this.lastSnapshotTimestamp = timestamp;
+
     const forceKeyframe = trigger === 'page-load' || trigger === 'navigation';
     const currentDom = document.documentElement.outerHTML;
     const diffResult = this.domDiffer.computeDiff(currentDom, forceKeyframe);
 
-    // Flush interceptor buffers
-    const consoleLogs = this.consoleHandle?.flush() ?? [];
-    const networkErrors = this.networkHandle?.flush() ?? [];
+    // Collect entries that arrived since the last snapshot
+    const consoleLogs = this.consoleHandle?.entriesSince(since) ?? [];
+    const networkErrors = this.networkHandle?.entriesSince(since) ?? [];
 
     const snapshot: RecordingSnapshot = {
-      timestamp: new Date().toISOString(),
+      timestamp,
       trigger,
       isKeyframe: diffResult.isKeyframe,
       domSnapshot: diffResult.isKeyframe ? diffResult.fullDom : undefined,
@@ -159,15 +169,19 @@ export class RecordingEngine {
     // Suppress the subsequent MutationObserver callback (DOM changes from route render)
     this.eventCaptureHandle?.suppressNext();
 
+    const timestamp = new Date().toISOString();
+    const since = this.lastSnapshotTimestamp;
+    this.lastSnapshotTimestamp = timestamp;
+
     const forceKeyframe = true;
     const currentDom = document.documentElement.outerHTML;
     const diffResult = this.domDiffer.computeDiff(currentDom, forceKeyframe);
 
-    const consoleLogs = this.consoleHandle?.flush() ?? [];
-    const networkErrors = this.networkHandle?.flush() ?? [];
+    const consoleLogs = this.consoleHandle?.entriesSince(since) ?? [];
+    const networkErrors = this.networkHandle?.entriesSince(since) ?? [];
 
     const snapshot: RecordingSnapshot = {
-      timestamp: new Date().toISOString(),
+      timestamp,
       trigger: 'navigation',
       isKeyframe: true,
       domSnapshot: diffResult.fullDom,

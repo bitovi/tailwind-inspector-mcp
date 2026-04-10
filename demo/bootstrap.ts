@@ -4,10 +4,45 @@ import './fetch-interceptor'; // Intercept fetch calls (overlay + panel API mock
 import './tailwind-browser'; // Registers MutationObserver for Tailwind CSS generation
 import { addPatch, commitDraft, discardPatch, discardCommit, broadcastQueueUpdate, markCommitImplementing, markCommitImplemented } from './mock-queue';
 import { logMcpCommit } from './mock-mcp';
-import { onMessage } from './bus';
+import { onMessage, send } from './bus';
 
 // ── Wire message bus to handle queue operations (acts as the "server") ──
 onMessage((msg: any) => {
+  // ── Tutorial event bridge ──
+  // Dispatch CustomEvents so useTutorialProgress can auto-detect completions
+  if (msg.type === 'REGISTER' && msg.role === 'panel') {
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'panel-registered' } }));
+  }
+  if (msg.type === 'PATCH_COMMIT') {
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'patch-committed' } }));
+  }
+  if (msg.type === 'MESSAGE_STAGE') {
+    const detail: Record<string, unknown> = { action: 'message-staged' };
+    if (msg.insertMode) detail.insertMode = msg.insertMode;
+    if (msg.inputMethod) detail.inputMethod = msg.inputMethod;
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail }));
+  }
+  if (msg.type === 'TEXT_EDIT_DONE') {
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'text-edit-done' } }));
+  }
+  if (msg.type === 'COMPONENT_DROPPED') {
+    const args = msg.patch?.componentArgs;
+    const hasNestedComponent = args != null && Object.values(args).some(
+      (v) => v != null && typeof v === 'object' && (v as Record<string, unknown>).type === 'component'
+    );
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'component-dropped', hasNestedComponent } }));
+  }
+  if (msg.type === 'PATCH_STAGED') {
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'patch-staged', kind: msg.patch?.kind ?? 'class-change' } }));
+  }
+  if (msg.type === 'BUG_REPORT_STAGE') {
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'bug-report-staged' } }));
+  }
+  if (msg.type === 'DESIGN_SUBMIT') {
+    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'patch-staged', kind: 'design' } }));
+  }
+
+  // ── Queue operations ──
   if (msg.type === 'PATCH_STAGED') {
     addPatch({
       ...msg.patch,
@@ -65,6 +100,31 @@ onMessage((msg: any) => {
   } else if (msg.type === 'DISCARD_COMMIT') {
     discardCommit(msg.commitId);
     broadcastQueueUpdate();
+  } else if (msg.type === 'DESIGN_SUBMIT') {
+    const patch = addPatch({
+      id: crypto.randomUUID(),
+      kind: 'design',
+      elementKey: `${msg.target?.tag ?? ''}.${(msg.target?.classes ?? '').split(' ')[0]}`,
+      status: 'staged',
+      originalClass: '',
+      newClass: '',
+      property: 'design',
+      timestamp: new Date().toISOString(),
+      component: msg.componentName ? { name: msg.componentName } : undefined,
+      target: msg.target,
+      context: msg.context,
+      image: msg.image,
+      insertMode: msg.insertMode,
+      canvasWidth: msg.canvasWidth,
+      canvasHeight: msg.canvasHeight,
+      canvasComponents: msg.canvasComponents,
+    });
+    broadcastQueueUpdate();
+    // Tell overlay to replace canvas iframe with static image
+    send({ type: 'DESIGN_SUBMITTED', image: msg.image, patchId: patch.id });
+  } else if (msg.type === 'DESIGN_CLOSE') {
+    // Forward to overlay so it removes the canvas
+    send({ type: 'DESIGN_CLOSE' });
   } else if (msg.type === 'REGISTER') {
     if (msg.role === 'panel') {
       queueMicrotask(() => broadcastQueueUpdate());
@@ -90,8 +150,16 @@ async function boot() {
   fakeScript.setAttribute('type', 'text/x-vybit-stub');
   document.body.appendChild(fakeScript);
 
-  // Pre-set sessionStorage so the overlay auto-opens the panel on init
-  sessionStorage.setItem('tw-inspector-panel-open', '1');
+  // Ensure panel starts closed for tutorial Step 3 — but only if the user
+  // hasn't already completed that step (so refresh preserves panel state).
+  try {
+    const progress = JSON.parse(localStorage.getItem('vybit-tutorial-progress') || '[]');
+    if (!Array.isArray(progress) || !progress.includes(3)) {
+      sessionStorage.removeItem('tw-inspector-panel-open');
+    }
+  } catch {
+    sessionStorage.removeItem('tw-inspector-panel-open');
+  }
 
   // Initialize overlay (calls init() on import, reads ./ws aliased to demo/bus.ts)
   await import('../overlay/src/index');

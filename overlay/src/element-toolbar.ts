@@ -1,7 +1,7 @@
 // Element toolbar — unified bar shown above the selected element.
 // Extracted from index.ts. Contains showDrawButton() and showGroupPicker().
 
-import { computePosition, flip, offset, shift } from "@floating-ui/dom";
+import { computePosition, flip, offset, shift, autoUpdate } from "@floating-ui/dom";
 import { cancelInsert, clearLockedInsert, getLockedInsert, startBrowse } from "./drop-zone";
 import { highlightElement, clearHighlights, removeDrawButton } from "./element-highlight";
 import { computeNearGroups, findSamePathElements } from "./grouping";
@@ -180,6 +180,12 @@ export async function positionBothMenus(
 }
 
 export { positionWithFlip };
+
+/** Reposition toolbar + message row at fresh coordinates (call on scroll/resize). */
+export function repositionToolbar(): void {
+	if (!state.toolbarEl || !state.currentTargetEl || isToolbarDragged()) return;
+	positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+}
 
 export function showDrawButton(targetEl: HTMLElement): void {
 	removeDrawButton();
@@ -395,6 +401,7 @@ function createMsgRow(
 	// ── Mic button (only if browser supports SpeechRecognition) ──
 	let recognition: any = null;
 	let micBtn: HTMLButtonElement | null = null;
+	let usedVoice = false;
 
 	if (SpeechRecognitionAPI) {
 		micBtn = document.createElement("button");
@@ -425,6 +432,7 @@ function createMsgRow(
 				}
 				const separator = baseText && !baseText.endsWith("\n") ? "\n" : "";
 				msgInput.value = baseText + separator + transcript;
+				usedVoice = true;
 				msgInput.style.height = "auto";
 				msgInput.style.height = msgInput.scrollHeight + "px";
 				onReposition();
@@ -484,9 +492,11 @@ function createMsgRow(
 			context,
 			insertMode,
 			pageUrl,
+			...(usedVoice ? { inputMethod: 'voice' as const } : {}),
 		});
 		msgInput.value = "";
 		msgInput.style.height = "auto";
+		usedVoice = false;
 		onReposition();
 		showToast("Message staged");
 	}
@@ -521,7 +531,7 @@ function createMsgRow(
 // ── Canvas-anchored message row ─────────────────────────────────────────────
 
 let canvasMsgRow: HTMLElement | null = null;
-let canvasMsgRowObserver: ResizeObserver | null = null;
+let canvasMsgRowCleanup: (() => void) | null = null;
 
 export function showCanvasMessageRow(
 	canvasWrapper: HTMLElement,
@@ -535,17 +545,15 @@ export function showCanvasMessageRow(
 	shadowRoot.appendChild(msgRow);
 	canvasMsgRow = msgRow;
 
-	positionCanvasMsgRow(canvasWrapper, msgRow);
-
-	canvasMsgRowObserver = new ResizeObserver(() => {
+	// Use autoUpdate to reposition on scroll, resize, and layout changes
+	canvasMsgRowCleanup = autoUpdate(canvasWrapper, msgRow, () => {
 		positionCanvasMsgRow(canvasWrapper, msgRow);
 	});
-	canvasMsgRowObserver.observe(canvasWrapper);
 }
 
 export function hideCanvasMessageRow(): void {
-	canvasMsgRowObserver?.disconnect();
-	canvasMsgRowObserver = null;
+	canvasMsgRowCleanup?.();
+	canvasMsgRowCleanup = null;
 	canvasMsgRow?.remove();
 	canvasMsgRow = null;
 }

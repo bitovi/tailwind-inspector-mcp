@@ -74,7 +74,7 @@ describe('createEventCapture', () => {
     // Wait for debounce (500ms)
     await new Promise(r => setTimeout(r, 600));
 
-    expect(onSnapshot).toHaveBeenCalledWith('mutation');
+    expect(onSnapshot).toHaveBeenCalledWith('mutation', undefined, expect.any(Array));
 
     handle.teardown();
   });
@@ -171,7 +171,7 @@ describe('createEventCapture', () => {
     // Next mutation should fire normally
     observer.trigger([{ target: { tagName: 'DIV', id: '', parentElement: null, getRootNode: () => ({}) } } as any]);
     await new Promise(r => setTimeout(r, 600));
-    expect(onSnapshot).toHaveBeenCalledWith('mutation');
+    expect(onSnapshot).toHaveBeenCalledWith('mutation', undefined, expect.any(Array));
 
     handle.teardown();
   });
@@ -201,7 +201,7 @@ describe('createEventCapture', () => {
     await new Promise(r => setTimeout(r, 600));
     // Should only fire once
     expect(onSnapshot).toHaveBeenCalledTimes(1);
-    expect(onSnapshot).toHaveBeenCalledWith('mutation');
+    expect(onSnapshot).toHaveBeenCalledWith('mutation', undefined, expect.any(Array));
 
     handle.teardown();
   });

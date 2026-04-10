@@ -58,6 +58,9 @@ export const state = {
 	pickerCloseHandler: null as ((e: MouseEvent) => void) | null,
 	pickerRefreshCallback: null as (() => void) | null,
 
+	// Depth disambiguation picker
+	depthPickerEl: null as HTMLElement | null,
+
 	// Design canvas wrappers
 	designCanvasWrappers: [] as DesignCanvasEntry[],
 };

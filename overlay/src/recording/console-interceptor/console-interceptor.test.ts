@@ -150,6 +150,32 @@ describe('createConsoleInterceptor', () => {
     console.log('after teardown');
     expect(handle.size()).toBe(0);
   });
+
+  describe('entriesSince', () => {
+    it('returns entries after the given timestamp', () => {
+      const t0 = new Date(Date.now() - 2000).toISOString();
+      console.log('before');
+      const t1 = new Date(Date.now() - 1000).toISOString();
+      console.error('after');
+      const result = handle.entriesSince(t1);
+      // The 'after' entry was logged at ~now, which is > t1
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      expect(result.some(e => e.args[0] === 'after')).toBe(true);
+    });
+
+    it('does not clear the buffer', () => {
+      console.log('keep me');
+      const t0 = new Date(0).toISOString();
+      handle.entriesSince(t0);
+      expect(handle.size()).toBe(1);
+    });
+
+    it('returns empty array when no entries match', () => {
+      console.log('old');
+      const future = new Date(Date.now() + 60000).toISOString();
+      expect(handle.entriesSince(future)).toHaveLength(0);
+    });
+  });
 });
 
 describe('safeSerialize', () => {

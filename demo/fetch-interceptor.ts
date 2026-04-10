@@ -9,6 +9,15 @@ const originalFetch = window.fetch.bind(window);
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
 
+  // POST /api/billing/* — simulate a 500 server error (used by bug-report tutorial step)
+  if (url.includes('/api/billing/') && init?.method === 'POST') {
+    return new Response(JSON.stringify({ error: 'INVOICE_CALC_ERROR' }), {
+      status: 500,
+      statusText: 'Internal Server Error',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   // POST /css — return empty CSS (browser compiler handles it via MutationObserver)
   if (url.includes('/css') && init?.method === 'POST') {
     return new Response(JSON.stringify({ css: '' }), {

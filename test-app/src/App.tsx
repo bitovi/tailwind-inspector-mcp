@@ -1,176 +1,486 @@
 import { Button } from './components/Button'
 import { Card } from './components/Card'
 import { Badge } from './components/Badge'
-import { Icon } from './components/Icon'
-import { Tag } from './components/Tag'
+import { Input } from './components/Input'
+import { TutorialSection } from './TutorialSection'
+import { useTutorialProgress } from './useTutorialProgress'
 
-const CASES = [
-  { id: 1, title: 'Vehicle Accident Report', code: '#CAS-001' },
-  { id: 2, title: 'Insurance Claim Dispute', code: '#CAS-002' },
-  { id: 3, title: 'Policy Coverage Inquiry', code: '#CAS-003' },
-  { id: 4, title: 'Premium Adjustment Request', code: '#CAS-004' },
-  { id: 5, title: 'Billing Discrepancy', code: '#CAS-005' },
-]
-
-// Intentionally no CaseListItem component — items rendered inline via .map()
-// This tests the findInlineRepeatedNodes fallback.
-function CaseList() {
-  const activeId = 2
+// Inline icons matching the panel's ModeToggle buttons, rendered at text size
+function SelectIcon() {
   return (
-    <div className="flex flex-col gap-2">
-      {CASES.map(c => (
-        <a
-          key={c.id}
-          href="#"
-          className={`flex items-center justify-between px-4 py-4 rounded-lg transition-colors ${
-            c.id === activeId ? 'bg-teal-50 border border-teal-300' : 'hover:bg-gray-100 border border-transparent'
-          }`}
-        >
-          <div className="flex flex-col items-start text-sm leading-snug">
-            <p className="font-semibold text-teal-700 truncate">{c.title}</p>
-            <p className="font-normal text-gray-600 truncate">{c.code}</p>
-          </div>
-          <div className="flex items-center gap-2 ml-3 shrink-0">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">open</span>
-            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </a>
-      ))}
-    </div>
+    <span className="inline-flex align-middle mx-0.5 rounded bg-[#1a1a1a] p-0.5">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="#5fd4da">
+        <path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/>
+        <path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/>
+      </svg>
+    </span>
+  )
+}
+
+function InsertIcon() {
+  return (
+    <span className="inline-flex align-middle mx-0.5 rounded bg-[#1a1a1a] p-0.5">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5fd4da" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+        <rect x="4" y="2" width="16" height="8" rx="2"/>
+        <path d="m17,14h1c1.105,0,2,.895,2,2"/>
+        <path d="m4,16c0-1.105.895-2,2-2h1"/>
+        <path d="m7,22h-1c-1.105,0-2-.895-2-2"/>
+        <path d="m20,20c0,1.105-.895,2-2,2h-1"/>
+        <line x1="13" y1="14" x2="11" y2="14"/>
+        <line x1="13" y1="22" x2="11" y2="22"/>
+      </svg>
+    </span>
+  )
+}
+
+function BugReportIcon() {
+  return (
+    <span className="inline-flex align-middle mx-0.5 rounded bg-[#1a1a1a] p-0.5">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="#5fd4da">
+        <path d="M11.5,6C11.5,4.067,9.933,2.5,8,2.5S4.5,4.067,4.5,6v1h7V6Z"/>
+        <rect x="3" y="8" width="10" height="6" rx="2"/>
+        <path d="M1,5.5h2.2C3.07,5.01,3,4.51,3,4h0V3.5H1c-.552,0-1,.448-1,1S.448,5.5,1,5.5Z"/>
+        <path d="M15,3.5h-2c0,.51-.07,1.01-.2,1.5H15c.552,0,1-.448,1-1s-.448-1-1-1Z"/>
+        <path d="M1,11.5h2.05c.232,.89,.62,1.71,1.13,2.5H1c-.552,0-1-.448-1-1s.448-1,1-1h0Z"/>
+        <path d="M15,10.5h-2.05c-.232,.89-.62,1.71-1.13,2.5h3.18c.552,0,1-.448,1-1s-.448-1-1-1Z"/>
+        <path d="M1,7.5h2v2H1c-.552,0-1-.448-1-1s.448-1,1-1Z"/>
+        <path d="M13,7.5h2c.552,0,1,.448,1,1s-.448,1-1,1h-2v-2Z"/>
+        <rect x="7" y="9" width="2" height="4" rx=".5"/>
+      </svg>
+    </span>
+  )
+}
+
+function MicIcon() {
+  return (
+    <span className="inline-flex align-middle mx-0.5 rounded bg-[#1a1a1a] p-0.5">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#5fd4da">
+        <path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/>
+      </svg>
+    </span>
   )
 }
 
 function App() {
+  const { completedSteps, completeStep, resetProgress } = useTutorialProgress()
+  const totalSteps = 12
+  const completedCount = completedSteps.size
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Tailwind Visual Editor — Test App</h1>
-          <div className="flex gap-2">
-            <Button variant="primary">Save</Button>
-            <Button variant="secondary">Cancel</Button>
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">VyBit Interactive Tutorial</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {completedCount} of {totalSteps} completed
+            </p>
           </div>
+          <button
+            onClick={resetProgress}
+            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          >
+            ↺ Start Over
+          </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Cards section — tests multiple instances of same component */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Cards (3 instances of Card)</h2>
-        <div className="grid grid-cols-3 gap-6 mb-12">
+      <main className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
+
+        {/* ── Section 1: Welcome ── */}
+        <TutorialSection
+          step={1}
+          title="Welcome to VyBit"
+          completed={completedSteps.has(1)}
+          onMarkComplete={() => completeStep(1)}
+          instructions={
+            <>
+              <p>
+                VyBit is a visual editing tool that works alongside your running app. You select elements, describe changes in plain language or tweak styles visually, and VyBit sends precise instructions to an AI coding agent that implements the changes in your source code.
+              </p>
+              <p className="mt-3">
+                This tutorial will walk you through the most common features. Each section has a small exercise — try them in any order. Completed sections get a checkmark so you can track your progress.
+              </p>
+              <p className="mt-3">
+                No backend is running. In the real workflow, committed changes would be picked up by an AI agent. Here, you'll see the exact MCP tool output logged to your browser's developer console.
+              </p>
+              <p className="mt-3">
+                Below is a sample app — <strong>Acme Project Tracker</strong> — that you'll modify throughout the exercises.
+              </p>
+            </>
+          }
+        />
+
+        {/* ── Section 2: Meet the Three Modes ── */}
+        <TutorialSection
+          step={2}
+          title="Meet the Three Modes"
+          completed={completedSteps.has(2)}
+          onMarkComplete={() => completeStep(2)}
+          instructions={
+            <>
+              <p>VyBit has three modes, controlled by the buttons at the top of the panel:</p>
+              <p className="mt-3">
+                <SelectIcon /> <strong>Select</strong> — Click elements in your app to inspect and change them. This is where you'll spend most of your time. Select an element, then describe what you want changed, tweak spacing, adjust colors, or edit text directly.
+              </p>
+              <p className="mt-3">
+                <InsertIcon /> <strong>Insert</strong> — Add new content to the page. Click a spot where you want something new, then describe it, sketch it, or pick a component from your design system.
+              </p>
+              <p className="mt-3">
+                <BugReportIcon /> <strong>Bug Report</strong> — Record and describe issues. Pick an element, describe what's wrong, and VyBit captures a timeline snapshot for context.
+              </p>
+              <p className="mt-3">You'll try all three in the exercises below.</p>
+            </>
+          }
+        />
+
+        {/* ── Section 3: Open the Panel ── */}
+        <TutorialSection
+          step={3}
+          title="Open the Panel"
+          completed={completedSteps.has(3)}
+          onMarkComplete={() => completeStep(3)}
+          instructions={
+            <>
+              <p>
+                See the round button in the bottom-right corner of the page? That's the <strong>VyBit toggle button</strong>. Click it to open the inspector panel.
+              </p>
+              <p className="mt-3">The panel will slide in as a sidebar on the right side of the page.</p>
+            </>
+          }
+        />
+
+        {/* ── Section 4: Your First Change ── */}
+        <TutorialSection
+          step={4}
+          title="Your First Change"
+          completed={completedSteps.has(4)}
+          onMarkComplete={() => completeStep(4)}
+          instructions={
+            <>
+              <p>Let's make your first change. <strong>Click the issue card below</strong> to select it, then tell VyBit what to do.</p>
+              <ol>
+                <li>In the panel, click the <strong>Select</strong> button (<SelectIcon />) to enter Select mode</li>
+                <li>Click the card below — it will highlight with a teal border</li>
+                <li>In the panel's message area, type something like: <em>"Make the bug tag flash red"</em></li>
+                <li>Click <strong>Queue Message</strong> in the panel</li>
+                <li>At the bottom of the panel, click the <strong>draft count</strong> (e.g., "1 draft") to open the queue</li>
+                <li>Click <strong>Commit</strong></li>
+              </ol>
+              <p className="mt-3">Open your browser's developer console (F12) to see the MCP tool call — that's exactly what an AI agent would receive.</p>
+            </>
+          }
+        >
           <Card
-            title="Design System"
-            description="Create consistent, reusable components for your application."
-            tag="UI"
+            title="Fix Login Page Timeout"
+            description="Users see a blank screen after 30s on the login page."
+            tag="Bug"
           />
-          <Card
-            title="Performance"
-            description="Optimize bundle size and runtime performance metrics."
-            tag="Engineering"
-          />
-          <Card
-            title="Accessibility"
-            description="Ensure your app is usable by everyone, including assistive tech."
-            tag="A11y"
-          />
-        </div>
+        </TutorialSection>
 
-        {/* Buttons section — tests multiple instances with different variants */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Buttons (6 instances of Button)</h2>
-        <div className="flex flex-wrap gap-3 mb-12">
-          <Button variant="primary" leftIcon={<Icon name="star" />}>Primary</Button>
-          <Button variant="secondary">Secondary</Button>
-          <Button variant="primary" leftIcon={<Icon name="check" />}>Submit</Button>
-          <Button variant="secondary" rightIcon={<Icon name="arrow-right" />}>Reset</Button>
-          <Button variant="primary" leftIcon={<Icon name="heart" />} rightIcon={<Icon name="arrow-right" />}>Confirm</Button>
-          <Button variant="secondary" leftIcon={<Icon name="arrow-left" />}>Back</Button>
-        </div>
+        {/* ── Section 5: Send a Voice Message ── */}
+        <TutorialSection
+          step={5}
+          title="Send a Voice Message"
+          completed={completedSteps.has(5)}
+          onMarkComplete={() => completeStep(5)}
+          instructions={
+            <>
+              <p>Sometimes it's easier to talk than type. VyBit has a microphone button for voice messages.</p>
+              <ol>
+                <li>Click the <strong>Select</strong> button (<SelectIcon />) in the panel to enter Select mode</li>
+                <li>Click the <strong>Assign</strong> button below to select it</li>
+                <li>In the panel, click the <strong>microphone</strong> (<MicIcon />) button next to the message input</li>
+                <li>Speak your change — something like <em>"When assigning, show a spinner in the assign button and disable the button"</em></li>
+                <li>Click the mic again to stop recording, then click <strong>Queue Message</strong></li>
+              </ol>
+            </>
+          }
+        >
+          <div className="flex gap-2">
+            <Button variant="primary">Assign</Button>
+            <Button variant="secondary">Close Issue</Button>
+          </div>
+        </TutorialSection>
 
-        {/* Badges — tests small inline components */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Badges (5 instances of Badge)</h2>
-        <div className="flex flex-wrap gap-2 mb-12">
-          <Badge color="blue">Active</Badge>
-          <Badge color="green">Approved</Badge>
-          <Badge color="yellow">Pending</Badge>
-          <Badge color="red">Rejected</Badge>
-          <Badge color="gray">Draft</Badge>
-        </div>
+        {/* ── Section 6: Edit Text In Place ── */}
+        <TutorialSection
+          step={6}
+          title="Edit Text In Place"
+          completed={completedSteps.has(6)}
+          onMarkComplete={() => completeStep(6)}
+          instructions={
+            <>
+              <p>You can edit text directly on the page using the overlay toolbar.</p>
+              <ol>
+                <li>Make sure you're in <strong>Select</strong> mode — click the <SelectIcon /> button in the panel if needed</li>
+                <li>Click the empty state card below to select it — it will highlight with a teal border</li>
+                <li>In the floating toolbar that appears above it, click the <strong>Text</strong> button</li>
+                <li>The text becomes editable — try changing it to something friendlier, like <em>"Nothing here yet — Create your first issue!"</em></li>
+                <li>Click away or press Escape to finish editing</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <p className="text-3xl mb-3">📋</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">No Data Available</h3>
+            <p className="text-sm text-gray-500">There are currently no items to display in this view at this time.</p>
+          </div>
+        </TutorialSection>
 
-        {/* Inline list — tests findInlineRepeatedNodes fallback (no CaseListItem component) */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Case List (inline .map(), no item component)</h2>
-        <div className="bg-white rounded-lg shadow p-4 mb-12 w-72">
-          <CaseList />
-        </div>
-
-        {/* Tags — tests near-group matching (single-class diff between variants) */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Tags (group test: 1-class diff)</h2>
-        <div className="flex flex-wrap gap-2 mb-12">
-          <Tag color="blue">Frontend</Tag>
-          <Tag color="blue">Backend</Tag>
-          <Tag color="red">Urgent</Tag>
-          <Tag color="green">Done</Tag>
-          <Tag color="green">Shipped</Tag>
-        </div>
-
-        {/* Typography section — tests font-family, size, style, weight, stretch, spacing, etc. */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Typography Showcase</h2>
-        <div className="bg-white rounded-lg shadow p-6 mb-12 flex flex-col gap-4">
-          <h1 className="font-sans text-4xl font-bold not-italic tracking-tight leading-tight text-left text-gray-900 align-baseline">
-            Sans-serif, 4xl, Bold, Tight Tracking
-          </h1>
-          <h2 className="font-serif text-3xl font-extrabold italic tracking-wide leading-snug text-center text-indigo-700 align-middle">
-            Serif, 3xl, Extrabold, Italic, Wide Tracking
-          </h2>
-          <h3 className="font-mono text-2xl font-light not-italic tracking-widest leading-relaxed text-right text-teal-600 align-top">
-            Mono, 2xl, Light, Widest Tracking
-          </h3>
-          <h4 className="font-sans text-xl font-semibold italic tracking-normal leading-loose text-left text-rose-600 align-baseline">
-            Sans, xl, Semibold, Italic, Loose Line Height
-          </h4>
-          <h5 className="font-serif text-lg font-medium not-italic tracking-wider leading-none text-center text-amber-600 align-middle">
-            Serif, lg, Medium, Wider Tracking, None Line Height
-          </h5>
-          <h6 className="font-mono text-base font-thin italic tracking-tight leading-normal text-right text-gray-500 align-bottom">
-            Mono, base, Thin, Italic, Normal Line Height
-          </h6>
-        </div>
-
-        {/* Effects — tests opacity scrubber */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Effects (opacity)</h2>
-        <div className="flex flex-wrap gap-4 mb-12">
-          <div className="w-24 h-24 rounded-lg bg-teal-500 opacity-50 flex items-center justify-center text-white font-bold text-sm">50%</div>
-          <div className="w-24 h-24 rounded-lg bg-teal-500 flex items-center justify-center text-white font-bold text-sm">100%</div>
-        </div>
-
-        {/* Nested structure — tests deep fiber walking */}
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Nested Structure</h2>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">JM</div>
-            <div>
-              <p className="font-medium text-gray-900">Justin Meyer</p>
-              <p className="text-sm text-gray-500">Designer</p>
+        {/* ── Section 7: Describe What to Add ── */}
+        <TutorialSection
+          step={7}
+          title="Describe What to Add"
+          completed={completedSteps.has(7)}
+          onMarkComplete={() => completeStep(7)}
+          instructions={
+            <>
+              <p>Now let's <strong>add a new field</strong> to this form.</p>
+              <ol>
+                <li>In the panel header, click the <strong>Insert</strong> (<InsertIcon />) mode button</li>
+                <li>Hover over the form below — you'll see insertion indicators between the fields</li>
+                <li>Click the gap between <strong>Email</strong> and <strong>Role</strong> to set an <strong>insert point</strong></li>
+                <li>In the panel's message area, describe the field to add — something like: <em>"Add a phone number field"</em></li>
+                <li>Click <strong>Queue Message</strong></li>
+              </ol>
+            </>
+          }
+        >
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Add Team Member</h3>
+            <div className="flex flex-col gap-4">
+              <Input label="Full Name" placeholder="Jane Smith" />
+              <Input label="Email" placeholder="jane@acme.com" type="email" />
+              <Input label="Role" placeholder="Designer" />
             </div>
           </div>
-          <p className="text-gray-600 mb-4">
-            This section tests deeply nested elements to verify the pseudo-HTML context builder captures the full ancestor chain correctly.
-          </p>
-          <div className="flex gap-2">
-            <Button variant="primary">Follow</Button>
-            <Button variant="secondary">Message</Button>
-          </div>
-        </div>
-      </main>
+        </TutorialSection>
 
-      {/* Footer */}
-      <footer className="fixed bottom-0 w-full bg-gray-900 text-gray-400 py-3">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm">
-          <span>Tailwind Visual Editor Test</span>
-          <span>v0.1.0</span>
-        </div>
-      </footer>
+        {/* ── Section 8: Sketch What to Add ── */}
+        <TutorialSection
+          step={8}
+          title="Sketch What to Add"
+          completed={completedSteps.has(8)}
+          onMarkComplete={() => completeStep(8)}
+          instructions={
+            <>
+              <p>Don't want to describe in words? Draw it instead. The signups below are just numbers — let's sketch a chart to visualize the trend.</p>
+              <ol>
+                <li>Switch to <strong>Insert</strong> mode (<InsertIcon />) and click between <strong>"Monthly Signups"</strong> and <strong>"January"</strong> to set an insertion point</li>
+                <li>In the <strong>Place</strong> tab, click <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span></li>
+                <li>On the canvas, sketch a bar chart — draw a few bars of different heights with labels underneath</li>
+                <li>Click <strong style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#00848B',color:'#fff',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>✓ Add to Drafts</strong> to queue the drawing</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Signups</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">January</span>
+                <span className="text-gray-900 font-medium">120</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">February</span>
+                <span className="text-gray-900 font-medium">185</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">March</span>
+                <span className="text-gray-900 font-medium">310</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">April</span>
+                <span className="text-gray-900 font-medium">275</span>
+              </div>
+            </div>
+          </div>
+        </TutorialSection>
+
+        {/* ── Section 9: Place a Component ── */}
+        <TutorialSection
+          step={9}
+          title="Place a Component"
+          completed={completedSteps.has(9)}
+          onMarkComplete={() => completeStep(9)}
+          instructions={
+            <>
+              <p>VyBit can browse your component library and place components directly onto the page.</p>
+              <ol>
+                <li>Switch to <strong>Insert</strong> mode (<InsertIcon />) if not already active</li>
+                <li>In the panel, you'll see the <strong>Components</strong> tab with your available components</li>
+                <li>Find a component (e.g., <strong>Badge</strong>) and click its <strong>Place</strong> button</li>
+                <li>Hover over the page — you'll see a ghost preview of the component following your cursor</li>
+                <li>Click to drop it next to the existing status badges</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Status:</span>
+            <Badge color="green">Open</Badge>
+            <Badge color="blue">Frontend</Badge>
+            <Badge color="red">Priority: High</Badge>
+          </div>
+        </TutorialSection>
+
+        {/* ── Section 10: Build with Nested Components ── */}
+        <TutorialSection
+          step={10}
+          title="Build with Nested Components"
+          completed={completedSteps.has(10)}
+          onMarkComplete={() => completeStep(10)}
+          instructions={
+            <>
+              <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component. VyBit lets you fill these slots directly in the component drawer.</p>
+              <ol>
+                <li>In <strong>Insert</strong> mode (<InsertIcon />), find the <strong>Button</strong> component in the Components tab and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Customize</span> button</li>
+                <li>In the detail drawer, switch the <strong>variant</strong> to <code style={{background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:'3px',padding:'0 4px',fontSize:'12px'}}>warning</code></li>
+                <li>Find the <strong>leftIcon</strong> row — click the <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'18px',height:'18px',background:'#374151',color:'#f9fafb',fontSize:'13px',fontWeight:700,borderRadius:'3px',fontFamily:'sans-serif',lineHeight:1}}>⊞</span> button to open the component picker for that prop</li>
+                <li>Find the <strong>Icon</strong> component and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#F5532D',color:'#fff',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Set Prop</span> button — you'll see a star appear in the Button preview</li>
+                <li>Back in the Button drawer, click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Place</span> button and drop the composed button onto the page</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="flex gap-2">
+            <Button variant="primary">Assign</Button>
+            <Button variant="secondary">Close Issue</Button>
+          </div>
+        </TutorialSection>
+
+        {/* ── Section 11: Fine-Tune the Design ── */}
+        <TutorialSection
+          step={11}
+          title="Fine-Tune the Design"
+          completed={completedSteps.has(11)}
+          onMarkComplete={() => completeStep(11)}
+          playgroundClassName="bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300"
+          instructions={
+            <>
+              <p>VyBit isn't just for big changes — you can precisely adjust Tailwind classes too. Scrub spacing values, pick colors from a palette, adjust shadows, and see changes live as you drag.</p>
+              <ol>
+                <li>Switch to <strong>Select</strong> mode (<SelectIcon />)</li>
+                <li>Click the banner below — it will show its Tailwind properties in the panel</li>
+                <li>
+                  Try any of these in the <strong>Design</strong> tab:
+                  <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                    <li>Drag the <strong>padding</strong> scrubber left or right</li>
+                    <li>Click a <strong>color</strong> chip to open the color grid — pick a new background color</li>
+                    <li>Adjust the <strong>shadow</strong> to make it bigger or smaller</li>
+                    <li>Change the <strong>ring</strong> width or color to add an outline</li>
+                    <li>Tweak the <strong>border radius</strong> to sharpen or round the corners</li>
+                  </ul>
+                </li>
+                <li>Every change previews live on the page — experiment freely</li>
+              </ol>
+            </>
+          }
+        >
+          <h3 className="text-2xl font-bold mb-2">Welcome to Acme Project Tracker</h3>
+          <p className="text-indigo-200">Your hub for issues, roadmaps, and team collaboration.</p>
+        </TutorialSection>
+
+        {/* ── Section 12: Report a Bug ── */}
+        <TutorialSection
+          step={12}
+          title="Report a Bug"
+          completed={completedSteps.has(12)}
+          onMarkComplete={() => completeStep(12)}
+          instructions={
+            <>
+              <p>Found something broken? VyBit's Bug Report mode captures element context, console errors, network failures, and a visual timeline so the AI agent knows exactly what to fix.</p>
+              <ol>
+                <li>First, click <strong>"Refresh Invoice"</strong> below — it will trigger a failed API call and a console error</li>
+                <li>In the panel header, switch to <strong>Bug Report</strong> mode (<BugReportIcon />)</li>
+                <li>The timeline will show the errors that just happened — you'll see network and console error badges</li>
+                <li>Click the element below that looks "wrong"</li>
+                <li>Describe the bug — e.g., <em>"This price should not be negative and the refresh button is broken"</em></li>
+                <li>Submit the bug report</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="overflow-hidden rounded-lg">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Billing — Invoice #1042</h3>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Pro Plan (monthly)</span>
+                <span className="text-gray-900 font-medium">$49.00</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Extra seats (3)</span>
+                <span className="text-gray-900 font-medium">$30.00</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-red-600 font-semibold">Overage charges</span>
+                <span className="text-red-600 font-bold">$-14,000.00</span>
+              </div>
+              <hr className="my-2 border-gray-200" />
+              <div className="flex justify-between">
+                <span className="text-gray-900 font-semibold">Total</span>
+                <span className="text-red-600 font-bold text-base">-$13,921.00</span>
+              </div>
+            </div>
+            <button
+              className="mt-4 px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 transition-colors"
+              onClick={() => {
+                console.error('[Billing] Failed to refresh invoice: INVOICE_CALC_ERROR — negative overage value is invalid');
+                fetch('/api/billing/invoice/1042/refresh', { method: 'POST' }).catch(() => {});
+              }}
+            >
+              Refresh Invoice
+            </button>
+          </div>
+          </div>
+        </TutorialSection>
+
+        {/* ── Completion Section ── */}
+        {completedCount === totalSteps && (
+          <section className="bg-linear-to-br from-green-50 to-teal-50 rounded-lg shadow-sm border border-green-200 px-6 py-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">You did it!</h2>
+            <div className="text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
+              <p>You've explored every major VyBit feature:</p>
+              <ul className="text-left inline-block mt-3 space-y-1">
+                <li>✓ Selecting elements and sending change messages</li>
+                <li>✓ Voice messages</li>
+                <li>✓ Inline text editing</li>
+                <li>✓ Describing new content to insert</li>
+                <li>✓ Sketching layouts</li>
+                <li>✓ Placing design system components</li>
+                <li>✓ Composing nested components</li>
+                <li>✓ Fine-tuning Tailwind styles</li>
+                <li>✓ Reporting bugs</li>
+              </ul>
+              <p className="mt-4">
+                In a real project, every committed change triggers the MCP <code className="bg-gray-100 text-gray-800 px-1 rounded">implement_next_change</code> tool. Your AI agent (Copilot, Cursor, Claude, etc.) receives the change description, context, and instructions — then writes the code.
+              </p>
+              <p className="mt-4 font-medium text-gray-900">
+                Ready to try it for real?{' '}
+                <a
+                  href="https://github.com/bitovi/vybit"
+                  className="text-teal-600 underline hover:text-teal-800"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Install VyBit
+                </a>{' '}
+                and connect it to your project.
+              </p>
+            </div>
+            <button
+              onClick={resetProgress}
+              className="mt-6 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-4 py-2 hover:bg-white transition-colors"
+            >
+              ↺ Start Over
+            </button>
+          </section>
+        )}
+      </main>
     </div>
   )
 }

@@ -293,6 +293,26 @@ export function clearLockedInsert(): void {
   if (locked.arrowRight) { locked.arrowRight.remove(); locked.arrowRight = null; }
 }
 
+/** Re-render indicators at fresh getBoundingClientRect positions (call on scroll). */
+export function repositionOnScroll(): void {
+  // Hover indicator (only while a mode is active)
+  if (mode.kind !== 'idle' && dom.currentTarget && dom.currentPosition && dom.indicator) {
+    const parentAxis = dom.currentTarget.parentElement ? getAxis(dom.currentTarget.parentElement) : 'vertical';
+    showDropIndicator(dom.currentTarget, dom.currentPosition, parentAxis);
+  }
+
+  // Element-select outline (only while selecting)
+  if (mode.kind === 'element-select' && dom.currentTarget) {
+    showElementSelectOutline(dom.currentTarget);
+  }
+
+  // Locked indicator — persists after mode returns to idle
+  if (locked.target && locked.position && locked.indicator) {
+    const parentAxis = locked.target.parentElement ? getAxis(locked.target.parentElement) : 'vertical';
+    showLockedIndicator(locked.target, locked.position, parentAxis);
+  }
+}
+
 // ── Shared arming logic ──────────────────────────────────────────────────
 
 function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label: string): void {

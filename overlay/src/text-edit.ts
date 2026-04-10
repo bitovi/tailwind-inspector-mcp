@@ -170,8 +170,8 @@ export function endTextEdit(confirm: boolean): void {
   editTarget = null;
   originalHtml = '';
 
-  // Notify panel
-  deps.sendTo('panel', { type: 'TEXT_EDIT_DONE' });
+  // Notify all listeners (send instead of sendTo so the demo bus echoes locally)
+  deps.send({ type: 'TEXT_EDIT_DONE' });
 
   // Restore toolbar
   if (deps.onDone) deps.onDone();

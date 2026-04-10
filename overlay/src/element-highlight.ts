@@ -31,6 +31,16 @@ export function clearHighlights(): void {
 	removeDrawButton();
 }
 
+/** Re-render selection highlights at fresh getBoundingClientRect positions. */
+export function repositionHighlights(): void {
+	// Only reposition highlights that are actually in the DOM — don't create
+	// new ones.  This keeps insert mode from spawning selection outlines.
+	const existing = state.shadowRoot.querySelectorAll(".highlight-overlay");
+	if (existing.length === 0) return;
+	existing.forEach((el) => el.remove());
+	state.currentEquivalentNodes.forEach((n) => highlightElement(n));
+}
+
 export function clearHoverPreview(): void {
 	state.hoverOutlineEl?.remove();
 	state.hoverOutlineEl = null;

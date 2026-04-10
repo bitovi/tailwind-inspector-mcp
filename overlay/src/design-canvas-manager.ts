@@ -6,7 +6,7 @@ import { sendTo } from "./ws";
 import { css, SUBMITTED_IMAGE } from './styles';
 import { clearHighlights } from "./element-highlight";
 import { showCanvasMessageRow, hideCanvasMessageRow, getCanvasMessageText } from "./element-toolbar";
-import { state } from "./overlay-state";
+import { state, clearSelectionState } from "./overlay-state";
 import { send } from "./ws";
 
 let serverOrigin = '';
@@ -31,6 +31,12 @@ export function injectDesignCanvas(insertMode: InsertMode): void {
 	clearHighlights();
 
 	const targetEl = state.currentTargetEl;
+	// Snapshot state before clearing — needed for ELEMENT_CONTEXT sent to design iframe
+	const boundary = state.currentBoundary;
+	const equivalentCount = state.currentEquivalentNodes.length;
+
+	// Clear selection state so the overlay doesn't re-highlight after canvas insert
+	clearSelectionState();
 
 	// Create design canvas element
 	const canvas = document.createElement('vb-design-canvas') as VbDesignCanvas;
@@ -76,15 +82,15 @@ export function injectDesignCanvas(insertMode: InsertMode): void {
 		parent: replacedParent,
 		anchor: replacedAnchor,
 	});
-	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), state.currentBoundary, state.shadowRoot));
+	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), boundary, state.shadowRoot));
 	// Use a short delay to allow the iframe's WS client to connect and register
 	console.log('[tw-debug] canvas inserted into DOM, listening for vb-canvas-ready...');
 	canvas.addEventListener('vb-canvas-ready', () => {
 		console.log('[tw-debug] vb-canvas-ready fired!');
 		const contextMsg = {
 			type: "ELEMENT_CONTEXT",
-			componentName: state.currentBoundary?.componentName ?? "",
-			instanceCount: state.currentEquivalentNodes.length,
+			componentName: boundary?.componentName ?? "",
+			instanceCount: equivalentCount,
 			target: {
 				tag: targetEl.tagName.toLowerCase(),
 				classes:
@@ -164,9 +170,12 @@ export async function handleCaptureScreenshot(): Promise<void> {
 	clearHighlights();
 
 	// Hide all selected nodes so the canvas takes their place
-	for (const node of state.currentEquivalentNodes) {
+	for (const node of replacedNodes) {
 		node.style.display = "none";
 	}
+
+	// Clear selection state so the overlay doesn't re-highlight after canvas insert
+	clearSelectionState();
 
 	// toolbar ~40px = no footer now
 	const PANEL_CHROME_HEIGHT = 40;
@@ -188,7 +197,7 @@ export async function handleCaptureScreenshot(): Promise<void> {
 	marker.remove();
 
 	state.designCanvasWrappers.push({ wrapper: canvas as unknown as HTMLElement, replacedNodes, parent, anchor: canvas.nextSibling });
-	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), state.currentBoundary, state.shadowRoot));
+	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), boundary, state.shadowRoot));
 	canvas.addEventListener('vb-canvas-ready', () => {
 		const contextMsg = {
 			type: "ELEMENT_CONTEXT",
@@ -225,17 +234,20 @@ export function handleDesignSubmitted(msg: { image?: string; patchId?: string })
 	const lastEntry = state.designCanvasWrappers[state.designCanvasWrappers.length - 1];
 	const last = lastEntry?.wrapper;
 	if (last) {
-		const iframe = last.querySelector("iframe");
+		// last may be the <vb-design-canvas> custom element; the actual wrapper div is its first child
+		const wrapper = last.querySelector('[data-tw-design-canvas]') as HTMLElement ?? last;
+		const iframe = wrapper.querySelector("iframe");
 		if (iframe && msg.image) {
 			const img = document.createElement("img");
 			img.src = msg.image;
 			img.style.cssText = css(SUBMITTED_IMAGE);
 			// Remove all children (iframe, resize handles) and show just the image
-			last.innerHTML = "";
-			last.style.height = "auto";
-			last.style.minHeight = "0";
-			last.style.overflow = "hidden";
-			last.appendChild(img);
+			wrapper.innerHTML = "";
+			wrapper.style.width = "auto";
+			wrapper.style.height = "auto";
+			wrapper.style.minHeight = "0";
+			wrapper.style.overflow = "hidden";
+			wrapper.appendChild(img);
 		}
 	}
 	const messageText = getCanvasMessageText();

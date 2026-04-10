@@ -3,6 +3,8 @@ import type { NetworkError } from '../../../../shared/types';
 const MAX_BUFFER_SIZE = 100;
 
 export interface NetworkInterceptorHandle {
+  /** Return all entries with timestamp > the given ISO string, without clearing. */
+  entriesSince(since: string): NetworkError[];
   /** Flush and return all buffered errors, clearing the buffer. */
   flush(): NetworkError[];
   /** Peek at current buffer without flushing. */
@@ -67,6 +69,9 @@ export function createNetworkInterceptor(options: { serverOrigin?: string } = {}
   };
 
   return {
+    entriesSince(since: string): NetworkError[] {
+      return buffer.filter(e => e.timestamp > since);
+    },
     flush(): NetworkError[] {
       const entries = buffer;
       buffer = [];

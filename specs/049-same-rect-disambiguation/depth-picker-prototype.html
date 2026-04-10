@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>049 · Same-Rect Element Disambiguation — Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── TOKENS (Bitovi / overlay theme) ──────────────────── */
+    :root {
+      --bg:           #1a1a1a;
+      --surface:      #2c2c2c;
+      --surface-hi:   #383838;
+      --border:       #DFE2E2;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --text-dark:    #334041;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --teal:         #00848B;
+      --teal-dark:    #003D40;
+      --teal-dim:     rgba(0,132,139,0.08);
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', system-ui, sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px 40px 120px;
+    }
+
+    .page-header {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 40px;
+      line-height: 1.7;
+      max-width: 880px;
+    }
+
+    .page-subtitle strong { color: var(--text-mid); }
+    .page-subtitle code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--surface);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 52px 0 36px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+      max-width: 780px;
+    }
+
+    .variations {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      max-width: 420px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 420px;
+      line-height: 1.55;
+      margin-bottom: 6px;
+    }
+
+    /* ─── SCENARIO PANELS (fake app areas) ─────────────────── */
+    .scenario {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .scenario-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-mid);
+      margin-bottom: 8px;
+    }
+
+    /* app mock area */
+    .app-area {
+      position: relative;
+      background: #f9fafb;
+      border-radius: 10px;
+      overflow: visible;
+    }
+
+    /* ─── HIGHLIGHT OUTLINE (mimics overlay) ───────────────── */
+    .highlight {
+      position: absolute;
+      border: 2px solid var(--teal);
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 10;
+      animation: highlight-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes highlight-pulse {
+      0%, 100% { border-color: #00848B; box-shadow: 0 0 6px rgba(0,132,139,0.5); }
+      50% { border-color: #F5532D; box-shadow: 0 0 6px rgba(245,83,45,0.5); }
+    }
+
+    /* Preview highlight when hovering a picker row */
+    .highlight-preview {
+      position: absolute;
+      border: 2px dashed var(--orange);
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 9;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .highlight-preview.visible {
+      opacity: 1;
+    }
+
+    /* ─── DEPTH PICKER POPUP (dark — matches overlay toolbar) ─ */
+    .depth-picker {
+      position: absolute;
+      z-index: 100;
+      background: #1a1a1a;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+      min-width: 280px;
+      max-width: 440px;
+      font-family: var(--font-ui);
+      overflow: hidden;
+      pointer-events: auto;
+    }
+
+    .depth-picker-header {
+      display: flex;
+      align-items: center;
+      padding: 7px 12px 5px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .depth-picker-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #999;
+    }
+
+    .depth-picker-list {
+      padding: 4px 0;
+    }
+
+    .depth-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background 0.1s;
+      color: #ccc;
+    }
+
+    .depth-row:hover {
+      background: rgba(0,132,139,0.08);
+    }
+
+    .depth-row.active {
+      background: rgba(0,132,139,0.12);
+    }
+
+    /* ── Nesting depth levels (padding only) ── */
+    .depth-0 { padding-left: 12px; }
+    .depth-1 { padding-left: 28px; }
+    .depth-2 { padding-left: 44px; }
+
+    .depth-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: #aaa;
+      flex-shrink: 0;
+    }
+
+    .depth-row:hover .depth-tag,
+    .depth-row.active .depth-tag {
+      color: #ddd;
+    }
+
+    .depth-component {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1ac2cb;
+      flex-shrink: 0;
+    }
+
+    .depth-classes {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #777;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .depth-row:hover .depth-classes,
+    .depth-row.active .depth-classes {
+      color: #aaa;
+    }
+
+    .depth-hint {
+      font-size: 10px;
+      color: #777;
+      padding: 5px 12px 7px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .depth-hint kbd {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 1px 4px;
+      border-radius: 2px;
+      color: #aaa;
+    }
+
+    /* ─── TOOLBAR (simplified mockup) ──────────────────────── */
+    .toolbar-mock {
+      position: absolute;
+      top: -38px;
+      left: -2px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 4px 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      font-size: 10px;
+      color: var(--text);
+    }
+
+    .toolbar-btn {
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .toolbar-btn.active {
+      background: var(--teal);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .toolbar-btn:not(.active):hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .toolbar-sep {
+      width: 1px;
+      height: 16px;
+      background: rgba(255,255,255,0.12);
+      margin: 0 3px;
+    }
+
+    /* ─── ANNOTATION LABELS ────────────────────────────────── */
+    .annotation {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--teal);
+      background: rgba(0, 132, 139, 0.12);
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .annotation.orange {
+      color: var(--orange);
+      background: rgba(245, 83, 45, 0.12);
+    }
+
+    /* ─── INTERACTIVE DEMO ─────────────────────────────────── */
+    .demo-area {
+      position: relative;
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      margin-top: 16px;
+    }
+
+    .click-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .click-hint svg {
+      width: 12px;
+      height: 12px;
+      opacity: 0.5;
+    }
+
+    .status-msg {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--text-mid);
+      min-height: 20px;
+    }
+
+    .status-msg .selected-class {
+      font-family: var(--font-mono);
+      color: var(--teal);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">049 · Same-Rect Element Disambiguation</div>
+  <p class="page-subtitle">
+    When the user clicks a spot where multiple elements share the <strong>same bounding rect</strong>,
+    a small picker popup lets them choose which element to select. This replaces the old behavior of
+    always walking up to the component root, which caused wrong classes to be sent to the panel.<br><br>
+    The algorithm: walk up from <code>e.target</code>, compare <code>getBoundingClientRect()</code>
+    against the clicked element. Parents within ~2px on all sides are candidates. If only 1 candidate,
+    select directly. If 2+, show the picker.
+  </p>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="section-title">Scenario 1: No Overlap — Direct Select</div>
+  <p class="section-subtitle">
+    The indigo banner's parent (<code>&lt;div class="px-6 py-5"&gt;</code>) has padding,
+    so its bounding rect is larger. Only 1 candidate → select immediately, no popup.
+    The panel receives <code>bg-indigo-600</code> classes (not the parent's).
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <div class="col-label">Click the banner</div>
+      <div class="col-description">Only the indigo div matches at this rect — no picker needed.</div>
+
+      <div class="scenario">
+        <div class="app-area" style="padding: 24px; background: #f9fafb; border-radius: 10px; width: 520px;">
+          <!-- Wrapper with padding (different rect) -->
+          <div style="padding: 0; position: relative;">
+            <!-- The indigo banner (this is what gets selected) -->
+            <div id="demo1-banner" style="background: #4f46e5; color: white; border-radius: 16px; padding: 48px 24px; text-align: center; box-shadow: 0 20px 60px rgba(79,70,229,0.3); cursor: pointer; position: relative;"
+                 onclick="demo1Select(this)">
+              <!-- Selection highlight -->
+              <div class="highlight" id="demo1-highlight" style="inset: -3px; display: none;"></div>
+              <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Welcome to Acme Project Tracker</h3>
+              <p style="color: rgba(199,198,255,0.8); font-size: 14px;">Your hub for issues, roadmaps, and team collaboration.</p>
+            </div>
+          </div>
+        </div>
+        <div class="status-msg" id="demo1-status">Click the banner above.</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Panel sees</div>
+      <div class="col-description">Component name + the clicked element's own classes.</div>
+
+      <div style="background: var(--surface); border-radius: 8px; padding: 14px 16px; min-width: 260px; opacity: 0.4; transition: opacity 0.2s;" id="demo1-panel">
+        <div style="font-size: 10px; font-weight: 700; color: var(--teal); margin-bottom: 2px;" id="demo1-panel-name">TutorialSection › div</div>
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text-mid); line-height: 1.6;" id="demo1-panel-classes">bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300</div>
+        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+          <div style="font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Backgrounds</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 32px; height: 20px; background: #4f46e5; border-radius: 4px; border: 1px solid rgba(255,255,255,0.12);"></div>
+            <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text);">indigo-600</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="section-title">Scenario 2: Same-Rect Overlap — Picker Appears</div>
+  <p class="section-subtitle">
+    Two nested divs have the exact same bounding rect (the outer one has <code>p-0</code>).
+    The picker appears so the user can choose which element they mean.
+    Hovering a row previews an orange dashed outline on that element.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <div class="col-label">Click triggers picker</div>
+      <div class="col-description">Both divs match the same rect → 2 candidates → picker shown.</div>
+
+      <div class="scenario">
+        <div class="app-area" style="padding: 24px; width: 520px; position: relative;">
+          <!-- Outer div — same rect as inner (no padding) -->
+          <div id="demo2-outer" style="border-radius: 16px; overflow: hidden; position: relative;">
+            <!-- Preview highlight for outer -->
+            <div class="highlight-preview" id="demo2-preview-outer" style="inset: -3px;"></div>
+            <!-- Inner div — the indigo banner -->
+            <div id="demo2-inner" style="background: #4f46e5; color: white; border-radius: 16px; padding: 48px 24px; text-align: center; box-shadow: 0 20px 60px rgba(79,70,229,0.3); cursor: pointer; position: relative;"
+                 onclick="demo2Click(event)">
+              <!-- Selection highlight -->
+              <div class="highlight" id="demo2-highlight" style="inset: -3px; display: none;"></div>
+              <!-- Preview highlight for inner -->
+              <div class="highlight-preview" id="demo2-preview-inner" style="inset: -3px;"></div>
+              <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Welcome to Acme Project Tracker</h3>
+              <p style="color: rgba(199,198,255,0.8); font-size: 14px;">Your hub for issues, roadmaps, and team collaboration.</p>
+            </div>
+          </div>
+
+          <!-- Depth picker popup -->
+          <div class="depth-picker" id="demo2-picker" style="display: none; top: calc(100% + 8px); left: 0;">
+            <div class="depth-picker-header">
+              <span class="depth-picker-title">Pick an element</span>
+            </div>
+            <div class="depth-picker-list">
+              <div class="depth-row depth-0" id="demo2-row-outer"
+                   onmouseenter="demo2Hover('outer')"
+                   onmouseleave="demo2Unhover()"
+                   onclick="demo2Select('outer', event)">
+                <span class="depth-tag">&lt;section&gt;</span>
+                <span class="depth-component">TutorialSection</span>
+                <span class="depth-classes">.rounded-lg .shadow-sm .border .overflow-hidden .bg-white</span>
+              </div>
+              <div class="depth-row depth-1" id="demo2-row-inner"
+                   onmouseenter="demo2Hover('inner')"
+                   onmouseleave="demo2Unhover()"
+                   onclick="demo2Select('inner', event)">
+                <span class="depth-tag">&lt;div&gt;</span>
+                <span class="depth-component">TutorialSection</span>
+                <span class="depth-classes">.bg-indigo-600 .text-white .rounded-2xl .p-12 .shadow-xl</span>
+              </div>
+            </div>
+            <div class="depth-hint"><kbd>Esc</kbd> to dismiss</div>
+          </div>
+        </div>
+        <div class="status-msg" id="demo2-status">Click the banner to trigger the picker.</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Panel updates after picking</div>
+      <div class="col-description">Once you choose, the panel receives that element's classes.</div>
+
+      <div style="background: var(--surface); border-radius: 8px; padding: 14px 16px; min-width: 260px; opacity: 0.4; transition: opacity 0.2s;" id="demo2-panel">
+        <div style="font-size: 10px; font-weight: 700; color: var(--teal); margin-bottom: 2px;" id="demo2-panel-name">—</div>
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text-mid); line-height: 1.6;" id="demo2-panel-classes">—</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="section-title">Scenario 3: Button / Span — No Overlap</div>
+  <p class="section-subtitle">
+    The <code>&lt;span&gt;</code> inside a <code>&lt;Button&gt;</code> is smaller than the button
+    (the button has padding). Clicking the text selects the span. Clicking the button's padding
+    area selects the button. No picker needed.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <div class="col-label">Click the text vs. the padding</div>
+      <div class="col-description">Different rects → always 1 candidate → direct select.</div>
+
+      <div class="scenario">
+        <div class="app-area" style="padding: 32px; display: flex; gap: 16px; width: 520px;">
+          <!-- Button with padding -->
+          <div id="demo3-button" style="background: #3b82f6; color: white; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; position: relative;"
+               onclick="demo3Click(event)">
+            <div class="highlight" id="demo3-highlight" style="inset: -3px; display: none;"></div>
+            <span id="demo3-span" style="font-weight: 700; pointer-events: auto;">Submit Form</span>
+          </div>
+
+          <div id="demo3-button2" style="background: transparent; border: 1px solid #d1d5db; color: #374151; padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; position: relative;"
+               onclick="demo3Click2(event)">
+            <div class="highlight" id="demo3-highlight2" style="inset: -3px; display: none;"></div>
+            <span>Cancel</span>
+          </div>
+        </div>
+        <div class="status-msg" id="demo3-status">Click the button text or its padding area.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="section-title">Static Mockup: Picker Variations</div>
+  <p class="section-subtitle">
+    Different visual states of the disambiguation picker popup.
+  </p>
+
+  <div class="variations">
+    <!-- Variation A: 2 elements, inner hovered -->
+    <div class="col">
+      <div class="col-label">2 candidates, inner hovered</div>
+
+      <div class="depth-picker" style="position: relative;">
+        <div class="depth-picker-header">
+          <span class="depth-picker-title">Pick an element</span>
+        </div>
+        <div class="depth-picker-list">
+          <div class="depth-row depth-0">
+            <span class="depth-tag">&lt;section&gt;</span>
+            <span class="depth-component">TutorialSection</span>
+            <span class="depth-classes">.rounded-lg .shadow-sm .border</span>
+          </div>
+          <div class="depth-row depth-1 active">
+            <span class="depth-tag">&lt;div&gt;</span>
+            <span class="depth-component">TutorialSection</span>
+            <span class="depth-classes">.bg-indigo-600 .text-white .rounded-2xl .p-12</span>
+          </div>
+        </div>
+        <div class="depth-hint"><kbd>Esc</kbd> to dismiss</div>
+      </div>
+    </div>
+
+    <!-- Variation B: 3 elements (deeply nested same-rect) -->
+    <div class="col">
+      <div class="col-label">3 candidates</div>
+
+      <div class="depth-picker" style="position: relative;">
+        <div class="depth-picker-header">
+          <span class="depth-picker-title">Pick an element</span>
+        </div>
+        <div class="depth-picker-list">
+          <div class="depth-row depth-0">
+            <span class="depth-tag">&lt;div&gt;</span>
+            <span class="depth-component">Layout</span>
+            <span class="depth-classes">.flex .flex-col .min-h-screen</span>
+          </div>
+          <div class="depth-row depth-1">
+            <span class="depth-tag">&lt;main&gt;</span>
+            <span class="depth-component">App</span>
+            <span class="depth-classes">.flex-1</span>
+          </div>
+          <div class="depth-row depth-2 active">
+            <span class="depth-tag">&lt;div&gt;</span>
+            <span class="depth-component">Card</span>
+            <span class="depth-classes">.bg-white .rounded-xl .shadow-lg .p-8</span>
+          </div>
+        </div>
+        <div class="depth-hint"><kbd>Esc</kbd> to dismiss</div>
+      </div>
+    </div>
+
+    <!-- Variation C: element with no component -->
+    <div class="col">
+      <div class="col-label">No component boundary</div>
+      <div class="col-description">When the element has no React component, only the tag + classes are shown.</div>
+
+      <div class="depth-picker" style="position: relative;">
+        <div class="depth-picker-header">
+          <span class="depth-picker-title">Pick an element</span>
+        </div>
+        <div class="depth-picker-list">
+          <div class="depth-row depth-0">
+            <span class="depth-tag">&lt;div&gt;</span>
+            <span class="depth-classes">.container .mx-auto</span>
+          </div>
+          <div class="depth-row depth-1 active">
+            <span class="depth-tag">&lt;div&gt;</span>
+            <span class="depth-classes">.bg-gradient-to-r .from-blue-500 .to-purple-600 .p-8</span>
+          </div>
+        </div>
+        <div class="depth-hint"><kbd>Esc</kbd> to dismiss</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="section-title">Algorithm Visualization</div>
+  <p class="section-subtitle">
+    Visual walkthrough of the same-rect detection. Green = candidate (same rect). Red = stop (bigger rect).
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <div class="col-label">Walk from e.target upward</div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mono); font-size: 11px; padding: 16px; background: var(--surface); border-radius: 8px; min-width: 400px;">
+        <!-- e.target -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #22c55e; width: 12px;">✓</span>
+          <span style="color: var(--teal); font-weight: 600;">e.target</span>
+          <span style="color: var(--text-mid);">&lt;div class="bg-indigo-600 p-12"&gt;</span>
+          <span class="annotation" style="margin-left: auto;">320×200 @ (100, 250)</span>
+        </div>
+        <!-- parent 1 — same rect -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #22c55e; width: 12px;">✓</span>
+          <span style="color: var(--muted);">parent</span>
+          <span style="color: var(--text-mid);">&lt;div class="p-0 rounded-lg"&gt;</span>
+          <span class="annotation" style="margin-left: auto;">320×200 @ (100, 250)</span>
+        </div>
+        <!-- parent 2 — bigger (padding) → stop -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #ef4444; width: 12px;">✗</span>
+          <span style="color: var(--muted);">parent</span>
+          <span style="color: var(--text-mid);">&lt;div class="px-6 py-5"&gt;</span>
+          <span class="annotation orange" style="margin-left: auto;">368×232 @ (76, 230)</span>
+        </div>
+        <!-- result -->
+        <div style="margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); color: var(--text-mid);">
+          → <strong style="color: var(--text);">2 candidates</strong>: show picker
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">No overlap case</div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mono); font-size: 11px; padding: 16px; background: var(--surface); border-radius: 8px; min-width: 400px;">
+        <!-- e.target -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #22c55e; width: 12px;">✓</span>
+          <span style="color: var(--teal); font-weight: 600;">e.target</span>
+          <span style="color: var(--text-mid);">&lt;div class="bg-indigo-600 p-12"&gt;</span>
+          <span class="annotation" style="margin-left: auto;">320×200 @ (100, 250)</span>
+        </div>
+        <!-- parent 1 — bigger → stop immediately -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #ef4444; width: 12px;">✗</span>
+          <span style="color: var(--muted);">parent</span>
+          <span style="color: var(--text-mid);">&lt;div class="px-6 py-5"&gt;</span>
+          <span class="annotation orange" style="margin-left: auto;">368×232 @ (76, 230)</span>
+        </div>
+        <!-- result -->
+        <div style="margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); color: var(--text-mid);">
+          → <strong style="color: var(--text);">1 candidate</strong>: select directly (no picker)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="section-title">Component Name Display</div>
+  <p class="section-subtitle">
+    The panel header now shows the component and the clicked element's tag
+    when they differ — e.g. <code>TutorialSection › div</code>.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <div class="col-label">Clicked component root</div>
+      <div style="background: var(--surface); border-radius: 8px; padding: 10px 14px; font-size: 12px;">
+        <span style="color: var(--teal); font-weight: 700;">Button</span>
+        <span style="color: var(--muted);"> — 1 instance</span>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Clicked inner element</div>
+      <div style="background: var(--surface); border-radius: 8px; padding: 10px 14px; font-size: 12px;">
+        <span style="color: var(--teal); font-weight: 700;">TutorialSection</span>
+        <span style="color: var(--muted);"> › </span>
+        <span style="color: var(--text-mid); font-weight: 500;">div</span>
+        <span style="color: var(--muted);"> — 1 instance</span>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">No component (plain HTML)</div>
+      <div style="background: var(--surface); border-radius: 8px; padding: 10px 14px; font-size: 12px;">
+        <span style="color: var(--text-mid); font-weight: 500;">div</span>
+        <span style="color: var(--muted);"> — 1 instance</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <script>
+    // ── Scenario 1: Direct select (no overlap) ──
+    function demo1Select(el) {
+      document.getElementById('demo1-highlight').style.display = 'block';
+      document.getElementById('demo1-status').innerHTML =
+        'Selected! Classes: <span class="selected-class">bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300</span>';
+      document.getElementById('demo1-panel').style.opacity = '1';
+    }
+
+    // ── Scenario 2: Same-rect overlap (picker) ──
+    let demo2PickerOpen = false;
+    let demo2Selected = false;
+
+    function demo2Click(e) {
+      e.stopPropagation();
+      if (demo2Selected) return;
+      demo2PickerOpen = true;
+      document.getElementById('demo2-picker').style.display = 'block';
+      document.getElementById('demo2-status').textContent = 'Picker shown — hover rows to preview, click to select.';
+    }
+
+    function demo2Hover(which) {
+      // Show preview highlight
+      document.getElementById('demo2-preview-outer').classList.toggle('visible', which === 'outer');
+      document.getElementById('demo2-preview-inner').classList.toggle('visible', which === 'inner');
+      // Style active row
+      document.getElementById('demo2-row-outer').classList.toggle('active', which === 'outer');
+      document.getElementById('demo2-row-inner').classList.toggle('active', which === 'inner');
+    }
+
+    function demo2Unhover() {
+      document.getElementById('demo2-preview-outer').classList.remove('visible');
+      document.getElementById('demo2-preview-inner').classList.remove('visible');
+      document.getElementById('demo2-row-outer').classList.remove('active');
+      document.getElementById('demo2-row-inner').classList.remove('active');
+    }
+
+    function demo2Select(which, e) {
+      e.stopPropagation();
+      demo2Selected = true;
+      demo2PickerOpen = false;
+      document.getElementById('demo2-picker').style.display = 'none';
+      demo2Unhover();
+
+      const isInner = which === 'inner';
+      document.getElementById('demo2-highlight').style.display = 'block';
+
+      if (isInner) {
+        document.getElementById('demo2-status').innerHTML =
+          'Selected inner div: <span class="selected-class">bg-indigo-600 text-white rounded-2xl p-12</span>';
+        document.getElementById('demo2-panel-name').textContent = 'TutorialSection › div';
+        document.getElementById('demo2-panel-classes').textContent = 'bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300';
+      } else {
+        document.getElementById('demo2-status').innerHTML =
+          'Selected outer section: <span class="selected-class">rounded-lg shadow-sm border overflow-hidden bg-white</span>';
+        document.getElementById('demo2-panel-name').textContent = 'TutorialSection';
+        document.getElementById('demo2-panel-classes').textContent = 'rounded-lg shadow-sm border overflow-hidden bg-white border-gray-200';
+      }
+      document.getElementById('demo2-panel').style.opacity = '1';
+    }
+
+    // Escape to dismiss picker
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && demo2PickerOpen) {
+        demo2PickerOpen = false;
+        document.getElementById('demo2-picker').style.display = 'none';
+        demo2Unhover();
+        document.getElementById('demo2-status').textContent = 'Dismissed. Click again to reopen.';
+        demo2Selected = false;
+      }
+    });
+
+    // Click outside to dismiss
+    document.addEventListener('click', () => {
+      if (demo2PickerOpen) {
+        demo2PickerOpen = false;
+        document.getElementById('demo2-picker').style.display = 'none';
+        demo2Unhover();
+        document.getElementById('demo2-status').textContent = 'Dismissed. Click again to reopen.';
+        demo2Selected = false;
+      }
+    });
+
+    // ── Scenario 3: Button / span ──
+    function demo3Click(e) {
+      e.stopPropagation();
+      const clickedSpan = e.target.id === 'demo3-span' || e.target.tagName === 'SPAN';
+      document.getElementById('demo3-highlight').style.display = 'block';
+      document.getElementById('demo3-highlight2').style.display = 'none';
+
+      if (clickedSpan) {
+        document.getElementById('demo3-status').innerHTML =
+          'Selected <strong>&lt;span&gt;</strong> (clicked text): <span class="selected-class">font-bold</span>';
+      } else {
+        document.getElementById('demo3-status').innerHTML =
+          'Selected <strong>&lt;button&gt;</strong> (clicked padding): <span class="selected-class">bg-blue-500 px-4 py-2 rounded</span>';
+      }
+    }
+
+    function demo3Click2(e) {
+      e.stopPropagation();
+      document.getElementById('demo3-highlight').style.display = 'none';
+      document.getElementById('demo3-highlight2').style.display = 'block';
+      document.getElementById('demo3-status').innerHTML =
+        'Selected <strong>&lt;button&gt;</strong>: <span class="selected-class">border border-gray-300 px-4 py-2 rounded</span>';
+    }
+  </script>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor } from "./drop-zone";
+import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone } from "./drop-zone";
 import { isTextEditing, handleTextEditingClick, endTextEdit } from "./text-edit";
 import type { ContainerName } from "./containers/IContainer";
 import { ModalContainer } from "./containers/ModalContainer";
@@ -11,7 +11,7 @@ import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { findExactMatches } from "./grouping";
-import { getFiber, findComponentBoundary, extractComponentProps, getDOMNode } from "./fiber";
+import { getFiber, findComponentBoundary, extractComponentProps } from "./fiber";
 import type { InsertMode } from "./messages";
 import {
 	applyPreview,
@@ -22,10 +22,11 @@ import {
 } from "./patcher";
 import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab, clearSelectionState } from "./overlay-state";
-import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler } from "./element-highlight";
-import { showDrawButton, positionWithFlip, positionBothMenus, isToolbarDragged, initToolbar } from "./element-toolbar";
+import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
+import { showDrawButton, initToolbar, repositionToolbar } from "./element-toolbar";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
+import { getSameRectCandidates, showDepthPicker, dismissDepthPicker } from "./depth-picker";
 import type { BugReportElement } from "../../shared/types";
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
@@ -236,12 +237,38 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	}
 
 	// ── Normal click: select single element ──
+
+	// Dismiss any open depth picker from a previous click
+	dismissDepthPicker();
+
+	// ── Same-rect disambiguation ──
+	// Walk up from clicked element; parents with the same bounding rect are candidates.
+	const candidates = getSameRectCandidates(targetEl);
+
+	if (candidates.length > 1) {
+		// Multiple same-rect elements — show picker and let the user choose
+		showDepthPicker(candidates, targetEl, (picked) => {
+			finalizeSelection(picked.el);
+		});
+		return;
+	}
+
+	// Single candidate — select directly
+	await finalizeSelection(targetEl);
+}
+
+/**
+ * Complete an element selection: highlight, extract component info,
+ * open the panel, and send ELEMENT_SELECTED to the panel via WS.
+ */
+async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
+	const classString =
+		typeof targetEl.className === "string" ? targetEl.className : "";
+
 	const result = findExactMatches(targetEl, state.shadowHost);
 	let componentName = result.componentName ?? targetEl.tagName.toLowerCase();
 
 	// ── Ghost element detection ──
-	// Ghost elements are raw HTML (no React fiber), but carry data attributes
-	// that link them back to their component-drop patch.
 	const isGhostTarget = !!targetEl.dataset.twDroppedComponent;
 	const ghostAncestorEl = !isGhostTarget ? findGhostAncestor(targetEl) : null;
 	const ghostEl = isGhostTarget ? targetEl : ghostAncestorEl;
@@ -252,13 +279,11 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	}
 
 	clearHighlights();
-	// Only highlight the clicked element (not all exact matches)
 	highlightElement(targetEl);
 
-	// Fetch tailwind config (cached after first fetch)
 	const config = await fetchTailwindConfig();
 
-	// Store selection state — single element only
+	// Store selection state
 	state.currentEquivalentNodes = [targetEl];
 	state.currentTargetEl = targetEl;
 	state.currentBoundary = { componentName };
@@ -266,21 +291,17 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	state.cachedExactMatches = result.exactMatch;
 	state.manuallyAddedNodes = new Set<HTMLElement>();
 
-	// Build instances metadata for context
 	state.currentInstances = [{
 		index: 0,
 		label: (targetEl.innerText || "").trim().slice(0, 40) || `#1`,
 		parent: targetEl.parentElement?.tagName.toLowerCase() ?? "",
 	}];
 
-	// Selection complete — deactivate hover preview and selection mode cursor
 	clearHoverPreview();
 	setSelectMode(false);
 
-	// Show the element toolbar at the top-left of the selected element
 	showDrawButton(targetEl);
 
-	// Open the container if not already open (skip in Storybook — panel lives in addon tab)
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
 		if (!state.activeContainer.isOpen()) {
@@ -288,8 +309,6 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 		}
 	}
 
-	// Send element data to Panel via WS
-	// Resolve CSS variable color values using the live DOM context
 	const resolvedConfig = config ? resolveConfigCssVars(config) : config;
 
 	// Extract component props from React Fiber if available
@@ -300,17 +319,9 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 		if (boundary) {
 			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
 			componentName = boundary.componentName;
-
-			// Use the component root element's className instead of e.target's
-			// so clicks on inner elements (e.g. spans inside a Button) still
-			// send the full component class string to the panel.
-			const rootEl = getDOMNode(boundary.componentFiber);
-			if (rootEl && rootEl !== targetEl) {
-				const rootClassName = rootEl.className;
-				if (typeof rootClassName === "string" && rootClassName) {
-					classString = rootClassName;
-				}
-			}
+			// NOTE: We intentionally do NOT override classString with the component
+			// root element's classes. The user selected this specific element (possibly
+			// via the depth picker), so we send its own classes.
 		}
 	}
 
@@ -447,6 +458,7 @@ function resetOnNavigation(): void {
 	if (isTextEditing()) endTextEdit(false);
 	revertPreview();
 	clearHighlights();
+	dismissDepthPicker();
 	cancelInsert();
 	clearLockedInsert();
 	removeAllDesignCanvases();
@@ -471,7 +483,7 @@ function getDefaultContainer(): ContainerName {
 	} catch {
 		/* ignore */
 	}
-	return "popover";
+	return "sidebar";
 }
 
 function init(): void {
@@ -897,37 +909,16 @@ function init(): void {
 		}
 	});
 
-	window.addEventListener("resize", () => {
-		if (state.currentEquivalentNodes.length > 0) {
-			state.shadowRoot
-				.querySelectorAll(".highlight-overlay")
-				.forEach((el) => el.remove());
-			state.currentEquivalentNodes.forEach((n) => highlightElement(n));
-		}
-		if (state.toolbarEl && state.currentTargetEl) {
-			if (!isToolbarDragged()) {
-				positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
-			}
-		}
-	});
-
-	window.addEventListener(
-		"scroll",
-		() => {
-			if (state.currentEquivalentNodes.length > 0) {
-				state.shadowRoot
-					.querySelectorAll(".highlight-overlay")
-					.forEach((el) => el.remove());
-				state.currentEquivalentNodes.forEach((n) => highlightElement(n));
-			}
-			if (state.toolbarEl && state.currentTargetEl) {
-				if (!isToolbarDragged()) {
-					positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
-				}
-			}
-		},
-		{ capture: true, passive: true },
-	);
+	// ── Unified reposition on scroll / resize ────────────────────────────────
+	// Each function is a no-op when it has nothing visible to reposition,
+	// so no branching is needed — just call them all.
+	function repositionAll(): void {
+		repositionHighlights();
+		repositionToolbar();
+		repositionDropZone();
+	}
+	window.addEventListener("resize", repositionAll);
+	window.addEventListener("scroll", repositionAll, { capture: true, passive: true });
 
 	// Auto-open panel if it was open before the last page refresh
 	if (sessionStorage.getItem(PANEL_OPEN_KEY) === "1") {

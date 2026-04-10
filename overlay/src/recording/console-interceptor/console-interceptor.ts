@@ -5,6 +5,8 @@ const MAX_ARG_LENGTH = 500;
 const MAX_SERIALIZE_DEPTH = 3;
 
 export interface ConsoleInterceptorHandle {
+  /** Return all entries with timestamp > the given ISO string, without clearing. */
+  entriesSince(since: string): ConsoleEntry[];
   /** Flush and return all buffered entries, clearing the buffer. */
   flush(): ConsoleEntry[];
   /** Peek at current buffer without flushing. */
@@ -70,6 +72,9 @@ export function createConsoleInterceptor(): ConsoleInterceptorHandle {
   window.addEventListener('unhandledrejection', rejectionHandler);
 
   return {
+    entriesSince(since: string): ConsoleEntry[] {
+      return buffer.filter(e => e.timestamp > since);
+    },
     flush(): ConsoleEntry[] {
       const entries = buffer;
       buffer = [];

@@ -140,4 +140,42 @@ describe('createNetworkInterceptor', () => {
 
     expect(handle.size()).toBe(0);
   });
+
+  describe('entriesSince', () => {
+    it('returns entries after the given timestamp', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Error' });
+      await fetch('https://api.example.com/old');
+
+      // Grab the timestamp of the entry we just created, then use it as the
+      // boundary — anything strictly after it should be the "new" entry only.
+      const entries = handle.peek();
+      const mid = entries[entries.length - 1].timestamp;
+
+      // Advance clock by 1ms so the next entry gets a strictly later timestamp
+      await new Promise(r => setTimeout(r, 1));
+
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' });
+      await fetch('https://api.example.com/new');
+
+      const result = handle.entriesSince(mid);
+      expect(result).toHaveLength(1);
+      expect(result[0].url).toBe('https://api.example.com/new');
+    });
+
+    it('does not clear the buffer', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Error' });
+      await fetch('https://api.example.com/a');
+
+      handle.entriesSince(new Date(0).toISOString());
+      expect(handle.size()).toBe(1);
+    });
+
+    it('returns empty array when no entries match', async () => {
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Error' });
+      await fetch('https://api.example.com/a');
+
+      const future = new Date(Date.now() + 60000).toISOString();
+      expect(handle.entriesSince(future)).toHaveLength(0);
+    });
+  });
 });

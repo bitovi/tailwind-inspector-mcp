@@ -211,7 +211,7 @@ export const SHADOW_HOST: StyleObj = {
 // ── Submitted design image ──────────────────────────────────────────────
 
 export const SUBMITTED_IMAGE: StyleObj = {
-  width: '100%',
+  maxWidth: '100%',
   height: 'auto',
   display: 'block',
   pointerEvents: 'none',
@@ -776,4 +776,99 @@ export const OVERLAY_CSS = `
     transition: background 0.15s;
   }
   .el-picker-apply:hover { background: #006E74; }
+
+  /* ── Depth disambiguation picker (dark, matches toolbar) ── */
+  .depth-picker {
+    position: fixed;
+    z-index: 1000000;
+    background: #1a1a1a;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+    min-width: 280px;
+    max-width: 440px;
+    font-family: 'Inter', system-ui, sans-serif;
+    pointer-events: auto;
+    overflow: hidden;
+  }
+  .depth-picker-header {
+    display: flex;
+    align-items: center;
+    padding: 7px 12px 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .depth-picker-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+  }
+  .depth-picker-list {
+    padding: 4px 0;
+  }
+  .depth-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+    color: #ccc;
+  }
+  .depth-picker-row:hover {
+    background: rgba(0,132,139,0.08);
+  }
+  /* Nesting depth indentation */
+  .depth-0 { padding-left: 12px; }
+  .depth-1 { padding-left: 28px; }
+  .depth-2 { padding-left: 44px; }
+  .depth-3 { padding-left: 60px; }
+  .depth-4 { padding-left: 76px; }
+  .depth-picker-tag {
+    font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #aaa;
+    flex-shrink: 0;
+  }
+  .depth-picker-row:hover .depth-picker-tag { color: #ddd; }
+  .depth-picker-comp {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1ac2cb;
+    flex-shrink: 0;
+  }
+  .depth-picker-classes {
+    font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    font-size: 11px;
+    color: #777;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .depth-picker-row:hover .depth-picker-classes { color: #aaa; }
+  .depth-picker-hint {
+    font-size: 10px;
+    color: #777;
+    padding: 5px 12px 7px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .depth-picker-hint kbd {
+    font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    font-size: 9px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: #aaa;
+  }
+  /* Preview highlight for hovered depth row */
+  .depth-picker-preview {
+    border: 2px dashed #F5532D;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 999998;
+  }
 `;
