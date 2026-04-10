@@ -32,7 +32,7 @@ jobs:
         run: cd panel && npm ci
 
       - name: Install test-app dependencies
-        run: cd test-app && npm ci
+        run: cd test-app && npm ci --legacy-peer-deps
 
       - name: Install demo dependencies
         run: cd demo && npm ci
