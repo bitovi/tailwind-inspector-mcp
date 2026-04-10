@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@floating-ui/react": "^0.27.19",
     "@tailwindcss/browser": "^4.1.0",
+    "@testing-library/dom": "^10.4.1",
+    "fabric": "^6.9.1",
+    "html-to-image": "^1.11.13",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },
