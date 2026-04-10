@@ -31,6 +31,9 @@ jobs:
       - name: Install panel dependencies
         run: cd panel && npm ci
 
+      - name: Install test-app dependencies
+        run: cd test-app && npm ci
+
       - name: Install demo dependencies
         run: cd demo && npm ci
 
