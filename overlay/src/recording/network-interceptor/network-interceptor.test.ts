@@ -143,6 +143,9 @@ describe('createNetworkInterceptor', () => {
 
   describe('entriesSince', () => {
     it('returns entries after the given timestamp', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2024-01-01T00:00:00.000Z'));
+
       fetchMock.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Error' });
       await fetch('https://api.example.com/old');
 
@@ -151,11 +154,13 @@ describe('createNetworkInterceptor', () => {
       const entries = handle.peek();
       const mid = entries[entries.length - 1].timestamp;
 
-      // Advance clock by 1ms so the next entry gets a strictly later timestamp
-      await new Promise(r => setTimeout(r, 1));
+      // Advance fake clock by 1ms so the next entry gets a strictly later timestamp
+      vi.setSystemTime(new Date('2024-01-01T00:00:00.001Z'));
 
       fetchMock.mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' });
       await fetch('https://api.example.com/new');
+
+      vi.useRealTimers();
 
       const result = handle.entriesSince(mid);
       expect(result).toHaveLength(1);
