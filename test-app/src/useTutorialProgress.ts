@@ -54,38 +54,38 @@ export function useTutorialProgress() {
 
       switch (detail.action) {
         case 'panel-registered':
-          completeStep(3)
+          completeStep(2)
           break
         case 'patch-committed':
-          completeStep(4)
+          completeStep(3)
           break
         case 'message-staged':
           if (detail.insertMode) {
-            completeStep(7)
+            completeStep(6)
           }
           if (detail.inputMethod === 'voice') {
-            completeStep(5)
+            completeStep(4)
           }
           break
         case 'text-edit-done':
-          completeStep(6)
+          completeStep(5)
           break
         case 'component-dropped':
-          completeStep(9)
+          completeStep(8)
           if (detail.hasNestedComponent) {
-            completeStep(10)
+            completeStep(9)
           }
           break
         case 'patch-staged':
           if (detail.kind === 'class-change') {
-            completeStep(11)
+            completeStep(10)
           }
           if (detail.kind === 'design') {
-            completeStep(8)
+            completeStep(7)
           }
           break
         case 'bug-report-staged':
-          completeStep(12)
+          completeStep(11)
           break
       }
     }

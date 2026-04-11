@@ -1,3 +1,4 @@
+import GitHubButton from 'react-github-btn'
 import { Button } from './components/Button'
 import { Card } from './components/Card'
 import { Badge } from './components/Badge'
@@ -63,7 +64,7 @@ function MicIcon() {
 
 function App() {
   const { completedSteps, completeStep, resetProgress } = useTutorialProgress()
-  const totalSteps = 12
+  const totalSteps = 11
   const completedCount = completedSteps.size
 
   return (
@@ -71,18 +72,30 @@ function App() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-gray-900">VyBit Interactive Tutorial</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <span style={{ display: 'flex', alignItems: 'center', lineHeight: 0 }}>
+              <GitHubButton
+                href="https://github.com/bitovi/vybit"
+                data-icon="octicon-star"
+                data-show-count="true"
+                aria-label="Star bitovi/vybit on GitHub"
+              >
+                Star
+              </GitHubButton>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-gray-500">
               {completedCount} of {totalSteps} completed
             </p>
+            <button
+              onClick={resetProgress}
+              className="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors"
+            >
+              ↺ Start Over
+            </button>
           </div>
-          <button
-            onClick={resetProgress}
-            className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-          >
-            ↺ Start Over
-          </button>
         </div>
       </header>
 
@@ -97,30 +110,31 @@ function App() {
           instructions={
             <>
               <p>
-                VyBit is a visual editing tool that works alongside your running app. You select elements, describe changes in plain language or tweak styles visually, and VyBit sends precise instructions to an AI coding agent that implements the changes in your source code.
+                <a href="https://github.com/bitovi/vybit" className="text-blue-500 hover:underline">VyBit</a> is a visual editing tool that works alongside your running app. You select elements, describe changes in plain language or tweak styles visually, and VyBit sends precise instructions to an AI coding agent that implements the changes in your source code.
               </p>
               <p className="mt-3">
                 This tutorial will walk you through the most common features. Each section has a small exercise — try them in any order. Completed sections get a checkmark so you can track your progress.
               </p>
-              <p className="mt-3">
-                No backend is running. In the real workflow, committed changes would be picked up by an AI agent. Here, you'll see the exact MCP tool output logged to your browser's developer console.
-              </p>
-              <p className="mt-3">
-                Below is a sample app — <strong>Acme Project Tracker</strong> — that you'll modify throughout the exercises.
+              <p className="mt-3 flex gap-2 bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2 text-sm">
+                <span>⚠️</span>
+                <span>No agent is running and receiving the changes you suggest. In the real workflow, committed changes would be picked up by an AI agent. You can see the exact MCP tool output in your browser's developer console.</span>
               </p>
             </>
           }
         />
 
-        {/* ── Section 2: Meet the Three Modes ── */}
+        {/* ── Section 2: Open the Panel ── */}
         <TutorialSection
           step={2}
-          title="Meet the Three Modes"
+          title="Open the Panel"
           completed={completedSteps.has(2)}
           onMarkComplete={() => completeStep(2)}
           instructions={
             <>
-              <p>VyBit has three modes, controlled by the buttons at the top of the panel:</p>
+              <p>
+                See the round button in the bottom-right corner of the page? That's the <strong>VyBit toggle button</strong>. Click it to open the inspector panel. The panel will slide in as a sidebar on the right side of the page.
+              </p>
+              <p className="mt-3">Once open, you'll see three mode buttons at the top of the panel:</p>
               <p className="mt-3">
                 <SelectIcon /> <strong>Select</strong> — Click elements in your app to inspect and change them. This is where you'll spend most of your time. Select an element, then describe what you want changed, tweak spacing, adjust colors, or edit text directly.
               </p>
@@ -135,28 +149,12 @@ function App() {
           }
         />
 
-        {/* ── Section 3: Open the Panel ── */}
+        {/* ── Section 3: Your First Change ── */}
         <TutorialSection
           step={3}
-          title="Open the Panel"
+          title="Your First Change"
           completed={completedSteps.has(3)}
           onMarkComplete={() => completeStep(3)}
-          instructions={
-            <>
-              <p>
-                See the round button in the bottom-right corner of the page? That's the <strong>VyBit toggle button</strong>. Click it to open the inspector panel.
-              </p>
-              <p className="mt-3">The panel will slide in as a sidebar on the right side of the page.</p>
-            </>
-          }
-        />
-
-        {/* ── Section 4: Your First Change ── */}
-        <TutorialSection
-          step={4}
-          title="Your First Change"
-          completed={completedSteps.has(4)}
-          onMarkComplete={() => completeStep(4)}
           instructions={
             <>
               <p>Let's make your first change. <strong>Click the issue card below</strong> to select it, then tell VyBit what to do.</p>
@@ -179,12 +177,12 @@ function App() {
           />
         </TutorialSection>
 
-        {/* ── Section 5: Send a Voice Message ── */}
+        {/* ── Section 4: Send a Voice Message ── */}
         <TutorialSection
-          step={5}
+          step={4}
           title="Send a Voice Message"
-          completed={completedSteps.has(5)}
-          onMarkComplete={() => completeStep(5)}
+          completed={completedSteps.has(4)}
+          onMarkComplete={() => completeStep(4)}
           instructions={
             <>
               <p>Sometimes it's easier to talk than type. VyBit has a microphone button for voice messages.</p>
@@ -204,12 +202,12 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 6: Edit Text In Place ── */}
+        {/* ── Section 5: Edit Text In Place ── */}
         <TutorialSection
-          step={6}
+          step={5}
           title="Edit Text In Place"
-          completed={completedSteps.has(6)}
-          onMarkComplete={() => completeStep(6)}
+          completed={completedSteps.has(5)}
+          onMarkComplete={() => completeStep(5)}
           instructions={
             <>
               <p>You can edit text directly on the page using the overlay toolbar.</p>
@@ -230,12 +228,12 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 7: Describe What to Add ── */}
+        {/* ── Section 6: Describe What to Add ── */}
         <TutorialSection
-          step={7}
+          step={6}
           title="Describe What to Add"
-          completed={completedSteps.has(7)}
-          onMarkComplete={() => completeStep(7)}
+          completed={completedSteps.has(6)}
+          onMarkComplete={() => completeStep(6)}
           instructions={
             <>
               <p>Now let's <strong>add a new field</strong> to this form.</p>
@@ -259,12 +257,12 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 8: Sketch What to Add ── */}
+        {/* ── Section 7: Sketch What to Add ── */}
         <TutorialSection
-          step={8}
+          step={7}
           title="Sketch What to Add"
-          completed={completedSteps.has(8)}
-          onMarkComplete={() => completeStep(8)}
+          completed={completedSteps.has(7)}
+          onMarkComplete={() => completeStep(7)}
           instructions={
             <>
               <p>Don't want to describe in words? Draw it instead. The signups below are just numbers — let's sketch a chart to visualize the trend.</p>
@@ -300,12 +298,12 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 9: Place a Component ── */}
+        {/* ── Section 8: Place a Component ── */}
         <TutorialSection
-          step={9}
+          step={8}
           title="Place a Component"
-          completed={completedSteps.has(9)}
-          onMarkComplete={() => completeStep(9)}
+          completed={completedSteps.has(8)}
+          onMarkComplete={() => completeStep(8)}
           instructions={
             <>
               <p>VyBit can browse your component library and place components directly onto the page.</p>
@@ -327,12 +325,12 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 10: Build with Nested Components ── */}
+        {/* ── Section 9: Build with Nested Components ── */}
         <TutorialSection
-          step={10}
+          step={9}
           title="Build with Nested Components"
-          completed={completedSteps.has(10)}
-          onMarkComplete={() => completeStep(10)}
+          completed={completedSteps.has(9)}
+          onMarkComplete={() => completeStep(9)}
           instructions={
             <>
               <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component. VyBit lets you fill these slots directly in the component drawer.</p>
@@ -352,12 +350,12 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 11: Fine-Tune the Design ── */}
+        {/* ── Section 10: Fine-Tune the Design ── */}
         <TutorialSection
-          step={11}
+          step={10}
           title="Fine-Tune the Design"
-          completed={completedSteps.has(11)}
-          onMarkComplete={() => completeStep(11)}
+          completed={completedSteps.has(10)}
+          onMarkComplete={() => completeStep(10)}
           playgroundClassName="bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300"
           instructions={
             <>
@@ -384,12 +382,12 @@ function App() {
           <p className="text-indigo-200">Your hub for issues, roadmaps, and team collaboration.</p>
         </TutorialSection>
 
-        {/* ── Section 12: Report a Bug ── */}
+        {/* ── Section 11: Report a Bug ── */}
         <TutorialSection
-          step={12}
+          step={11}
           title="Report a Bug"
-          completed={completedSteps.has(12)}
-          onMarkComplete={() => completeStep(12)}
+          completed={completedSteps.has(11)}
+          onMarkComplete={() => completeStep(11)}
           instructions={
             <>
               <p>Found something broken? VyBit's Bug Report mode captures element context, console errors, network failures, and a visual timeline so the AI agent knows exactly what to fix.</p>
