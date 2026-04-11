@@ -62,6 +62,16 @@ function MicIcon() {
   )
 }
 
+function SendIcon() {
+  return (
+    <span className="inline-flex items-center justify-center align-middle mx-0.5 rounded-full bg-[#00848B] p-1">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="white">
+        <path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/>
+      </svg>
+    </span>
+  )
+}
+
 function App() {
   const { completedSteps, completeStep, resetProgress } = useTutorialProgress()
   const totalSteps = 11
@@ -113,8 +123,22 @@ function App() {
                 <a href="https://github.com/bitovi/vybit" className="text-blue-500 hover:underline">VyBit</a> is a visual editing tool that works alongside your running app. You select elements, describe changes in plain language or tweak styles visually, and VyBit sends precise instructions to an AI coding agent that implements the changes in your source code.
               </p>
               <p className="mt-3">
-                This tutorial will walk you through the most common features. Each section has a small exercise — try them in any order. Completed sections get a checkmark so you can track your progress.
+                This tutorial will walk you through the most common features. Each section has a small exercise — try them in any order. 
+                Completed sections get a checkmark so you can track your progress.
               </p>
+
+              <p className="mt-3">If you get stuck, refer to the video below for a walkthrough of this tutorial.</p>
+              <div className="mt-4 rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                  <iframe
+                    src="https://www.youtube.com/embed/_pd7UbohrPw"
+                    title="VyBit Tutorial Walkthrough"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                  />
+                </div>
+              </div>
               <p className="mt-3 flex gap-2 bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2 text-sm">
                 <span>⚠️</span>
                 <span>No agent is running and receiving the changes you suggest. In the real workflow, committed changes would be picked up by an AI agent. You can see the exact MCP tool output in your browser's developer console.</span>
@@ -160,9 +184,9 @@ function App() {
               <p>Let's make your first change. <strong>Click the issue card below</strong> to select it, then tell VyBit what to do.</p>
               <ol>
                 <li>In the panel, click the <strong>Select</strong> button (<SelectIcon />) to enter Select mode</li>
-                <li>Click the card below — it will highlight with a teal border</li>
-                <li>In the panel's message area, type something like: <em>"Make the bug tag flash red"</em></li>
-                <li>Click <strong>Queue Message</strong> in the panel</li>
+                <li>Click the card below — it will highlight with a teal border and a floating toolbar will appear above it</li>
+                <li>In the floating toolbar's message area, type something like: <em>"Make the bug tag flash red"</em></li>
+                <li>Click the <strong>submit</strong> button (<SendIcon />) to queue the message</li>
                 <li>At the bottom of the panel, click the <strong>draft count</strong> (e.g., "1 draft") to open the queue</li>
                 <li>Click <strong>Commit</strong></li>
               </ol>
@@ -189,9 +213,9 @@ function App() {
               <ol>
                 <li>Click the <strong>Select</strong> button (<SelectIcon />) in the panel to enter Select mode</li>
                 <li>Click the <strong>Assign</strong> button below to select it</li>
-                <li>In the panel, click the <strong>microphone</strong> (<MicIcon />) button next to the message input</li>
+                <li>In the floating toolbar, click the <strong>microphone</strong> (<MicIcon />) button next to the message input</li>
                 <li>Speak your change — something like <em>"When assigning, show a spinner in the assign button and disable the button"</em></li>
-                <li>Click the mic again to stop recording, then click <strong>Queue Message</strong></li>
+                <li>Click the mic again to stop recording, then click the <strong>submit</strong> button (<SendIcon />)</li>
               </ol>
             </>
           }
@@ -241,8 +265,8 @@ function App() {
                 <li>In the panel header, click the <strong>Insert</strong> (<InsertIcon />) mode button</li>
                 <li>Hover over the form below — you'll see insertion indicators between the fields</li>
                 <li>Click the gap between <strong>Email</strong> and <strong>Role</strong> to set an <strong>insert point</strong></li>
-                <li>In the panel's message area, describe the field to add — something like: <em>"Add a phone number field"</em></li>
-                <li>Click <strong>Queue Message</strong></li>
+                <li>In the floating toolbar's message area, describe the field to add — something like: <em>"Add a phone number field"</em></li>
+                <li>Click the <strong>submit</strong> button (<SendIcon />)</li>
               </ol>
             </>
           }
@@ -268,7 +292,7 @@ function App() {
               <p>Don't want to describe in words? Draw it instead. The signups below are just numbers — let's sketch a chart to visualize the trend.</p>
               <ol>
                 <li>Switch to <strong>Insert</strong> mode (<InsertIcon />) and click between <strong>"Monthly Signups"</strong> and <strong>"January"</strong> to set an insertion point</li>
-                <li>In the <strong>Place</strong> tab, click <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span></li>
+                <li>In the panel's <strong>Place</strong> tab, click <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span></li>
                 <li>On the canvas, sketch a bar chart — draw a few bars of different heights with labels underneath</li>
                 <li>Click <strong style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#00848B',color:'#fff',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>✓ Add to Drafts</strong> to queue the drawing</li>
               </ol>
@@ -335,10 +359,10 @@ function App() {
             <>
               <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component. VyBit lets you fill these slots directly in the component drawer.</p>
               <ol>
-                <li>In <strong>Insert</strong> mode (<InsertIcon />), find the <strong>Button</strong> component in the Components tab and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Customize</span> button</li>
-                <li>In the detail drawer, switch the <strong>variant</strong> to <code style={{background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:'3px',padding:'0 4px',fontSize:'12px'}}>warning</code></li>
+                <li>In <strong>Insert</strong> mode (<InsertIcon />), find the <strong>Button</strong> component in the panel's Components tab and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Customize</span> button</li>
+                <li>In the props drawer, switch the <strong>variant</strong> to <code style={{background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:'3px',padding:'0 4px',fontSize:'12px'}}>warning</code></li>
                 <li>Find the <strong>leftIcon</strong> row — click the <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'18px',height:'18px',background:'#374151',color:'#f9fafb',fontSize:'13px',fontWeight:700,borderRadius:'3px',fontFamily:'sans-serif',lineHeight:1}}>⊞</span> button to open the component picker for that prop</li>
-                <li>Find the <strong>Icon</strong> component and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#F5532D',color:'#fff',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Set Prop</span> button — you'll see a star appear in the Button preview</li>
+                <li>Find the <svg style={{display:'inline',verticalAlign:'middle',marginLeft:'2px',marginRight:'2px'}} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><strong>Icon</strong> component and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#F5532D',color:'#fff',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Set Prop</span> button — you'll see a star appear in the Button preview</li>
                 <li>Back in the Button drawer, click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Place</span> button and drop the composed button onto the page</li>
               </ol>
             </>
@@ -362,9 +386,9 @@ function App() {
               <p>VyBit isn't just for big changes — you can precisely adjust Tailwind classes too. Scrub spacing values, pick colors from a palette, adjust shadows, and see changes live as you drag.</p>
               <ol>
                 <li>Switch to <strong>Select</strong> mode (<SelectIcon />)</li>
-                <li>Click the banner below — it will show its Tailwind properties in the panel</li>
+                <li>Click the purple banner below (not the text inside it) — it will show its Tailwind properties in the panel</li>
                 <li>
-                  Try any of these in the <strong>Design</strong> tab:
+                  Try any of these in the panel's <strong>Design</strong> tab:
                   <ul className="list-disc pl-5 mt-1 space-y-0.5">
                     <li>Drag the <strong>padding</strong> scrubber left or right</li>
                     <li>Click a <strong>color</strong> chip to open the color grid — pick a new background color</li>
