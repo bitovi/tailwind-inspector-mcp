@@ -11,9 +11,11 @@ Suggest features, change designs, draw mockups, and report bugs __in your browse
 
 ![VyBit - Click and Change - HD 1080p](https://github.com/user-attachments/assets/df8d7c56-68af-4580-b046-c84a943f6b68)
 
-[Watch a video going over its features](https://www.youtube.com/watch?v=dE2rYcyC2xk)
+| [Watch a video going over its features](https://www.youtube.com/watch?v=dE2rYcyC2xk) | [Try a live demo in your browser](https://bitovi.github.io/vybit/) |
+|----------|----------|
+| [![Watch the video](https://github.com/user-attachments/assets/c6b866a8-c917-4ff3-a0e4-536d334e3d1a)](https://www.youtube.com/watch?v=dE2rYcyC2xk)  | [![Interactive Tutoral](https://github.com/user-attachments/assets/8f282b8f-ed51-4d1a-abfb-7080cf453fc7)](https://bitovi.github.io/vybit/)  |
 
-[![Watch the video](https://github.com/user-attachments/assets/c6b866a8-c917-4ff3-a0e4-536d334e3d1a)](https://www.youtube.com/watch?v=dE2rYcyC2xk)
+
 
 
 `VyBit` changes how you can design and build an app or website. Instead of building your design system and page designs in Sketch or Figma and then implementing it in code, you:
