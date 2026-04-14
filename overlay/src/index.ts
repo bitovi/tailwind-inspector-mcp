@@ -946,10 +946,12 @@ function init(): void {
 		}
 	});
 
-	// Start always-on background recording
-	recordingEngine.startRecording().catch(err => {
-		console.error("[tw-overlay] Failed to start recording:", err);
-	});
+	// Start always-on background recording once WS is connected
+	window.addEventListener('overlay-ws-connected', () => {
+		recordingEngine.startRecording().catch(err => {
+			console.error("[tw-overlay] Failed to start recording:", err);
+		});
+	}, { once: true });
 }
 
 // Recording engine — always-on background recording

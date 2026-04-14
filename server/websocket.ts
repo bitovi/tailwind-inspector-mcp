@@ -24,6 +24,13 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
     }
   }
 
+  function hasOverlay(): boolean {
+    for (const [client, role] of clientRoles) {
+      if (role === "overlay" && client.readyState === 1) return true;
+    }
+    return false;
+  }
+
   function broadcastPatchUpdate(): void {
     broadcastTo("panel", { type: "QUEUE_UPDATE", ...getQueueUpdate() });
   }
@@ -42,6 +49,12 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
             console.error(`[ws] Client registered as: ${role}`);
             if (role === "panel") {
               ws.send(JSON.stringify({ type: "QUEUE_UPDATE", ...getQueueUpdate() }));
+              // Tell newly-registered panel whether an overlay is connected
+              const overlayConnected = hasOverlay();
+              ws.send(JSON.stringify({ type: "OVERLAY_STATUS", connected: overlayConnected }));
+            } else if (role === "overlay") {
+              // Notify all panels that an overlay connected
+              broadcastTo("panel", { type: "OVERLAY_STATUS", connected: true });
             }
           }
           return;
@@ -168,8 +181,13 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
     });
 
     ws.on("close", () => {
+      const role = clientRoles.get(ws);
       clientRoles.delete(ws);
       console.error("[ws] Client disconnected");
+      // If an overlay disconnected, notify panels
+      if (role === "overlay" && !hasOverlay()) {
+        broadcastTo("panel", { type: "OVERLAY_STATUS", connected: false });
+      }
     });
   });
 

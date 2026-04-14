@@ -53,6 +53,7 @@ export function App() {
 
 function InspectorApp() {
 	const [wsConnected, setWsConnected] = useState(false);
+	const [overlayConnected, setOverlayConnected] = useState(false);
 	const patchManager = usePatchManager();
 	const [promptCopied, setPromptCopied] = useState(false);
 	const [isComponentArmed, setIsComponentArmed] = useState(false);
@@ -115,7 +116,9 @@ function InspectorApp() {
 			// Mode-related messages are handled by the state machine hook
 			if (handleWsMessage(msg)) return;
 
-			if (msg.type === "QUEUE_UPDATE") {
+			if (msg.type === "OVERLAY_STATUS") {
+				setOverlayConnected(!!msg.connected);
+			} else if (msg.type === "QUEUE_UPDATE") {
 				patchManager.handleQueueUpdate({
 					draftCount: msg.draftCount,
 					committedCount: msg.committedCount,
@@ -329,6 +332,35 @@ function InspectorApp() {
 			</div>
 		</div>
 	);
+
+	// Block the entire panel while the overlay is not connected
+	if (!overlayConnected) {
+		return (
+			<div className="h-full flex flex-col items-center justify-center gap-4 p-6 text-center">
+				<div className="w-12 h-12 rounded-full bg-bv-teal/10 text-bv-teal flex items-center justify-center">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
+						<path d="M12 2v4" />
+						<path d="M12 18v4" />
+						<path d="M4.93 4.93l2.83 2.83" />
+						<path d="M16.24 16.24l2.83 2.83" />
+						<path d="M2 12h4" />
+						<path d="M18 12h4" />
+						<path d="M4.93 19.07l2.83-2.83" />
+						<path d="M16.24 7.76l2.83-2.83" />
+					</svg>
+				</div>
+				<div>
+					<p className="text-[13px] text-bv-text font-medium">
+						Connecting to page…
+					</p>
+					<p className="text-[11px] text-bv-text-mid mt-1 leading-relaxed">
+						Waiting for the overlay script to connect.
+						{!wsConnected && " Server WebSocket is also disconnected."}
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	if (!elementData) {
 		// Landing page — no mode selected yet
