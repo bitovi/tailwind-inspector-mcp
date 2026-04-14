@@ -14,6 +14,13 @@ export interface WebSocketDeps {
 export function setupWebSocket(httpServer: Server): WebSocketDeps {
   const wss = new WebSocketServer({ server: httpServer, maxPayload: 10 * 1024 * 1024, perMessageDeflate: false });
   const clientRoles = new Map<WebSocket, string>();
+  const serverStartTime = Date.now();
+  const ts = () => `[${((Date.now() - serverStartTime) / 1000).toFixed(1)}s]`;
+
+  // Log when the HTTP server receives a WebSocket upgrade request
+  httpServer.on('upgrade', (req) => {
+    console.error(`${ts()} [ws] HTTP upgrade request for: ${req.url} from ${req.headers.origin ?? 'unknown origin'}`);
+  });
 
   // Heartbeat: ping every 25s to keep Codespaces tunnel alive
   const aliveClients = new WeakSet<WebSocket>();
@@ -48,8 +55,8 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
     broadcastTo("panel", { type: "QUEUE_UPDATE", ...getQueueUpdate() });
   }
 
-  wss.on("connection", (ws: WebSocket) => {
-    console.error("[ws] Client connected");
+  wss.on("connection", (ws: WebSocket, req) => {
+    console.error(`${ts()} [ws] Client connected from ${req.url}`);
     aliveClients.add(ws);
     ws.on("pong", () => { aliveClients.add(ws); });
 
@@ -61,16 +68,16 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
           const role = msg.role;
           if (role === "overlay" || role === "panel" || role === "design") {
             clientRoles.set(ws, role);
-            console.error(`[ws] Client registered as: ${role}`);
+            console.error(`${ts()} [ws] Client registered as: ${role}`);
             if (role === "panel") {
               ws.send(JSON.stringify({ type: "QUEUE_UPDATE", ...getQueueUpdate() }));
               // Tell newly-registered panel whether an overlay is connected
               const overlayConnected = hasOverlay();
-              console.error(`[ws] Sending OVERLAY_STATUS { connected: ${overlayConnected} } to new panel`);
+              console.error(`${ts()} [ws] Sending OVERLAY_STATUS { connected: ${overlayConnected} } to new panel`);
               ws.send(JSON.stringify({ type: "OVERLAY_STATUS", connected: overlayConnected }));
             } else if (role === "overlay") {
               // Notify all panels that an overlay connected
-              console.error(`[ws] Broadcasting OVERLAY_STATUS { connected: true } to all panels`);
+              console.error(`${ts()} [ws] Broadcasting OVERLAY_STATUS { connected: true } to all panels`);
               broadcastTo("panel", { type: "OVERLAY_STATUS", connected: true });
             }
           }
@@ -200,7 +207,7 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
     ws.on("close", () => {
       const role = clientRoles.get(ws);
       clientRoles.delete(ws);
-      console.error("[ws] Client disconnected");
+      console.error(`${ts()} [ws] Client disconnected (was: ${role ?? 'unregistered'})`);
       // If an overlay disconnected, notify panels
       if (role === "overlay" && !hasOverlay()) {
         broadcastTo("panel", { type: "OVERLAY_STATUS", connected: false });
