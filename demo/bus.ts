@@ -25,6 +25,9 @@ export function connect(_url?: string): void {
   // Fire connect handlers async to match WS behavior
   queueMicrotask(() => {
     for (const h of connectHandlers) h();
+    // Dispatch the same event the real ws.ts fires so the overlay starts
+    // recording (needed for bug-report event capture in the demo).
+    window.dispatchEvent(new CustomEvent('overlay-ws-connected'));
   });
 }
 
