@@ -37,7 +37,17 @@ function vybitEnvScript(): string {
 export function createApp(packageRoot: string, initialStorybookUrl: string | null = null): express.Express {
   const app = express();
   let storybookUrl = initialStorybookUrl;
-  app.use(cors());
+  app.use(cors({ origin: true, credentials: true }));
+
+  // Codespaces CORS workaround: the overlay sends JSON as text/plain to avoid
+  // triggering a CORS preflight (OPTIONS) that the Codespaces tunnel rejects.
+  // Rewrite the content-type so express.json() parses the body normally.
+  app.use((req, _res, next) => {
+    if (req.method === 'POST' && req.headers['content-type'] === 'text/plain') {
+      req.headers['content-type'] = 'application/json';
+    }
+    next();
+  });
 
   // Load ghost cache from disk on startup
   loadCache();

@@ -238,49 +238,35 @@ function InspectorApp() {
 		document.body.removeChild(el);
 	}
 
+	const agentWarning = !wsConnected
+		? { icon: "dot" as const, text: "No agent listening" }
+		: showNoAgentWarning
+			? { icon: "triangle" as const, text: "No agent watching" }
+			: null;
+
 	const queueFooter = (
 		<div className="shrink-0">
-			{!wsConnected && (
+			{agentWarning && (
 				<div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-950/40 border-t border-amber-800/40 text-amber-300 text-[10px] font-medium">
-					<div className="w-1.5 h-1.5 rounded-full bg-bv-orange animate-pulse shrink-0" />
-					<span className="flex-1 leading-tight">
-						No agent listening —{" "}
-						<a
-							href="https://github.com/bitovi/vybit?tab=readme-ov-file#telling-your-agent-to-start-making-features"
-							target="_blank"
-							rel="noreferrer"
-							className="underline hover:text-amber-100"
+					{agentWarning.icon === "dot" ? (
+						<div className="w-1.5 h-1.5 rounded-full bg-bv-orange animate-pulse shrink-0" />
+					) : (
+						<svg
+							width="12"
+							height="12"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+							className="shrink-0 text-amber-400"
 						>
-							ask your agent
-						</a>{" "}
-						to start!
-					</span>
-					<button
-						onClick={handleCopyPrompt}
-						className={`shrink-0 px-1.5 py-0.5 rounded border font-semibold text-[9px] transition-colors ${promptCopied ? "border-emerald-700/50 bg-emerald-900/40 text-emerald-300" : "border-amber-700/50 bg-amber-900/40 hover:bg-amber-800/40 text-amber-300"}`}
-						title={`Copy: "${VYBIT_PROMPT}"`}
-					>
-						{promptCopied ? "Copied!" : "Copy prompt"}
-					</button>
-				</div>
-			)}
-			{showNoAgentWarning && (
-				<div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-950/40 border-t border-amber-800/40 text-amber-300 text-[10px] font-medium">
-					<svg
-						width="12"
-						height="12"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						className="shrink-0 text-amber-400"
-					>
-						<path
-							fillRule="evenodd"
-							d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.19-1.458-1.516-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-							clipRule="evenodd"
-						/>
-					</svg>
+							<path
+								fillRule="evenodd"
+								d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.19-1.458-1.516-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+								clipRule="evenodd"
+							/>
+						</svg>
+					)}
 					<span className="flex-1 leading-tight">
-						No agent watching —{" "}
+						{agentWarning.text} —{" "}
 						<a
 							href="https://github.com/bitovi/vybit?tab=readme-ov-file#telling-your-agent-to-start-making-features"
 							target="_blank"

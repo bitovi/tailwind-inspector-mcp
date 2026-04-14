@@ -71,7 +71,7 @@ async function fetchTailwindConfig(): Promise<any> {
 		return state.tailwindConfigCache;
 	}
 	try {
-		const res = await fetch(`${SERVER_ORIGIN}/tailwind-config`);
+		const res = await fetch(`${SERVER_ORIGIN}/tailwind-config`, { credentials: 'include' });
 		state.tailwindConfigCache = await res.json();
 		return state.tailwindConfigCache;
 	} catch (err) {

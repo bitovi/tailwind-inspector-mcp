@@ -1,5 +1,6 @@
 let socket: WebSocket | null = null;
 let connected = false;
+let connectAttempts = 0;
 
 type MessageHandler = (data: any) => void;
 const handlers: MessageHandler[] = [];
@@ -12,11 +13,13 @@ function getWsUrl(): string {
 
 export function connect(): void {
   if (socket) return; // already connected or connecting
+  connectAttempts++;
   const url = getWsUrl();
   socket = new WebSocket(url);
 
   socket.addEventListener('open', () => {
     connected = true;
+    connectAttempts = 0;
     send({ type: 'REGISTER', role: 'panel' });
     for (const h of connectHandlers) h();
   });
@@ -25,7 +28,8 @@ export function connect(): void {
     connected = false;
     socket = null;
     for (const h of disconnectHandlers) h();
-    setTimeout(() => connect(), 3000);
+    const delay = Math.min(500 * Math.pow(2, connectAttempts - 1), 3000);
+    setTimeout(() => connect(), delay);
   });
 
   socket.addEventListener('message', (event) => {

@@ -30,7 +30,8 @@ export async function applyPreview(
     try {
       const res = await fetch(`${serverOrigin}/css`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
+        credentials: 'include',
         body: JSON.stringify({ classes: [newClass] }),
       });
       // If a revert (or newer preview) happened while we were fetching, bail out.
@@ -94,7 +95,8 @@ export async function applyPreviewBatch(
     try {
       const res = await fetch(`${serverOrigin}/css`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
+        credentials: 'include',
         body: JSON.stringify({ classes: newClasses }),
       });
       if (gen !== previewGeneration) return;

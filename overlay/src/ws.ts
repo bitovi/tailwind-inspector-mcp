@@ -3,6 +3,7 @@ import { debugLog, debugWarn, isDebug } from "../../shared/vybit-env";
 let socket: WebSocket | null = null;
 let connected = false;
 let connectAttempts = 0;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 type MessageHandler = (data: any) => void;
 const handlers: MessageHandler[] = [];
@@ -23,6 +24,7 @@ export function connect(url: string = 'ws://localhost:3333'): void {
 
   socket.addEventListener('open', () => {
     connected = true;
+    connectAttempts = 0; // Reset backoff on successful connection
     debugLog('tw-overlay', `ws OPEN (attempt #${attempt}) — registering as overlay`);
     // Register as overlay so the server can route messages to us
     send({ type: 'REGISTER', role: 'overlay' });
@@ -34,8 +36,10 @@ export function connect(url: string = 'ws://localhost:3333'): void {
     connected = false;
     socket = null;
     window.dispatchEvent(new CustomEvent('overlay-ws-disconnected'));
-    debugLog('tw-overlay', `ws Will reconnect in 3s…`);
-    setTimeout(() => connect(url), 3000);
+    // Exponential backoff: 500ms, 1s, 2s, 3s (cap)
+    const delay = Math.min(500 * Math.pow(2, connectAttempts - 1), 3000);
+    debugLog('tw-overlay', `ws Will reconnect in ${delay}ms…`);
+    reconnectTimer = setTimeout(() => connect(url), delay);
   });
 
   socket.addEventListener('message', (event) => {

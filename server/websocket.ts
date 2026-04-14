@@ -12,8 +12,21 @@ export interface WebSocketDeps {
 }
 
 export function setupWebSocket(httpServer: Server): WebSocketDeps {
-  const wss = new WebSocketServer({ server: httpServer, maxPayload: 10 * 1024 * 1024 });
+  const wss = new WebSocketServer({ server: httpServer, maxPayload: 10 * 1024 * 1024, perMessageDeflate: false });
   const clientRoles = new Map<WebSocket, string>();
+
+  // Heartbeat: ping every 25s to keep Codespaces tunnel alive
+  const aliveClients = new WeakSet<WebSocket>();
+  const heartbeatInterval = setInterval(() => {
+    for (const ws of wss.clients) {
+      if (!aliveClients.has(ws)) {
+        ws.terminate();
+        continue;
+      }
+      aliveClients.delete(ws);
+      ws.ping();
+    }
+  }, 25_000);
 
   function broadcastTo(role: string, data: object, exclude?: WebSocket): void {
     const payload = JSON.stringify(data);
@@ -37,6 +50,8 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
 
   wss.on("connection", (ws: WebSocket) => {
     console.error("[ws] Client connected");
+    aliveClients.add(ws);
+    ws.on("pong", () => { aliveClients.add(ws); });
 
     ws.on("message", (raw) => {
       try {
@@ -51,9 +66,11 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
               ws.send(JSON.stringify({ type: "QUEUE_UPDATE", ...getQueueUpdate() }));
               // Tell newly-registered panel whether an overlay is connected
               const overlayConnected = hasOverlay();
+              console.error(`[ws] Sending OVERLAY_STATUS { connected: ${overlayConnected} } to new panel`);
               ws.send(JSON.stringify({ type: "OVERLAY_STATUS", connected: overlayConnected }));
             } else if (role === "overlay") {
               // Notify all panels that an overlay connected
+              console.error(`[ws] Broadcasting OVERLAY_STATUS { connected: true } to all panels`);
               broadcastTo("panel", { type: "OVERLAY_STATUS", connected: true });
             }
           }
@@ -190,6 +207,8 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
       }
     });
   });
+
+  wss.on("close", () => { clearInterval(heartbeatInterval); });
 
   return { broadcastPatchUpdate, broadcastTo };
 }
