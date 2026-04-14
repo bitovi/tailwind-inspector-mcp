@@ -1,5 +1,6 @@
 import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone } from "./drop-zone";
 import { isTextEditing, handleTextEditingClick, endTextEdit } from "./text-edit";
+import { debugLog } from "../../shared/vybit-env";
 import type { ContainerName } from "./containers/IContainer";
 import { ModalContainer } from "./containers/ModalContainer";
 import { PopoverContainer } from "./containers/PopoverContainer";
@@ -58,6 +59,8 @@ function getServerOrigin(): string {
 }
 
 const SERVER_ORIGIN = getServerOrigin();
+debugLog('tw-overlay', `SERVER_ORIGIN resolved to: ${SERVER_ORIGIN}`);
+debugLog('tw-overlay', `Script tags with "overlay.js":`, Array.from(document.querySelectorAll('script[src*="overlay.js"]')).map(s => (s as HTMLScriptElement).src));
 
 // When running inside a Storybook iframe, the panel is already shown in
 // the Storybook addon tab — suppress the overlay's own panel container.
@@ -578,6 +581,7 @@ function init(): void {
 
 	// WebSocket connection — derive WS URL from script src
 	const wsUrl = SERVER_ORIGIN.replace(/^http/, "ws");
+	debugLog('tw-overlay', `Connecting WebSocket to: ${wsUrl}`);
 	connect(wsUrl);
 
 	// Handle messages from Panel via WS

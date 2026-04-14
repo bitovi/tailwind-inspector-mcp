@@ -3,6 +3,7 @@
 import express from "express";
 import cors from "cors";
 import { request as makeRequest } from "http";
+import fs from "fs";
 import path from "path";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
@@ -15,6 +16,24 @@ import type { RequestHandler } from "express";
 
 const VALID_STATUSES = new Set<string>(['staged', 'committed', 'implementing', 'implemented', 'error']);
 
+/** Collect all process.env keys starting with VYBIT_ into a plain object */
+function collectVybitEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.startsWith('VYBIT_') && value !== undefined) {
+      env[key] = value;
+    }
+  }
+  return env;
+}
+
+/** Build a JS snippet that sets window.__VYBIT_ENV__ */
+function vybitEnvScript(): string {
+  const env = collectVybitEnv();
+  if (Object.keys(env).length === 0) return '';
+  return `window.__VYBIT_ENV__=${JSON.stringify(env)};`;
+}
+
 export function createApp(packageRoot: string, initialStorybookUrl: string | null = null): express.Express {
   const app = express();
   let storybookUrl = initialStorybookUrl;
@@ -26,12 +45,25 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
   app.get("/overlay.js", (_req, res) => {
     const overlayPath = path.join(packageRoot, "overlay", "dist", "overlay.js");
     res.set("Cache-Control", "no-store");
-    res.sendFile(overlayPath, (err) => {
-      if (err) {
-        console.error("[http] Failed to serve overlay.js:", err);
-        if (!res.headersSent) res.status(404).end();
-      }
-    });
+    res.set("Content-Type", "application/javascript");
+    const preamble = vybitEnvScript();
+    if (!preamble) {
+      // No VYBIT_* vars — serve the file directly (fast path)
+      return res.sendFile(overlayPath, (err) => {
+        if (err) {
+          console.error("[http] Failed to serve overlay.js:", err);
+          if (!res.headersSent) res.status(404).end();
+        }
+      });
+    }
+    // Prepend VYBIT_* env vars to the overlay bundle
+    try {
+      const js = fs.readFileSync(overlayPath, "utf-8");
+      res.send(preamble + "\n" + js);
+    } catch (err) {
+      console.error("[http] Failed to serve overlay.js:", err);
+      if (!res.headersSent) res.status(404).end();
+    }
   });
 
   // Test pages for ghost extraction/stitching visual comparison
@@ -252,12 +284,28 @@ export function createApp(packageRoot: string, initialStorybookUrl: string | nul
     });
   } else {
     const panelDist = path.join(packageRoot, "panel", "dist");
+    // Serve panel index.html with VYBIT_* env injected
+    const servePanelHtml: RequestHandler = (_req, res) => {
+      const htmlPath = path.join(panelDist, "index.html");
+      const preamble = vybitEnvScript();
+      if (!preamble) {
+        return res.sendFile(htmlPath, (err) => {
+          if (err && !res.headersSent) res.status(404).end();
+        });
+      }
+      try {
+        const html = fs.readFileSync(htmlPath, "utf-8");
+        const injected = html.replace("<head>", `<head><script>${preamble}</script>`);
+        res.set("Content-Type", "text/html");
+        res.send(injected);
+      } catch (err) {
+        if (!res.headersSent) res.status(404).end();
+      }
+    };
+    // index.html requests (exact /panel/ or SPA fallback)
+    app.get("/panel/", servePanelHtml);
     app.use("/panel", express.static(panelDist));
-    app.get("/panel/*", (_req, res) => {
-      res.sendFile(path.join(panelDist, "index.html"), (err) => {
-        if (err && !res.headersSent) res.status(404).end();
-      });
-    });
+    app.get("/panel/*", servePanelHtml);
   }
 
   // Storybook asset proxy — must come after all other routes
