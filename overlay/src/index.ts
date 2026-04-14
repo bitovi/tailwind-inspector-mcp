@@ -580,8 +580,13 @@ function init(): void {
 	});
 
 	// WebSocket connection — derive WS URL from script src
-	const wsUrl = SERVER_ORIGIN.replace(/^http/, "ws");
-	debugLog('tw-overlay', `Connecting WebSocket to: ${wsUrl}`);
+	// In proxy mode (overlay served from same origin), use /__vybit_ws path
+	// so Vite can proxy the WebSocket to the VyBit server.
+	const isProxied = SERVER_ORIGIN === window.location.origin;
+	const wsUrl = isProxied
+		? `${window.location.origin.replace(/^http/, "ws")}/__vybit_ws`
+		: SERVER_ORIGIN.replace(/^http/, "ws");
+	debugLog('tw-overlay', `Connecting WebSocket to: ${wsUrl} (proxied=${isProxied})`);
 	connect(wsUrl);
 
 	// Handle messages from Panel via WS
