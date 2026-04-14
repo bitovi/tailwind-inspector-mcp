@@ -64,7 +64,37 @@ const storybookUrl = await detectStorybookUrl();
 // --- HTTP + WebSocket ---
 const app = createApp(packageRoot, storybookUrl);
 const httpServer = createServer(app);
-const { broadcastPatchUpdate } = setupWebSocket(httpServer);
+const { broadcastPatchUpdate, registerSseClient, handleSseMessage } = setupWebSocket(httpServer);
+
+// --- SSE + POST endpoints (Codespaces-compatible transport) ---
+import type { Request, Response } from "express";
+
+const VALID_SSE_ROLES = new Set(['overlay', 'panel', 'design']);
+
+app.get('/sse', (req: Request, res: Response) => {
+  const role = String(req.query.role ?? '');
+  if (!VALID_SSE_ROLES.has(role)) {
+    res.status(400).json({ error: 'role query param required (overlay|panel|design)' });
+    return;
+  }
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+  res.flushHeaders();
+  registerSseClient(role, res);
+});
+
+app.post('/msg', express.json(), (req: Request, res: Response) => {
+  const { clientId, ...msg } = req.body ?? {};
+  if (!clientId || typeof clientId !== 'string') {
+    res.status(400).json({ error: 'clientId required' });
+    return;
+  }
+  handleSseMessage(clientId, msg);
+  res.status(200).end();
+});
 
 httpServer.listen(port, () => {
   console.error(`[server] HTTP + WS listening on http://localhost:${port}`);

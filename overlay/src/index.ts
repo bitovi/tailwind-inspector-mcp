@@ -587,7 +587,7 @@ function init(): void {
 		? `${window.location.origin.replace(/^http/, "ws")}/__vybit_ws`
 		: SERVER_ORIGIN.replace(/^http/, "ws");
 	debugLog('tw-overlay', `Connecting WebSocket to: ${wsUrl} (proxied=${isProxied})`);
-	connect(wsUrl);
+	connect(wsUrl, SERVER_ORIGIN);
 
 	// Handle messages from Panel via WS
 	onMessage((msg: any) => {

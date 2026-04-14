@@ -127,7 +127,11 @@ onMessage((msg: any) => {
     send({ type: 'DESIGN_CLOSE' });
   } else if (msg.type === 'REGISTER') {
     if (msg.role === 'panel') {
-      queueMicrotask(() => broadcastQueueUpdate());
+      queueMicrotask(() => {
+        broadcastQueueUpdate();
+        // Tell the panel that the overlay is connected (always true in demo — same page)
+        send({ type: 'OVERLAY_STATUS', connected: true });
+      });
     }
   }
 });
