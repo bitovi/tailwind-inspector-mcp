@@ -152,20 +152,24 @@ export function GradientBar({
 
   const gradientCSS = buildGradientCSS(sorted, direction);
 
+  const handleHalfWidth = 11; // half of 22px handle
+
   return (
-    <div className="relative flex-1 min-w-0" style={{ paddingTop: 28 }}>
-      {/* Pentagon handles */}
-      {sorted.map((stop, i) => (
-        <PentagonHandle
-          key={stop.id}
-          stop={stop}
-          isEndpoint={i === 0 || i === sorted.length - 1}
-          isSelected={stop.id === selectedStopId}
-          onDragStart={handleDragStart}
-          onClick={onStopClick}
-          onRemove={onStopRemove}
-        />
-      ))}
+    <div className="relative flex-1 min-w-0" style={{ paddingTop: 28, paddingLeft: handleHalfWidth, paddingRight: handleHalfWidth }}>
+      {/* Handle positioning area — inset to match track width */}
+      <div className="absolute" style={{ top: 0, left: handleHalfWidth, right: handleHalfWidth, height: 28 }}>
+        {sorted.map((stop, i) => (
+          <PentagonHandle
+            key={stop.id}
+            stop={stop}
+            isEndpoint={i === 0 || i === sorted.length - 1}
+            isSelected={stop.id === selectedStopId}
+            onDragStart={handleDragStart}
+            onClick={onStopClick}
+            onRemove={onStopRemove}
+          />
+        ))}
+      </div>
 
       {/* Gradient track */}
       <div
