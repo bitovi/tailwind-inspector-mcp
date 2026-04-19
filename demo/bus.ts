@@ -17,6 +17,7 @@ let _connected = false;
 channel.onmessage = (event) => {
   const data = event.data;
   for (const handler of handlers) handler(data);
+  window.dispatchEvent(new CustomEvent('vybit:message', { detail: data }));
 };
 
 export function connect(_url?: string): void {
@@ -48,6 +49,7 @@ export function send(data: object): void {
   // Also deliver locally (BroadcastChannel doesn't echo to sender)
   queueMicrotask(() => {
     for (const handler of handlers) handler(data);
+    window.dispatchEvent(new CustomEvent('vybit:message', { detail: data }));
   });
 }
 

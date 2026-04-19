@@ -8,40 +8,6 @@ import { onMessage, send } from './bus';
 
 // ── Wire message bus to handle queue operations (acts as the "server") ──
 onMessage((msg: any) => {
-  // ── Tutorial event bridge ──
-  // Dispatch CustomEvents so useTutorialProgress can auto-detect completions
-  if (msg.type === 'REGISTER' && msg.role === 'panel') {
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'panel-registered' } }));
-  }
-  if (msg.type === 'PATCH_COMMIT') {
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'patch-committed' } }));
-  }
-  if (msg.type === 'MESSAGE_STAGE') {
-    const detail: Record<string, unknown> = { action: 'message-staged' };
-    if (msg.insertMode) detail.insertMode = msg.insertMode;
-    if (msg.inputMethod) detail.inputMethod = msg.inputMethod;
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail }));
-  }
-  if (msg.type === 'TEXT_EDIT_DONE') {
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'text-edit-done' } }));
-  }
-  if (msg.type === 'COMPONENT_DROPPED') {
-    const args = msg.patch?.componentArgs;
-    const hasNestedComponent = args != null && Object.values(args).some(
-      (v) => v != null && typeof v === 'object' && (v as Record<string, unknown>).type === 'component'
-    );
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'component-dropped', hasNestedComponent } }));
-  }
-  if (msg.type === 'PATCH_STAGED') {
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'patch-staged', kind: msg.patch?.kind ?? 'class-change' } }));
-  }
-  if (msg.type === 'BUG_REPORT_STAGE') {
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'bug-report-staged' } }));
-  }
-  if (msg.type === 'DESIGN_SUBMIT') {
-    window.dispatchEvent(new CustomEvent('vybit-tutorial', { detail: { action: 'patch-staged', kind: 'design' } }));
-  }
-
   // ── Queue operations ──
   if (msg.type === 'PATCH_STAGED') {
     addPatch({

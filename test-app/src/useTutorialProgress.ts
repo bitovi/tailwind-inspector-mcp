@@ -19,12 +19,17 @@ function saveProgress(steps: Set<number>) {
   } catch { /* ignore */ }
 }
 
-interface TutorialEvent {
-  action: string
-  kind?: string
+interface ServerMessage {
+  __vybit?: boolean
+  type: string
+  role?: string
+  connected?: boolean
   insertMode?: string
   inputMethod?: string
-  hasNestedComponent?: boolean
+  patch?: {
+    kind?: string
+    componentArgs?: Record<string, unknown>
+  }
 }
 
 export function useTutorialProgress() {
@@ -46,52 +51,68 @@ export function useTutorialProgress() {
     setCompletedSteps(empty)
   }, [])
 
-  // Listen for vybit-tutorial CustomEvents dispatched by demo/bootstrap.ts
+  // Map a raw server/bus message to tutorial step completions
   useEffect(() => {
-    function handleTutorial(e: Event) {
-      const detail = (e as CustomEvent<TutorialEvent>).detail
-      if (!detail) return
+    function processMessage(msg: ServerMessage) {
+      if (!msg?.type) return
 
-      switch (detail.action) {
-        case 'panel-registered':
-          completeStep(2)
+      switch (msg.type) {
+        case 'REGISTER':
+          if (msg.role === 'panel') completeStep(2)
           break
-        case 'patch-committed':
+        case 'OVERLAY_STATUS':
+          if (msg.connected) completeStep(2)
+          break
+        case 'PATCH_COMMIT':
           completeStep(3)
           break
-        case 'message-staged':
-          if (detail.insertMode) {
-            completeStep(6)
-          }
-          if (detail.inputMethod === 'voice') {
-            completeStep(4)
-          }
+        case 'MESSAGE_STAGE':
+          if (msg.insertMode) completeStep(6)
+          if (msg.inputMethod === 'voice') completeStep(4)
           break
-        case 'text-edit-done':
+        case 'TEXT_EDIT_DONE':
           completeStep(5)
           break
-        case 'component-dropped':
+        case 'COMPONENT_DROPPED': {
           completeStep(8)
-          if (detail.hasNestedComponent) {
-            completeStep(9)
-          }
+          const args = msg.patch?.componentArgs
+          const hasNested = args != null && Object.values(args).some(
+            (v) => v != null && typeof v === 'object' && (v as Record<string, unknown>).type === 'component'
+          )
+          if (hasNested) completeStep(9)
           break
-        case 'patch-staged':
-          if (detail.kind === 'class-change') {
-            completeStep(10)
-          }
-          if (detail.kind === 'design') {
-            completeStep(7)
-          }
+        }
+        case 'PATCH_STAGED':
+          if ((msg.patch?.kind ?? 'class-change') === 'class-change') completeStep(10)
+          if (msg.patch?.kind === 'design') completeStep(7)
           break
-        case 'bug-report-staged':
+        case 'BUG_REPORT_STAGE':
           completeStep(11)
+          break
+        case 'DESIGN_SUBMIT':
+          completeStep(7)
           break
       }
     }
 
-    window.addEventListener('vybit-tutorial', handleTutorial)
-    return () => window.removeEventListener('vybit-tutorial', handleTutorial)
+    // vybit:message — dispatched by overlay ws.ts and demo bus.ts
+    function handleVybitMessage(e: Event) {
+      processMessage((e as CustomEvent<ServerMessage>).detail)
+    }
+
+    // message — cross-origin postMessage from the panel iframe (real server flow)
+    function handleWindowMessage(e: MessageEvent) {
+      if (e.data?.__vybit) {
+        processMessage(e.data as ServerMessage)
+      }
+    }
+
+    window.addEventListener('vybit:message', handleVybitMessage)
+    window.addEventListener('message', handleWindowMessage)
+    return () => {
+      window.removeEventListener('vybit:message', handleVybitMessage)
+      window.removeEventListener('message', handleWindowMessage)
+    }
   }, [completeStep])
 
   return { completedSteps, completeStep, resetProgress }

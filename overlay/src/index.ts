@@ -161,8 +161,8 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	)
 		return;
 
-	// When select mode is off, only intercept shift+clicks for multi-select
-	if (!state.selectModeOn && !e.shiftKey) return;
+	// When select mode is off, only intercept shift+clicks or add-mode clicks
+	if (!state.selectModeOn && !state.addMode && !e.shiftKey) return;
 
 	e.preventDefault();
 	e.stopPropagation();
@@ -399,7 +399,10 @@ function setAddMode(on: boolean): void {
 		document.addEventListener("mousemove", mouseMoveHandler, { passive: true });
 	} else {
 		document.documentElement.style.cursor = "";
-		document.removeEventListener("click", clickHandler, { capture: true });
+		// Only remove clickHandler if select mode isn't keeping it alive for shift+click
+		if (!state.selectModeOn) {
+			document.removeEventListener("click", clickHandler, { capture: true });
+		}
 		document.removeEventListener("mousemove", mouseMoveHandler);
 		clearHoverPreview();
 	}

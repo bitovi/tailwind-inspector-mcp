@@ -142,6 +142,12 @@ function sendRaw(data: object): void {
       body,
     }).catch(() => {});
   }
+
+  // Bridge outgoing messages to the parent window so page-level listeners
+  // (e.g. tutorial progress) can observe panel activity.
+  if (window.parent !== window) {
+    try { window.parent.postMessage({ __vybit: true, ...data }, '*'); } catch {}
+  }
 }
 
 export function send(data: object): void {
