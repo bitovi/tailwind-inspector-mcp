@@ -154,6 +154,9 @@ async function assertStepCompleted(page: Page, step: number): Promise<void> {
   await expect.poll(
     async () => {
       const progress = await getProgress(page);
+      if (!progress.has(step)) {
+        console.log(`[tutorial] waiting for step ${step} — localStorage has: [${[...progress].join(', ')}]`);
+      }
       return progress.has(step);
     },
     { message: `Step ${step} ("${SECTION_TITLES[step]}") should be in localStorage`, timeout: 10_000 },
@@ -465,7 +468,20 @@ async function ensureStorybookConnected(frame: Frame): Promise<void> {
     const buttons = Array.from(document.querySelectorAll('button'));
     return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
   }).catch(() => false);
-  if (hasComponents) return;
+  if (hasComponents) {
+    console.log('[tutorial] ensureStorybookConnected: Place buttons already present');
+    return;
+  }
+
+  // Log current panel state for diagnosis
+  const panelState = await frame.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll('button')).map(b => b.textContent?.trim()).filter(Boolean);
+    const text = document.body.innerText.slice(0, 400);
+    return { buttons, text };
+  }).catch(() => ({ buttons: [] as string[], text: '(eval failed)' }));
+  console.log('[tutorial] ensureStorybookConnected: no Place buttons found');
+  console.log('[tutorial] panel buttons:', panelState.buttons.slice(0, 20));
+  console.log('[tutorial] panel text (first 400 chars):', panelState.text);
 
   // If "Storybook not detected" is shown, click "Scan for Storybook" as fallback
   const hasScanButton = await frame.evaluate(() => {
@@ -476,6 +492,8 @@ async function ensureStorybookConnected(frame: Frame): Promise<void> {
     }
     return false;
   }).catch(() => false);
+
+  console.log('[tutorial] ensureStorybookConnected: hasScanButton =', hasScanButton);
 
   if (hasScanButton) {
     // Wait for components to appear after scan
@@ -490,6 +508,7 @@ async function ensureStorybookConnected(frame: Frame): Promise<void> {
       return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
     }, { timeout: 30000 });
   }
+  console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
 }
 
 async function doStep8(page: Page): Promise<void> {
@@ -699,8 +718,11 @@ export async function runTutorial(page: Page): Promise<void> {
   ];
 
   for (const { step, fn } of STEPS) {
+    console.log(`[tutorial] → starting step ${step} ("${SECTION_TITLES[step]}")`);
     await fn(page);
+    console.log(`[tutorial] → step ${step} action done, asserting localStorage`);
     await assertStepCompleted(page, step);
+    console.log(`[tutorial] ✓ step ${step} complete`);
   }
 
   await assertCompletionBanner(page);
