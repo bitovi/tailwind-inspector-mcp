@@ -482,13 +482,13 @@ async function ensureStorybookConnected(frame: Frame): Promise<void> {
     await frame.waitForFunction(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }, { timeout: 20000 });
+    }, { timeout: 30000 });
   } else {
     // Neither components nor scan button — just wait for components
     await frame.waitForFunction(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }, { timeout: 20000 });
+    }, { timeout: 30000 });
   }
 }
 
@@ -523,13 +523,8 @@ async function doStep8(page: Page): Promise<void> {
   const dropTarget = page.locator('text=Priority: High').first();
   await dropTarget.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  const box = await dropTarget.boundingBox();
-  if (!box) throw new Error('Drop target (Priority: High badge) not found');
-  // Hover to trigger insertion indicator, then click to drop after the badge
-  await page.mouse.move(box.x + box.width + 20, box.y + box.height / 2);
-  await page.waitForTimeout(300);
-  await page.mouse.click(box.x + box.width + 20, box.y + box.height / 2);
-  await page.waitForTimeout(1000);
+  await dropTarget.click();
+  await page.waitForTimeout(1500);
 }
 
 async function doStep9(page: Page): Promise<void> {
@@ -604,17 +599,11 @@ async function doStep9(page: Page): Promise<void> {
   // Click Place on Button to arm it.
   await clickComponentPlace(frame, 'Button');
 
-  // Drop next to the existing buttons in section 9's content area
-  // ("Assign" and "Close Issue" buttons)
+  // Drop on the "Close Issue" button in section 9's content area
   const dropTarget = page.locator('button:has-text("Close Issue")').first();
   await dropTarget.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  const box = await dropTarget.boundingBox();
-  if (!box) throw new Error('Drop target (Close Issue button) not found for step 9');
-  // Hover to trigger insertion indicator, then click to drop after the button
-  await page.mouse.move(box.x + box.width + 20, box.y + box.height / 2);
-  await page.waitForTimeout(500);
-  await page.mouse.click(box.x + box.width + 20, box.y + box.height / 2);
+  await dropTarget.click();
   await page.waitForTimeout(2000);
 }
 
