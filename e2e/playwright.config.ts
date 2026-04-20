@@ -41,9 +41,9 @@ export default defineConfig({
   ],
 
   webServer: [
-    // Demo: build then preview
+    // Demo: full build (with Storybook, same as GitHub Pages) then preview
     {
-      command: 'npm run build:demo-only && npx vite preview --port 4173',
+      command: 'npm run build && npx vite preview --port 4173',
       cwd: path.join(root, 'demo'),
       url: 'http://localhost:4173',
       reuseExistingServer: !process.env.CI,
