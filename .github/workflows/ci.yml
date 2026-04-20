@@ -49,7 +49,7 @@ jobs:
         run: cd test-app && npm ci --legacy-peer-deps
 
       - name: Install storybook-test/v10 deps
-        run: cd storybook-test/v10 && npm ci
+        run: cd storybook-test/v10 && npm install
 
       - name: Install demo deps
         run: cd demo && npm ci
@@ -91,7 +91,7 @@ jobs:
         run: cd test-app && npm ci --legacy-peer-deps
 
       - name: Install storybook-test/v10 deps
-        run: cd storybook-test/v10 && npm ci
+        run: cd storybook-test/v10 && npm install
 
       - name: Build overlay + panel
         run: npm run build
