@@ -17,8 +17,8 @@ test.describe('ScaleScrubber clears highlights on interaction', () => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    const primaryBtn = page.locator('button:has-text("Primary")').first();
-    const frame = await openAndSelectElement(page, primaryBtn);
+    const assignBtn = page.locator('button:has-text("Assign")').first();
+    const frame = await openAndSelectElement(page, assignBtn);
     await frame.locator('.cursor-ew-resize').first().waitFor({ timeout: 8000 });
 
     const highlightsBefore = await getHighlightCount(page);
@@ -38,8 +38,8 @@ test.describe('ScaleScrubber clears highlights on interaction', () => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    const primaryBtn = page.locator('button:has-text("Primary")').first();
-    const frame = await openAndSelectElement(page, primaryBtn);
+    const assignBtn = page.locator('button:has-text("Assign")').first();
+    const frame = await openAndSelectElement(page, assignBtn);
     await frame.locator('.cursor-ew-resize').first().waitFor({ timeout: 8000 });
 
     expect(await getHighlightCount(page)).toBeGreaterThan(0);

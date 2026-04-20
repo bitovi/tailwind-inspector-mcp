@@ -1,22 +1,22 @@
 import { test, expect, type Frame } from '@playwright/test';
 import { openAndSelectElement } from './helpers';
 
-async function openPanelForPrimaryButton(page: any): Promise<Frame> {
+async function openPanelForAssignButton(page: any): Promise<Frame> {
   await page.goto('/');
   await page.waitForTimeout(1500);
-  const frame = await openAndSelectElement(page, page.locator('button:has-text("Primary")').first());
+  const frame = await openAndSelectElement(page, page.locator('button:has-text("Assign")').first());
   await frame.locator('[data-layer="padding"] .bm-slot').first().waitFor({ timeout: 8000 });
   return frame;
 }
 
 test.describe('BoxModel panel integration', () => {
   test('BoxModel shows BOX MODEL header after element selection', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
     await expect(panel.getByText('BOX MODEL', { exact: false })).toBeVisible({ timeout: 5000 });
   });
 
-  test('BoxModel displays padding values px-4 and py-2 for the Primary button', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+  test('BoxModel displays padding values px-4 and py-2 for the Assign button', async ({ page }) => {
+    const panel = await openPanelForAssignButton(page);
 
     // The padding ring should show scrubbers with the truncated values "x-4" and "y-2"
     await expect(panel.locator('[data-layer="padding"] .bm-slot', { hasText: 'x-4' })).toBeVisible({ timeout: 5000 });
@@ -24,7 +24,7 @@ test.describe('BoxModel panel integration', () => {
   });
 
   test('BoxModel slot dropdown opens when clicked', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     // Click the x-4 scrubber to open its dropdown
     await panel.locator('[data-layer="padding"] .bm-slot', { hasText: 'x-4' }).click();
@@ -43,10 +43,10 @@ test.describe('BoxModel panel integration', () => {
       });
     });
 
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     // The padding label is a MiniScrubber — click it to open the dropdown
-    // The padding ring label shows "padding" (no shorthand set on primary button)
+    // The padding ring label shows "padding" (no shorthand set on Assign button)
     const paddingLabel = panel.locator('[data-layer="padding"] .bm-name-scrubber .bm-slot');
     await paddingLabel.waitFor({ timeout: 5000 });
     await paddingLabel.click();
@@ -65,7 +65,7 @@ test.describe('BoxModel panel integration', () => {
   });
 
   test('BoxModel shorthand label shows current value and allows changing it', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     // Primary button has px-4 py-2 but no shorthand — padding label shows "padding"
     const paddingLabel = panel.locator('[data-layer="padding"] .bm-name-scrubber .bm-slot');
@@ -83,7 +83,7 @@ test.describe('BoxModel panel integration', () => {
       });
     });
 
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     // Open the x dropdown and pick a new value
     await panel.locator('[data-layer="padding"] .bm-slot', { hasText: 'x-4' }).click();
@@ -97,7 +97,7 @@ test.describe('BoxModel panel integration', () => {
   });
 
   test('BoxModel clears highlights when editing starts', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     await expect.poll(async () => {
       return page.evaluate(() => {
@@ -128,9 +128,9 @@ test.describe('BoxModel panel integration', () => {
       });
     });
 
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
-    // The Primary button has px-4 py-2 — the 'l' slot (pl) is empty and shows placeholder 'l'.
+    // The Assign button has px-4 py-2 — the 'l' slot (pl) is empty and shows placeholder 'l'.
     // Hover the padding ring first to reveal empty slots, then click the 'l' slot.
     const paddingRing = panel.locator('[data-layer="padding"]');
     await paddingRing.hover();

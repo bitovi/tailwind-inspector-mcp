@@ -34,7 +34,7 @@ test.describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(selectPressed).toBe('true');
 
     // ── Step 2: Click an element on the page ──
-    const targetEl = page.locator('text=Primary').first();
+    const targetEl = page.locator('button:has-text("Assign")').first();
     await targetEl.click();
     await page.waitForTimeout(500);
 
@@ -64,7 +64,7 @@ test.describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(insertPressed).toBe('true');
 
     // ── Step 4: Click a placement site (browse mode should be active) ──
-    const insertTarget = page.locator('text=Primary').first();
+    const insertTarget = page.locator('button:has-text("Assign")').first();
     await insertTarget.click();
     await page.waitForTimeout(500);
 
@@ -89,7 +89,7 @@ test.describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(tab3).toBe('design');
 
     // ── Step 6: Click an element again ──
-    const targetEl2 = page.locator('text=Primary').first();
+    const targetEl2 = page.locator('button:has-text("Assign")').first();
     await targetEl2.click();
     await page.waitForTimeout(500);
 

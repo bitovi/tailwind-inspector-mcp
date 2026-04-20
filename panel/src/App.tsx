@@ -5,6 +5,7 @@ import { ModeToggle } from "./components/ModeToggle";
 import { PatchPopover } from "./components/PatchPopover";
 import { BugReportMode } from "./components/BugReportMode";
 import { TabBar } from "./components/TabBar";
+import { ThemeTab } from "./components/ThemeTab";
 import { usePatchManager } from "./hooks/usePatchManager";
 import { useModeStateMachine } from "./hooks/useModeStateMachine";
 import { Picker } from "./Picker";
@@ -57,6 +58,7 @@ function InspectorApp() {
 	const patchManager = usePatchManager();
 	const [promptCopied, setPromptCopied] = useState(false);
 	const [isComponentArmed, setIsComponentArmed] = useState(false);
+	const [themeConfig, setThemeConfig] = useState<any>(null);
 
 	const {
 		mode,
@@ -96,6 +98,22 @@ function InspectorApp() {
 		setIsComponentArmed(false);
 	}, [mode]);
 
+	// Request theme vars from overlay when theme mode becomes active
+	useEffect(() => {
+		if (mode !== 'theme') return;
+		sendTo('overlay', { type: 'REQUEST_THEME_VARS' });
+	}, [mode]);
+
+	const handleStageThemeChange = useCallback((description: string) => {
+		const id = crypto.randomUUID();
+		send({
+			type: 'MESSAGE_STAGE',
+			id,
+			message: description,
+			elementKey: 'theme',
+		});
+	}, []);
+
 	useEffect(() => {
 		const offConnect = onConnect(() => {
 			setWsConnected(true);
@@ -116,7 +134,12 @@ function InspectorApp() {
 			// Mode-related messages are handled by the state machine hook
 			if (handleWsMessage(msg)) return;
 
-			if (msg.type === "OVERLAY_STATUS") {
+			if (msg.type === "THEME_VARS") {
+				const varCount = msg.vars ? Object.keys(msg.vars).length : 0;
+				console.log(`[theme-trace] THEME_VARS received: ${varCount} vars`);
+				setThemeConfig({ vars: msg.vars });
+			} else if (msg.type === "OVERLAY_STATUS") {
+				console.log(`[theme-trace] OVERLAY_STATUS connected=${msg.connected}`);
 				setOverlayConnected(!!msg.connected);
 			} else if (msg.type === "QUEUE_UPDATE") {
 				patchManager.handleQueueUpdate({
@@ -349,6 +372,37 @@ function InspectorApp() {
 	}
 
 	if (!elementData) {
+		// Theme mode — dedicated panel view
+		if (mode === 'theme') {
+			return (
+				<div className="h-full flex flex-col">
+					<div className="px-3 pt-3 pb-2 border-b border-bv-border">
+						<div className="flex items-center justify-between gap-2">
+							<ModeToggle
+								mode={mode}
+								onModeChange={handleModeChange}
+								isPicking={isPicking}
+								isEngaged={isEngaged}
+							/>
+							{!isEmbeddedInStorybook && <ContainerSwitcher />}
+						</div>
+					</div>
+					{themeConfig ? (
+						<ThemeTab
+							tailwindConfig={themeConfig}
+							tailwindVersion={themeConfig.tailwindVersion ?? 4}
+							onStageThemeChange={handleStageThemeChange}
+						/>
+					) : (
+						<div className="flex-1 flex items-center justify-center text-[11px] text-bv-text-mid">
+							Loading theme data…
+						</div>
+					)}
+					{queueFooter}
+				</div>
+			);
+		}
+
 		// Landing page — no mode selected yet
 		if (mode === null) {
 			return (
@@ -435,6 +489,26 @@ function InspectorApp() {
 								Select events from recording history and describe the issue
 							</span>
 						</button>
+						<button
+							onClick={() => handleModeChange('theme')}
+							className="w-full flex flex-col items-center gap-3 px-6 py-4 rounded-lg border border-bv-border bg-bv-surface hover:border-bv-teal hover:bg-bv-teal/5 transition-all cursor-pointer"
+						>
+							<div className="w-14 h-14 rounded-full bg-bv-teal/10 text-bv-teal flex items-center justify-center">
+								<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+									<path
+									  fillRule="evenodd"
+									  clipRule="evenodd"
+									  d="M3 11A9 8.5 0 1 0 21 11A9 8.5 0 1 0 3 11ZM6.5 16A2 2 0 1 0 10.5 16A2 2 0 1 0 6.5 16ZM6.4 7.5A1.6 1.6 0 1 0 9.6 7.5A1.6 1.6 0 1 0 6.4 7.5ZM10.4 4.5A1.6 1.6 0 1 0 13.6 4.5A1.6 1.6 0 1 0 10.4 4.5ZM14.4 7.5A1.6 1.6 0 1 0 17.6 7.5A1.6 1.6 0 1 0 14.4 7.5ZM15.9 11.5A1.6 1.6 0 1 0 19.1 11.5A1.6 1.6 0 1 0 15.9 11.5ZM14.4 15.5A1.6 1.6 0 1 0 17.6 15.5A1.6 1.6 0 1 0 14.4 15.5Z"
+									/>
+								</svg>
+							</div>
+							<span className="text-[13px] text-bv-text font-medium">
+								Theme
+							</span>
+							<span className="text-[11px] text-bv-text-mid text-center leading-relaxed">
+								Edit colors, typography, spacing, and other CSS variables
+							</span>
+						</button>
 					</div>
 					{queueFooter}
 				</div>
@@ -451,11 +525,11 @@ function InspectorApp() {
 								mode={mode}
 								onModeChange={handleModeChange}
 								isPicking={isPicking}
-								isEngaged={isEngaged}
-							/>
-							<div className="flex-1 min-w-0">
-								<span className="font-display font-bold text-[13px] text-bv-text leading-tight">
-									Bug Report
+							isEngaged={isEngaged}
+						/>
+						<div className="flex-1 min-w-0">
+							<span className="font-display font-bold text-[13px] text-bv-text leading-tight">
+								Bug Report
 								</span>
 							</div>
 							{!isEmbeddedInStorybook && <ContainerSwitcher />}
@@ -495,10 +569,10 @@ function InspectorApp() {
 							mode={mode}
 							onModeChange={handleModeChange}
 							isPicking={isPicking}
-								isEngaged={isEngaged}
-						/>
-						<div className="flex-1 min-w-0">
-							{mode === 'insert' ? (
+							isEngaged={isEngaged}
+					/>
+					<div className="flex-1 min-w-0">
+						{mode === 'insert' ? (
 								<span className="text-[11px] text-bv-teal font-medium">
 								{insertPoint
 									? formatInsertLabel(insertPoint.position, insertPoint.targetName)

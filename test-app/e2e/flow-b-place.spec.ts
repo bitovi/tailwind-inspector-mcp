@@ -37,7 +37,7 @@ const ACTIONS: Record<string, (page: Page, frame: Frame) => Promise<void>> = {
 
 test.describe('Flow B: Place — pick location first, then pick a component', () => {
   test('full flow matches the behavior table', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(120000);
     await page.goto('/');
     await page.waitForTimeout(2000);
 

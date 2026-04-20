@@ -68,7 +68,16 @@ export default defineConfig({
       timeout: 120000,
       env: {
         PORT: '3333',
+        STORYBOOK_URL: 'http://localhost:6008',
       },
+    },
+    // Storybook v10 — needed for component discovery in flow-a/flow-b tests
+    {
+      command: 'npm run storybook',
+      cwd: '../storybook-test/v10',
+      url: 'http://localhost:6008',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
     },
   ],
 });

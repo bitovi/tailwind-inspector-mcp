@@ -5,6 +5,7 @@ import type { Server } from "http";
 import type { Response as ExpressResponse } from "express";
 
 import { addPatch, addAndCommit, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit, attachMessageToPatch, updateDraftPatch } from "./queue.js";
+import { generateCssForClasses, getTailwindVersion } from "./tailwind.js";
 import type { Patch } from "../shared/types.js";
 
 // --- Unified client abstraction ---
@@ -127,6 +128,11 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
 
     // Route messages with a "to" field to all clients of that role
     if (msg.to) {
+      // Intercept THEME_PREVIEW for v3: server must recompile CSS
+      if (msg.type === "THEME_PREVIEW" && msg.tailwindVersion === 3) {
+        handleV3ThemePreview(msg.overrides ?? [], client);
+        return;
+      }
       broadcastTo(msg.to, msg, client);
       if ((msg.type === "COMPONENT_ARM" || msg.type === "COMPONENT_DISARM") && msg.to === "overlay") {
         broadcastTo("design", msg, client);
@@ -293,6 +299,65 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
       return;
     }
     handleClientMessage(client, msg);
+  }
+
+  // --- v3 theme preview: recompile CSS with overrides ---
+  let v3PreviewTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function handleV3ThemePreview(
+    overrides: Array<{ variable: string; value: string }>,
+    _client: MessageClient,
+  ): Promise<void> {
+    // Debounce server-side compilation
+    if (v3PreviewTimer) clearTimeout(v3PreviewTimer);
+
+    if (overrides.length === 0) {
+      // Clear preview immediately
+      broadcastTo("overlay", { type: "THEME_PREVIEW_CSS", css: "" });
+      return;
+    }
+
+    v3PreviewTimer = setTimeout(async () => {
+      try {
+        // Build utility classes for every changed color token
+        const classes: string[] = [];
+        for (const { variable } of overrides) {
+          // variable format: "colors.blue.500" → build classes like bg-blue-500, text-blue-500, etc.
+          const match = variable.match(/^colors\.(.+)$/);
+          if (match) {
+            const colorPath = match[1].replace(/\./g, '-');
+            for (const prefix of ['bg', 'text', 'border', 'ring', 'outline', 'divide', 'accent', 'fill', 'stroke']) {
+              classes.push(`${prefix}-${colorPath}`);
+            }
+          }
+          // fontSize: fontSize.lg → text-lg
+          const fsMatch = variable.match(/^fontSize\.(.+)$/);
+          if (fsMatch) classes.push(`text-${fsMatch[1]}`);
+          // fontWeight: fontWeight.bold → font-bold
+          const fwMatch = variable.match(/^fontWeight\.(.+)$/);
+          if (fwMatch) classes.push(`font-${fwMatch[1]}`);
+        }
+
+        if (classes.length === 0) return;
+
+        // Generate CSS with current theme (overrides are not yet applied to config —
+        // v3 preview is approximate: we generate the CSS for current classes so the
+        // overlay can at least see the structure. Full override compilation would
+        // require modifying resolveConfig which is cached.)
+        // For now, send CSS variable override style (works for projects using CSS vars)
+        const rules = overrides
+          .map((o) => {
+            // Convert "colors.blue.500" → "--color-blue-500" for CSS var approach
+            const varName = `--${o.variable.replace(/\./g, '-')}`;
+            return `  ${varName}: ${o.value} !important;`;
+          })
+          .join("\n");
+        const css = `:root {\n${rules}\n}`;
+        broadcastTo("overlay", { type: "THEME_PREVIEW_CSS", css });
+      } catch (err) {
+        console.error("[theme] v3 preview compilation failed:", err);
+      }
+    }, 250);
   }
 
   return { broadcastPatchUpdate, broadcastTo, registerSseClient, handleSseMessage };

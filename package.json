@@ -49,6 +49,9 @@
     "test:overlay": "vitest run --project overlay+server overlay/src",
     "test:server": "vitest run --project overlay+server server/tests",
     "test:e2e": "cd test-app && npm run test:e2e",
+    "test:e2e:tutorial": "npx playwright test --config e2e/playwright.config.ts",
+    "test:e2e:tutorial:demo": "npx playwright test --config e2e/playwright.config.ts --project=demo",
+    "test:e2e:tutorial:test-app": "npx playwright test --config e2e/playwright.config.ts --project=test-app",
     "test:all": "npm run test && npm run test:e2e",
     "typecheck": "tsc --noEmit",
     "dev": "npm run build && node --import tsx server/index.ts"
@@ -80,6 +83,7 @@
     "react-dom": "^19.2.4",
     "storybook": "^10.3.3",
     "typescript": "^5.6.0",
+    "@playwright/test": "^1.58.2",
     "vitest": "^4.1.0"
   }
 }

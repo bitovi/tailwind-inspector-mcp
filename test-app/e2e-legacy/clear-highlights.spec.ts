@@ -10,7 +10,7 @@ test.describe('Clear highlights on class chip click', () => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    await openAndSelectElement(page, page.locator('button:has-text("Primary")').first());
+    await openAndSelectElement(page, page.locator('button:has-text("Assign")').first());
 
     await expect.poll(() => getHighlightCount(page)).toBeGreaterThan(0);
   });
@@ -19,7 +19,7 @@ test.describe('Clear highlights on class chip click', () => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    const frame = await openAndSelectElement(page, page.locator('button:has-text("Primary")').first());
+    const frame = await openAndSelectElement(page, page.locator('button:has-text("Assign")').first());
 
     await expect.poll(() => getHighlightCount(page)).toBeGreaterThan(0);
 
@@ -49,7 +49,7 @@ test.describe('Clear highlights on class chip click', () => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    const frame = await openAndSelectElement(page, page.locator('button:has-text("Primary")').first());
+    const frame = await openAndSelectElement(page, page.locator('button:has-text("Assign")').first());
 
     // Get the panel iframe and click a ScaleScrubber chip
     const chip = frame.locator('.cursor-ew-resize').first();

@@ -35,7 +35,7 @@ async function setupScaleRow(page: Page): Promise<{ frame: Frame; iframeBox: { x
   await page.waitForTimeout(300);
 
   await clickSelectElementButton(frame);
-  await page.locator('button:has-text("Primary")').first().click();
+  await page.locator('button:has-text("Assign")').first().click();
 
   const scrubber = frame.locator('.cursor-ew-resize').filter({ hasText: 'text-sm' }).first();
   await scrubber.waitFor({ timeout: 8000 });

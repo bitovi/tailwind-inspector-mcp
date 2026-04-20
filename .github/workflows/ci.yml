@@ -27,3 +27,84 @@ jobs:
       - run: cd panel && npm ci
 
       - run: npm test
+
+  e2e-tutorial:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Install panel deps
+        run: cd panel && npm ci
+
+      - name: Install test-app deps
+        run: cd test-app && npm ci --legacy-peer-deps
+
+      - name: Install storybook-test/v10 deps
+        run: cd storybook-test/v10 && npm install
+
+      - name: Install demo deps
+        run: cd demo && npm ci
+
+      - name: Build overlay + panel
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tutorial E2E tests
+        run: npx playwright test --config e2e/playwright.config.ts
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-tutorial-results
+          path: playwright-report/
+          retention-days: 7
+
+  e2e-flow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Install panel deps
+        run: cd panel && npm ci
+
+      - name: Install test-app deps
+        run: cd test-app && npm ci --legacy-peer-deps
+
+      - name: Install storybook-test/v10 deps
+        run: cd storybook-test/v10 && npm install
+
+      - name: Build overlay + panel
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: cd test-app && npx playwright install --with-deps chromium
+
+      - name: Run flow E2E tests
+        run: cd test-app && npx playwright test --reporter=line
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-flow-results
+          path: test-app/playwright-report/
+          retention-days: 7

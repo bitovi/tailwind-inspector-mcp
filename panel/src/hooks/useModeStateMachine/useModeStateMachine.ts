@@ -57,6 +57,8 @@ export function modeReducer(
       const fromOverlay = !!action.fromOverlay;
       const effects: SideEffect[] = [];
 
+      console.log(`[theme-trace] MODE_CHANGE: ${prev.mode} → ${newMode} (fromOverlay=${fromOverlay})`);
+
       // Re-click same mode
       if (newMode === prev.mode) {
         if (prev.elementData || prev.insertPoint) {
@@ -167,6 +169,7 @@ export function modeReducer(
     // ------------------------------------------------------------------
 
     case 'WS_RESET_SELECTION':
+      console.log(`[theme-trace] WS_RESET_SELECTION while mode=${prev.mode}`);
       return {
         state: {
           ...prev,
@@ -185,6 +188,11 @@ export function modeReducer(
       return deselectAndReenter(prev, true);
 
     case 'WS_ELEMENT_SELECTED':
+      // Ignore stale element selections while theme or bug-report mode is active
+      if (prev.mode === 'theme' || prev.mode === 'bug-report') {
+        console.log(`[theme-trace] WS_ELEMENT_SELECTED ignored (mode=${prev.mode})`);
+        return { state: prev, effects: [] };
+      }
       return {
         state: {
           ...prev,
@@ -197,12 +205,17 @@ export function modeReducer(
       };
 
     case 'WS_SELECT_MODE_CHANGED':
+      // Ignore stale select-mode updates while theme or bug-report mode is active
+      if (prev.mode === 'theme' || prev.mode === 'bug-report') {
+        return { state: prev, effects: [] };
+      }
       return {
         state: { ...prev, selectModeActive: action.active },
         effects: [],
       };
 
     case 'WS_MODE_CHANGED': {
+      console.log(`[theme-trace] WS_MODE_CHANGED: ${action.mode} (current=${prev.mode})`);
       // Delegate to MODE_CHANGE with fromOverlay=true
       return modeReducer(prev, { type: 'MODE_CHANGE', mode: action.mode, fromOverlay: true });
     }

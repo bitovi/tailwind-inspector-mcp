@@ -14,8 +14,8 @@ test('hovering then leaving scale chips reverts classes on the page', async ({ p
   await page.goto('/');
   await page.waitForTimeout(2000);
 
-  // Record the original class of the Primary button
-  const originalClass = await page.locator('button:has-text("Primary")').first().getAttribute('class');
+  // Record the original class of the Assign button
+  const originalClass = await page.locator('button:has-text("Assign")').first().getAttribute('class');
   expect(originalClass).toContain('px-4');
 
   await clickToggleButton(page);
@@ -24,8 +24,8 @@ test('hovering then leaving scale chips reverts classes on the page', async ({ p
   await page.waitForTimeout(300);
   await clickSelectElementButton(frame);
 
-  // Click the Primary button to select it
-  await page.locator('button:has-text("Primary")').first().click();
+  // Click the Assign button to select it
+  await page.locator('button:has-text("Assign")').first().click();
   const scrubber = frame.locator('.cursor-ew-resize').filter({ hasText: 'text-sm' }).first();
   await scrubber.waitFor({ timeout: 8000 });
   await scrubber.click();
@@ -42,7 +42,7 @@ test('hovering then leaving scale chips reverts classes on the page', async ({ p
   // Wait enough time for any in-flight fetches to resolve (they should be ignored)
   await page.waitForTimeout(1500);
 
-  // The Primary button should have its original class back — no stale preview class
-  const classAfterHover = await page.locator('button:has-text("Primary")').first().getAttribute('class');
+  // The Assign button should have its original class back — no stale preview class
+  const classAfterHover = await page.locator('button:has-text("Assign")').first().getAttribute('class');
   expect(classAfterHover).toBe(originalClass);
 });
