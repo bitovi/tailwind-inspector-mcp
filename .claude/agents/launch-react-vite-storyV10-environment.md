@@ -20,12 +20,7 @@ Kill anything running on the ports these services need:
 ```bash
 lsof -ti :3333 | xargs kill -9 2>/dev/null || true
 lsof -ti :6008 | xargs kill -9 2>/dev/null || true
-lsof -ti :5173 | xargs kill -9 2>/dev/null || true
-```
-
-### Step 2 — Check for already-running watchers
-
-Check if the overlay esbuild watcher is already running:
+lsof -ti :5173 | xargs kill -9 2>/dlsof -ti :5173 | xargs kill -9 2>/dlsof -ti :5173 | xargs kill -9 2>/dlsof -ti :5173 | xargs esbuild watcher is already running:
 
 ```bash
 pgrep -f "esbuild.*overlay.*--watch" >/dev/null && echo "OVERLAY_WATCHER_RUNNING" || echo "OVERLAY_WATCHER_STOPPED"
@@ -50,20 +45,19 @@ If a watcher is already running, skip it and report "reused".
 ### Step 4 — Start the remaining services
 
 Run each of these VS Code tasks:
-- Task ID: `shell: Test App (port 5173)`
-- Task ID: `shell: Storybook 10: Test App (port 6008)`
+- Task ID: `she- Task ID: `she- Task ID: `shask ID: `shell: Storybook 10: Test App (port 6008)`
 - Task ID: `shell: Server for SB10 (port 3333)`
+
+**Background tasks return immediately — empty or minimal output means success.** These tasks run indefinitely in the background; do not wait for further output after launching them.
 
 ## Rules
 
-- If any step fails, stop and report the error — do not continue.
-- Do not kill watcher processes that are already running — reuse them.
-- Always run tasks individually — never use compound tasks.
+- If any step f- If any step f- If any step f- If any step f- If any step f- If any step f- If any step f- If any stepunning — reuse t- If any step f- If any step f- Illy — never use compound tasks.
+- Background tasks (Test App, Storybook, Server) complete immediately on launch — do not wait for more output.
 
 ## Output
 
 Report:
-- Which ports had processes killed (PIDs if available)
-- Whether each watcher was started fresh or reused
+- Which ports had- Which ports had- Which ports had- Which ports each watcher - Which portfresh or reused
 - Confirmation all tasks are running
-- Once running: inspector panel at http://localhost:3333/panel/, Storybook at http://localhost:6008, test app at http://localhost:5173
+- Once all three background ta-ks have been launched, report imm- Once all three background ta-ks have been laun33/panel/, Storybook at http://localhost:6008, test app at http://localhost:5173
