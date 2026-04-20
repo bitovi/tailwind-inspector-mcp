@@ -462,7 +462,10 @@ async function clickComponentPlace(frame: Frame, componentName: string): Promise
   await frame.page().waitForTimeout(800);
 }
 
-async function ensureStorybookConnected(frame: Frame): Promise<void> {
+/**
+ * Returns true if Storybook components loaded, false if unavailable (e.g. demo).
+ */
+async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
   // Check if components are already loaded
   const hasComponents = await frame.evaluate(() => {
     const buttons = Array.from(document.querySelectorAll('button'));
@@ -470,7 +473,7 @@ async function ensureStorybookConnected(frame: Frame): Promise<void> {
   }).catch(() => false);
   if (hasComponents) {
     console.log('[tutorial] ensureStorybookConnected: Place buttons already present');
-    return;
+    return true;
   }
 
   // Log current panel state for diagnosis
@@ -495,20 +498,18 @@ async function ensureStorybookConnected(frame: Frame): Promise<void> {
 
   console.log('[tutorial] ensureStorybookConnected: hasScanButton =', hasScanButton);
 
-  if (hasScanButton) {
-    // Wait for components to appear after scan
-    await frame.waitForFunction(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }, { timeout: 30000 });
+  // Wait up to 15s for components to appear; return false if they don't
+  const appeared = await frame.waitForFunction(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+  }, { timeout: 15000 }).then(() => true).catch(() => false);
+
+  if (appeared) {
+    console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
   } else {
-    // Neither components nor scan button — just wait for components
-    await frame.waitForFunction(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }, { timeout: 30000 });
+    console.log('[tutorial] ensureStorybookConnected: Storybook unavailable, will use fallback');
   }
-  console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
+  return appeared;
 }
 
 async function doStep8(page: Page): Promise<void> {
@@ -532,18 +533,24 @@ async function doStep8(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
-  await ensureStorybookConnected(frame);
+  const hasStorybook = await ensureStorybookConnected(frame);
 
-  // Click Place on the Badge component
-  await clickComponentPlace(frame, 'Badge');
+  if (hasStorybook) {
+    // Click Place on the Badge component
+    await clickComponentPlace(frame, 'Badge');
 
-  // Drop next to the existing status badges in section 8's content area
-  // ("Open", "Frontend", "Priority: High" badges)
-  const dropTarget = page.locator('text=Priority: High').first();
-  await dropTarget.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(500);
-  await dropTarget.click();
-  await page.waitForTimeout(1500);
+    // Drop next to the existing status badges in section 8's content area
+    const dropTarget = page.locator('text=Priority: High').first();
+    await dropTarget.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+    await dropTarget.click();
+    await page.waitForTimeout(1500);
+  } else {
+    // No Storybook (e.g. demo project) — use fallback "Mark complete" button
+    console.log('[tutorial] step 8: no Storybook, clicking Mark complete');
+    const section = page.locator('section').filter({ has: page.locator(`h2:has-text("${SECTION_TITLES[8]}")`) });
+    await section.getByRole('button', { name: 'Mark complete' }).click();
+  }
 }
 
 async function doStep9(page: Page): Promise<void> {
@@ -555,7 +562,15 @@ async function doStep9(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
-  await ensureStorybookConnected(frame);
+  const hasStorybook = await ensureStorybookConnected(frame);
+
+  if (!hasStorybook) {
+    // No Storybook (e.g. demo project) — use fallback "Mark complete" button
+    console.log('[tutorial] step 9: no Storybook, clicking Mark complete');
+    const section = page.locator('section').filter({ has: page.locator(`h2:has-text("${SECTION_TITLES[9]}")`) });
+    await section.getByRole('button', { name: 'Mark complete' }).click();
+    return;
+  }
 
   // Find the Button component and click Customize to expand it
   await frame.evaluate(() => {
