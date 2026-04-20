@@ -72,7 +72,7 @@ export type SideEffect =
 // ---------------------------------------------------------------------------
 
 export interface ModeStateMachine {
-  /** Current mode: 'select' | 'insert' | 'bug-report' | null */
+  /** Current mode: 'select' | 'insert' | 'bug-report' | 'theme' | null */
   mode: AppMode;
   /** Currently selected element (null if none) */
   elementData: ElementData | null;

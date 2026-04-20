@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { openAndSelectElement } from './helpers';
 
-async function openPanelForPrimaryButton(page: any) {
+async function openPanelForAssignButton(page: any) {
   await page.goto('/');
   await page.waitForTimeout(1500);
-  const frame = await openAndSelectElement(page, page.locator('button:has-text("Primary")').first());
+  const frame = await openAndSelectElement(page, page.locator('button:has-text("Assign")').first());
   await frame.locator('[data-layer="padding"] .bm-slot', { hasText: 'x-4' }).first().waitFor({ timeout: 8000 });
   return frame;
 }
@@ -30,7 +30,7 @@ test.describe('PatchPopover footer menus', () => {
   });
 
   test('clicking "1 draft" opens a popover listing the draft patch', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     await stagePaddingXChange(panel, page);
 
@@ -53,7 +53,7 @@ test.describe('PatchPopover footer menus', () => {
   });
 
   test('discard removes the patch and closes the popover', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     await stagePaddingXChange(panel, page);
     const draftBeforeDiscard = await getFooterCount(panel, 'draft');
@@ -68,7 +68,7 @@ test.describe('PatchPopover footer menus', () => {
   });
 
   test('commit all sends patches to server and increments committed count', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     // Capture the current counts before staging
     const committedBefore = await getFooterCount(panel, 'committed');
@@ -94,7 +94,7 @@ test.describe('PatchPopover footer menus', () => {
   });
 
   test('popover closes on Escape key', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     await stagePaddingXChange(panel, page);
 
@@ -112,7 +112,7 @@ test.describe('PatchPopover footer menus', () => {
   });
 
   test('disabled counts (0) do not open a popover', async ({ page }) => {
-    const panel = await openPanelForPrimaryButton(page);
+    const panel = await openPanelForAssignButton(page);
 
     // "0 implementing" should always be disabled (no test triggers implementing state)
     const implementingBtn = panel.getByRole('button', { name: '0 implementing' });

@@ -214,9 +214,9 @@ export async function clickInsert(frame: Frame): Promise<void> {
   await frame.page().waitForTimeout(500);
 }
 
-/** Click a placement site on the page (the "Cards" heading). */
+/** Click a placement site on the page (the "Monthly Signups" heading). */
 export async function clickPlacementSite(page: Page): Promise<void> {
-  await page.locator('h2:has-text("Cards")').first().click();
+  await page.locator('h3:has-text("Monthly Signups")').first().click();
   await page.waitForTimeout(800);
 }
 
@@ -284,7 +284,7 @@ export async function isOverlayToolbarVisible(page: Page): Promise<boolean> {
 
 /** Click an element on the page to place the armed component (Flow A Step 4). */
 export async function placeOnPage(page: Page): Promise<void> {
-  await page.locator('h2:has-text("Cards")').first().click();
+  await page.locator('h3:has-text("Monthly Signups")').first().click();
   await page.waitForTimeout(800);
 }
 

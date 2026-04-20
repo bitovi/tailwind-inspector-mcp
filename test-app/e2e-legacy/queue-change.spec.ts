@@ -28,8 +28,8 @@ test('element selection sends correct class data via WS', async ({ page }) => {
   await page.waitForTimeout(300);
   await clickSelectElementButton(frame);
 
-  // Click the Primary button to send ELEMENT_SELECTED
-  await page.locator('button:has-text("Primary")').first().click();
+  // Click the Assign button to send ELEMENT_SELECTED
+  await page.locator('button:has-text("Assign")').first().click();
   await page.waitForTimeout(1000);
 
   // Verify ELEMENT_SELECTED was sent with the correct classes
@@ -39,6 +39,6 @@ test('element selection sends correct class data via WS', async ({ page }) => {
   expect(selected.componentName).toBe('Button');
 
   // Verify the button still has its original class in the DOM
-  const originalClass = await page.locator('button:has-text("Primary")').first().getAttribute('class');
+  const originalClass = await page.locator('button:has-text("Assign")').first().getAttribute('class');
   expect(originalClass).toContain('px-4');
 });

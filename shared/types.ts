@@ -404,7 +404,7 @@ export interface GhostUpdateMessage {
 // Mode sync messages
 // ---------------------------------------------------------------------------
 
-export type AppMode = 'select' | 'insert' | 'bug-report' | null;
+export type AppMode = 'select' | 'insert' | 'bug-report' | 'theme' | null;
 export type SelectTab = 'design' | 'replace';
 export type InsertTab = 'place';
 export type PanelTab = SelectTab | InsertTab;
@@ -421,6 +421,19 @@ export interface TabChangedMessage {
   type: 'TAB_CHANGED';
   to: 'overlay' | 'panel';
   tab: PanelTab;
+}
+
+/** Overlay → Panel: all CSS custom properties read from the page's :root/:host rules */
+export interface ThemeVarsMessage {
+  type: 'THEME_VARS';
+  to: 'panel';
+  vars: Record<string, string>;
+}
+
+/** Panel → Overlay: request a fresh THEME_VARS read */
+export interface RequestThemeVarsMessage {
+  type: 'REQUEST_THEME_VARS';
+  to: 'overlay';
 }
 
 /** Overlay → Panel: text editing started on an element */
@@ -445,7 +458,7 @@ export interface ComponentDroppedMessage {
 // Union types
 // ---------------------------------------------------------------------------
 
-export type OverlayToPanel = ElementSelectedMessage;
+export type OverlayToPanel = ElementSelectedMessage | ThemeVarsMessage;
 export type PanelToOverlay =
   | PatchPreviewMessage
   | PatchPreviewBatchMessage
@@ -459,7 +472,8 @@ export type PanelToOverlay =
   | ComponentArmMessage
   | ComponentDisarmMessage
   | ModeChangedMessage
-  | TabChangedMessage;
+  | TabChangedMessage
+  | RequestThemeVarsMessage;
 export type OverlayToServer = PatchStagedMessage | ComponentDroppedMessage | ResetSelectionMessage;
 export type PanelToServer = PatchCommitMessage | MessageStageMessage;
 export type ClientToServer =
@@ -511,6 +525,8 @@ export type AnyMessage =
   | TabChangedMessage
   | TextEditActiveMessage
   | TextEditDoneMessage
+  | ThemeVarsMessage
+  | RequestThemeVarsMessage
   | PingMessage
   | PongMessage
   | RecordingGetHistoryMessage

@@ -42,6 +42,99 @@ function onBrowseLocked(target: HTMLElement): void {
 	showDrawButton(target);
 }
 
+const THEME_PREVIEW_STYLE_ID = "vybit-theme-preview";
+
+/**
+ * Read all CSS custom properties declared in :root / :host rules from every
+ * stylesheet on the page. Returns a flat map of { "--var-name": "value" }.
+ */
+function readThemeVars(): Record<string, string> {
+	const vars: Record<string, string> = {};
+	for (const sheet of Array.from(document.styleSheets)) {
+		let rules: CSSRuleList;
+		try {
+			rules = sheet.cssRules;
+		} catch {
+			// Cross-origin stylesheet — skip
+			continue;
+		}
+		for (const rule of Array.from(rules)) {
+			// Unwrap @layer rules to reach the :root block inside
+			const candidates: CSSRule[] = [rule];
+			if (rule instanceof CSSLayerBlockRule) {
+				candidates.push(...Array.from(rule.cssRules));
+			}
+			for (const candidate of candidates) {
+				if (!(candidate instanceof CSSStyleRule)) continue;
+				if (!/:root|:host/.test(candidate.selectorText)) continue;
+				const style = candidate.style;
+				for (let i = 0; i < style.length; i++) {
+					const prop = style[i];
+					if (prop.startsWith('--')) {
+						vars[prop] = style.getPropertyValue(prop).trim();
+					}
+				}
+			}
+		}
+	}
+	return vars;
+}
+
+function sendThemeVars(): void {
+	// Wait for stylesheets to be loaded before reading CSS custom properties.
+	// During HMR full-reload, the overlay WS reconnects before stylesheets
+	// are parsed, so readThemeVars() would return 0 vars.
+	if (document.readyState !== 'complete') {
+		window.addEventListener('load', () => sendThemeVars(), { once: true });
+		return;
+	}
+	const vars = readThemeVars();
+	sendTo('panel', { type: 'THEME_VARS', vars });
+}
+
+/**
+ * Apply theme preview overrides by injecting/updating a <style> element.
+ * For v4: CSS custom property overrides in :root.
+ * For v3: pre-compiled CSS from server (THEME_PREVIEW_CSS message).
+ */
+function applyThemePreview(msg: any): void {
+	let existing = document.getElementById(THEME_PREVIEW_STYLE_ID);
+
+	if (msg.type === "THEME_PREVIEW_CSS") {
+		// v3: server sends compiled CSS
+		const css = msg.css as string;
+		if (!css) {
+			existing?.remove();
+			return;
+		}
+		if (!existing) {
+			existing = document.createElement("style");
+			existing.id = THEME_PREVIEW_STYLE_ID;
+			document.head.appendChild(existing);
+		}
+		existing.textContent = css;
+		return;
+	}
+
+	// v4: CSS variable overrides
+	const overrides: Array<{ variable: string; value: string }> = msg.overrides ?? [];
+	if (overrides.length === 0) {
+		existing?.remove();
+		return;
+	}
+	const rules = overrides
+		.map((o) => `  ${o.variable}: ${o.value} !important;`)
+		.join("\n");
+	const cssText = `:root {\n${rules}\n}`;
+
+	if (!existing) {
+		existing = document.createElement("style");
+		existing.id = THEME_PREVIEW_STYLE_ID;
+		document.head.appendChild(existing);
+	}
+	existing.textContent = cssText;
+}
+
 function getServerOrigin(): string {
 	const scripts = document.querySelectorAll('script[src*="overlay.js"]');
 	for (const s of scripts) {
@@ -918,6 +1011,10 @@ function init(): void {
 			}
 		} else if (msg.type === "BUG_REPORT_PICK_ELEMENT") {
 			enterBugReportPickMode();
+		} else if (msg.type === "THEME_PREVIEW" || msg.type === "THEME_PREVIEW_CSS") {
+			applyThemePreview(msg);
+		} else if (msg.type === "REQUEST_THEME_VARS") {
+			sendThemeVars();
 		}
 	});
 
@@ -946,6 +1043,8 @@ function init(): void {
 			showToast("Reconnected");
 		}
 		state.wasConnected = true;
+		// Send theme vars to panel on every connect/reconnect
+		sendThemeVars();
 	});
 
 	window.addEventListener("overlay-ws-disconnected", () => {

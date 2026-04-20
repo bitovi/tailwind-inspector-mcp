@@ -47,7 +47,7 @@ export function ModeToggle({ mode, onModeChange, isPicking = false, isEngaged = 
       <button
         type="button"
         onClick={() => onModeChange('bug-report')}
-        className={`${base} ${buttonStyle(mode === 'bug-report', false)}`}
+        className={`${base} ${buttonStyle(mode === 'bug-report', false, mode === 'bug-report')}`}
         aria-pressed={mode === 'bug-report'}
         title="Report a bug"
       >
@@ -61,6 +61,21 @@ export function ModeToggle({ mode, onModeChange, isPicking = false, isEngaged = 
           <path d="M1,7.5h2v2H1c-.552,0-1-.448-1-1s.448-1,1-1Z"/>
           <path d="M13,7.5h2c.552,0,1,.448,1,1s-.448,1-1,1h-2v-2Z"/>
           <rect x="7" y="9" width="2" height="4" rx=".5"/>
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => onModeChange('theme')}
+        className={`${base} ${buttonStyle(mode === 'theme', false, mode === 'theme')}`}
+        aria-pressed={mode === 'theme'}
+        title="Theme"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M3 11A9 8.5 0 1 0 21 11A9 8.5 0 1 0 3 11ZM6.5 16A2 2 0 1 0 10.5 16A2 2 0 1 0 6.5 16ZM6.4 7.5A1.6 1.6 0 1 0 9.6 7.5A1.6 1.6 0 1 0 6.4 7.5ZM10.4 4.5A1.6 1.6 0 1 0 13.6 4.5A1.6 1.6 0 1 0 10.4 4.5ZM14.4 7.5A1.6 1.6 0 1 0 17.6 7.5A1.6 1.6 0 1 0 14.4 7.5ZM15.9 11.5A1.6 1.6 0 1 0 19.1 11.5A1.6 1.6 0 1 0 15.9 11.5ZM14.4 15.5A1.6 1.6 0 1 0 17.6 15.5A1.6 1.6 0 1 0 14.4 15.5Z"
+          />
         </svg>
       </button>
     </div>

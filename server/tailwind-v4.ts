@@ -280,6 +280,17 @@ function extractVars(css: string, prefix: string): Map<string, string> {
 	return vars;
 }
 
+/** Extract ALL CSS custom properties from the theme layer output. */
+function extractAllVars(css: string): Map<string, string> {
+	const vars = new Map<string, string>();
+	const regex = /^\s*(--[\w-]+):\s*([^;]+);/gm;
+	let match;
+	while ((match = regex.exec(css)) !== null) {
+		vars.set(match[1], match[2].trim());
+	}
+	return vars;
+}
+
 export class TailwindV4Adapter implements TailwindAdapter {
 	readonly version = 4 as const;
 
@@ -334,23 +345,80 @@ export class TailwindV4Adapter implements TailwindAdapter {
 				k === "px" ? "1px" : k === "0" ? "0px" : `calc(var(--spacing) * ${k})`;
 		}
 
-		// --- Font size, weight, border radius (static scales in v4) ---
+		// --- Font size (extract --text-* vars by probing with all font-size classes) ---
+		const fontSizeProbeClasses = [
+			...FONT_SIZE_KEYS.map(k => `text-${k}`),
+			...FONT_WEIGHT_KEYS.map(k => `font-${k}`),
+		];
+		const fontProbeCss = compiler.build(fontSizeProbeClasses);
+		const fontSizeVars = extractVars(fontProbeCss, "text");
 		const fontSize: Record<string, unknown> = {};
-		for (const k of FONT_SIZE_KEYS) fontSize[k] = k;
+		const fontSizeLineHeight: Record<string, string> = {};
+		for (const [name, value] of fontSizeVars) {
+			// --text-lg--line-height → separate line-height map keyed by "lg"
+			const lhMatch = name.match(/^(.+)--line-height$/);
+			if (lhMatch) {
+				fontSizeLineHeight[lhMatch[1]] = value;
+			} else {
+				fontSize[name] = value;
+			}
+		}
+		// Fallback for any default keys not found via probe
+		for (const k of FONT_SIZE_KEYS) {
+			if (!(k in fontSize)) fontSize[k] = k;
+		}
 
+		// --- Font weight (extract --font-weight-* vars from the same probe build) ---
+		const fontWeightVars = extractVars(fontProbeCss, "font-weight");
 		const fontWeight: Record<string, unknown> = {};
-		for (const k of FONT_WEIGHT_KEYS) fontWeight[k] = k;
+		for (const [name, value] of fontWeightVars) {
+			fontWeight[name] = value;
+		}
+		for (const k of FONT_WEIGHT_KEYS) {
+			if (!(k in fontWeight)) fontWeight[k] = k;
+		}
 
 		const borderRadius: Record<string, string> = {};
 		for (const k of BORDER_RADIUS_KEYS)
 			borderRadius[k || "DEFAULT"] = k || "DEFAULT";
 
+		// --- Other vars: collect ALL theme-layer CSS custom properties,
+		// then subtract the ones we already categorized ---
+		const allVars = extractAllVars(baseCss);
+		// Also include vars from the probed build (may have additional vars)
+		for (const [name, value] of extractAllVars(css)) {
+			if (!allVars.has(name)) allVars.set(name, value);
+		}
+
+		const knownPrefixes = new Set<string>();
+		// Mark all color vars as known
+		for (const name of colorVars.keys()) knownPrefixes.add(`--color-${name}`);
+		for (const name of baseColorVars.keys()) knownPrefixes.add(`--color-${name}`);
+		// Mark spacing, font-size, font-weight, border-radius vars as known
+		for (const name of fontSizeVars.keys()) knownPrefixes.add(`--text-${name}`);
+		for (const name of fontWeightVars.keys()) knownPrefixes.add(`--font-weight-${name}`);
+		knownPrefixes.add("--spacing");
+		for (const k of BORDER_RADIUS_KEYS) {
+			if (k) knownPrefixes.add(`--radius-${k}`);
+			else knownPrefixes.add("--radius");
+		}
+
+		const otherVars: Record<string, string> = {};
+		for (const [name, value] of allVars) {
+			if (!knownPrefixes.has(name)) {
+				otherVars[name] = value;
+			}
+		}
+
 		const result: TailwindThemeSubset = {
+			tailwindVersion: 4,
 			spacing,
 			colors,
 			fontSize,
+			fontSizeLineHeight,
 			fontWeight,
 			borderRadius,
+			otherVars,
 		};
 		return result;
 	}

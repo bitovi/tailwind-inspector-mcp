@@ -129,8 +129,8 @@ test.describe('Overlay', () => {
     await page.waitForTimeout(300);
     await clickSelectElementButton(frame);
 
-    // Click on the first "Primary" button
-    await page.locator('button:has-text("Primary")').first().click();
+    // Click on the first "Assign" button
+    await page.locator('button:has-text("Assign")').first().click();
     await page.waitForTimeout(1000);
 
     // Verify ELEMENT_SELECTED was sent with correct component name

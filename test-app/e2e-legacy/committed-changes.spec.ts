@@ -46,7 +46,7 @@ test.describe('committed changes counter', () => {
 
     const frame = await openAndSelectElement(
       page,
-      page.locator('button:has-text("Primary")').first(),
+      page.locator('button:has-text("Assign")').first(),
     );
     await frame.locator('[data-layer="padding"] .bm-slot').first().waitFor({ timeout: 8000 });
 
@@ -72,7 +72,7 @@ test.describe('committed changes counter', () => {
 
     const frame = await openAndSelectElement(
       page,
-      page.locator('button:has-text("Primary")').first(),
+      page.locator('button:has-text("Assign")').first(),
     );
     await frame.locator('[data-layer="padding"] .bm-slot').first().waitFor({ timeout: 8000 });
 
@@ -82,7 +82,7 @@ test.describe('committed changes counter', () => {
     await commitAllStaged(frame);
 
     await clickSelectElementButton(frame);
-    await page.locator('button:has-text("Primary")').first().click();
+    await page.locator('button:has-text("Assign")').first().click();
     await frame.locator('[data-layer="padding"] .bm-slot').first().waitFor({ timeout: 5000 });
 
     await stageBoxModelChange(frame, 'y-2', 'py-3');
