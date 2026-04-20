@@ -220,8 +220,30 @@ export async function clickPlacementSite(page: Page): Promise<void> {
   await page.waitForTimeout(800);
 }
 
+/** Ensure Storybook components are loaded in the panel — triggers a scan if needed. */
+export async function ensureStorybookConnected(frame: Frame): Promise<void> {
+  const hasComponents = await frame.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+  }).catch(() => false);
+  if (hasComponents) return;
+
+  // Click "Scan for Storybook" if visible
+  await frame.evaluate(() => {
+    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
+    if (btn) (btn as HTMLButtonElement).click();
+  }).catch(() => {});
+
+  // Wait up to 30s for Place buttons to appear
+  await frame.waitForFunction(() => {
+    const buttons = Array.from(document.querySelectorAll('button'));
+    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+  }, { timeout: 30000 });
+}
+
 /** Click the first visible component Place button in the panel (excludes tab bar buttons). */
 export async function clickComponentPlace(frame: Frame): Promise<void> {
+  await ensureStorybookConnected(frame);
   await frame.waitForFunction(() => {
     const buttons = Array.from(document.querySelectorAll('button'));
     return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));

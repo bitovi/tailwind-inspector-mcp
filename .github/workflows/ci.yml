@@ -46,7 +46,7 @@ jobs:
         run: cd panel && npm ci
 
       - name: Install test-app deps
-        run: cd test-app && npm ci
+        run: cd test-app && npm ci --legacy-peer-deps
 
       - name: Install storybook-test/v10 deps
         run: cd storybook-test/v10 && npm ci
@@ -88,7 +88,7 @@ jobs:
         run: cd panel && npm ci
 
       - name: Install test-app deps
-        run: cd test-app && npm ci
+        run: cd test-app && npm ci --legacy-peer-deps
 
       - name: Install storybook-test/v10 deps
         run: cd storybook-test/v10 && npm ci
