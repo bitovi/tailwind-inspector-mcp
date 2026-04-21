@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { sendTo } from '../../ws';
+import { useMemo, useState } from 'react';
 import { SectionHeader } from './SectionHeader';
 import { ColorSection } from './ColorSection';
 import { TypographySectionV4 } from './TypographySectionV4';
@@ -7,12 +6,12 @@ import { BorderRadiusSection } from './BorderRadiusSection';
 import { FontFamiliesSection } from './FontFamiliesSection';
 import { SpacingSection } from './SpacingSection';
 import { OtherVarsSection } from './OtherVarsSection';
-import { hexToOklch } from './color-utils';
 import type { ThemeOverride } from './types';
 
 interface ThemeTabV4Props {
   tailwindConfig: any;
-  onStageThemeChange: (description: string) => void;
+  themeEdits: Map<string, ThemeOverride>;
+  onThemeEdit: (tokenKey: string, override: ThemeOverride) => void;
 }
 
 /** Prefixes we bucket into named sections — everything else goes to "Other". */
@@ -65,8 +64,7 @@ function groupVars(vars: Record<string, string>) {
   return { colors, fontSize, fontSizeLineHeight, fontWeight, borderRadius, fontFamilies, spacingBase, other };
 }
 
-export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Props) {
-  const [edits, setEdits] = useState<Map<string, ThemeOverride>>(new Map());
+export function ThemeTabV4({ tailwindConfig, themeEdits, onThemeEdit }: ThemeTabV4Props) {
   const [colorsExpanded, setColorsExpanded] = useState(true);
   const [typographyExpanded, setTypographyExpanded] = useState(true);
   const [spacingExpanded, setSpacingExpanded] = useState(true);
@@ -89,125 +87,23 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
     };
   }, [tailwindConfig]);
 
-  const editCount = edits.size;
-  const overrides = useMemo(() => Array.from(edits.values()), [edits]);
-
-  useEffect(() => {
-    sendTo('overlay', { type: 'THEME_PREVIEW', overrides, tailwindVersion: 4 });
-  }, [overrides]);
-
-  useEffect(() => {
-    return () => {
-      sendTo('overlay', { type: 'THEME_PREVIEW', overrides: [], tailwindVersion: 4 });
-    };
-  }, []);
-
-  const handleEdit = useCallback((tokenKey: string, override: ThemeOverride) => {
-    setEdits(prev => {
-      const next = new Map(prev);
-      next.set(tokenKey, override);
-      return next;
-    });
-  }, []);
-
-  function handleRevertAll() {
-    setEdits(new Map());
-  }
-
-  function handleStageAll() {
-    if (editCount === 0) return;
-
-    const colorEdits: ThemeOverride[] = [];
-    const fontSizeEdits: ThemeOverride[] = [];
-    const fontSizeLHEdits: ThemeOverride[] = [];
-    const fontWeightEdits: ThemeOverride[] = [];
-    const radiusEdits: ThemeOverride[] = [];
-    const fontFamilyEdits: ThemeOverride[] = [];
-    const spacingEdits: ThemeOverride[] = [];
-    const otherEdits: ThemeOverride[] = [];
-
-    for (const [key, override] of edits) {
-      if (key.startsWith('fontSizeLH-')) fontSizeLHEdits.push(override);
-      else if (key.startsWith('fontSize-')) fontSizeEdits.push(override);
-      else if (key.startsWith('fontWeight-')) fontWeightEdits.push(override);
-      else if (key.startsWith('radius-')) radiusEdits.push(override);
-      else if (key.startsWith('font-family-')) fontFamilyEdits.push(override);
-      else if (key === 'spacing-base') spacingEdits.push(override);
-      else if (key.startsWith('other-')) otherEdits.push(override);
-      else colorEdits.push(override);
-    }
-
-    const lines: string[] = [];
-    lines.push('Update the following Tailwind v4 theme values in the CSS @theme block:');
-
-    if (colorEdits.length > 0) {
-      lines.push('\n/* Colors */');
-      for (const edit of colorEdits) lines.push(`  ${edit.variable}: ${hexToOklch(edit.value)};`);
-    }
-    if (fontSizeEdits.length > 0) {
-      lines.push('\n/* Font Sizes */');
-      for (const edit of fontSizeEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-    if (fontSizeLHEdits.length > 0) {
-      lines.push('\n/* Font Size Line Heights */');
-      for (const edit of fontSizeLHEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-    if (fontWeightEdits.length > 0) {
-      lines.push('\n/* Font Weights */');
-      for (const edit of fontWeightEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-    if (spacingEdits.length > 0) {
-      lines.push('\n/* Spacing */');
-      for (const edit of spacingEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-    if (radiusEdits.length > 0) {
-      lines.push('\n/* Border Radius */');
-      for (const edit of radiusEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-    if (fontFamilyEdits.length > 0) {
-      lines.push('\n/* Font Families */');
-      for (const edit of fontFamilyEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-    if (otherEdits.length > 0) {
-      lines.push('\n/* Other Variables */');
-      for (const edit of otherEdits) lines.push(`  ${edit.variable}: ${edit.value};`);
-    }
-
-    onStageThemeChange(lines.join('\n'));
-    setEdits(new Map());
-  }
+  const editCount = themeEdits.size;
 
   const radiiCount = Object.keys(borderRadius).length;
   const fontFamiliesCount = Object.keys(fontFamilies).length;
   const otherCount = Object.keys(otherVars).length;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-bv-border">
         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400">
           Tailwind v4
         </span>
-        <div className="ml-auto flex items-center gap-1.5">
-          {editCount > 0 && (
-            <>
-              <span className="text-[9px] text-bv-orange font-medium">
-                {editCount} edit{editCount !== 1 ? 's' : ''}
-              </span>
-              <button
-                onClick={handleRevertAll}
-                className="text-[10px] px-2 py-0.5 rounded border border-bv-border text-bv-text-mid hover:text-bv-text hover:border-bv-text-mid transition-colors"
-              >
-                Revert
-              </button>
-              <button
-                onClick={handleStageAll}
-                className="text-[10px] px-2 py-0.5 rounded bg-bv-teal text-white font-medium hover:bg-bv-teal/80 transition-colors"
-              >
-                Stage
-              </button>
-            </>
-          )}
-        </div>
+        {editCount > 0 && (
+          <span className="ml-auto text-[9px] text-bv-orange font-medium">
+            {editCount} edit{editCount !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -219,9 +115,9 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
         {colorsExpanded && (
           <ColorSection
             colors={colors}
-            edits={edits}
+            edits={themeEdits}
             tailwindVersion={4}
-            onEdit={handleEdit}
+            onEdit={onThemeEdit}
           />
         )}
 
@@ -235,8 +131,8 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
             fontSize={fontSize}
             fontSizeLineHeight={fontSizeLineHeight}
             fontWeight={fontWeight}
-            edits={edits}
-            onEdit={handleEdit}
+            edits={themeEdits}
+            onEdit={onThemeEdit}
           />
         )}
 
@@ -250,8 +146,8 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
             {spacingExpanded && (
               <SpacingSection
                 spacingBase={spacingBase}
-                edits={edits}
-                onEdit={handleEdit}
+                edits={themeEdits}
+                onEdit={onThemeEdit}
               />
             )}
           </>
@@ -267,8 +163,8 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
             {radiiExpanded && (
               <BorderRadiusSection
                 vars={borderRadius}
-                edits={edits}
-                onEdit={handleEdit}
+                edits={themeEdits}
+                onEdit={onThemeEdit}
               />
             )}
           </>
@@ -284,8 +180,8 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
             {fontFamiliesExpanded && (
               <FontFamiliesSection
                 vars={fontFamilies}
-                edits={edits}
-                onEdit={handleEdit}
+                edits={themeEdits}
+                onEdit={onThemeEdit}
               />
             )}
           </>
@@ -302,8 +198,8 @@ export function ThemeTabV4({ tailwindConfig, onStageThemeChange }: ThemeTabV4Pro
             {otherExpanded && (
               <OtherVarsSection
                 otherVars={otherVars}
-                edits={edits}
-                onEdit={handleEdit}
+                edits={themeEdits}
+                onEdit={onThemeEdit}
               />
             )}
           </>

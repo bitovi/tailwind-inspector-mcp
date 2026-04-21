@@ -72,10 +72,24 @@ function SendIcon() {
   )
 }
 
+function ThemeIcon() {
+  return (
+    <span className="inline-flex align-middle mx-0.5 rounded bg-[#1a1a1a] p-0.5">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#5fd4da">
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M3 11A9 8.5 0 1 0 21 11A9 8.5 0 1 0 3 11ZM6.5 16A2 2 0 1 0 10.5 16A2 2 0 1 0 6.5 16ZM6.4 7.5A1.6 1.6 0 1 0 9.6 7.5A1.6 1.6 0 1 0 6.4 7.5ZM10.4 4.5A1.6 1.6 0 1 0 13.6 4.5A1.6 1.6 0 1 0 10.4 4.5ZM14.4 7.5A1.6 1.6 0 1 0 17.6 7.5A1.6 1.6 0 1 0 14.4 7.5ZM15.9 11.5A1.6 1.6 0 1 0 19.1 11.5A1.6 1.6 0 1 0 15.9 11.5ZM14.4 15.5A1.6 1.6 0 1 0 17.6 15.5A1.6 1.6 0 1 0 14.4 15.5Z"
+        />
+      </svg>
+    </span>
+  )
+}
+
 function App() {
   const { completedSteps, completeStep, resetProgress } = useTutorialProgress()
   const totalSteps = 11
-  const completedCount = completedSteps.size
+  const completedCount = [...completedSteps].filter(s => s <= totalSteps).length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -461,47 +475,119 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Completion Section ── */}
-        {completedCount === totalSteps && (
-          <section className="bg-linear-to-br from-green-50 to-teal-50 rounded-lg shadow-sm border border-green-200 px-6 py-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">You did it!</h2>
-            <div className="text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
-              <p>You've explored every major VyBit feature:</p>
-              <ul className="text-left inline-block mt-3 space-y-1">
-                <li>✓ Selecting elements and sending change messages</li>
-                <li>✓ Voice messages</li>
-                <li>✓ Inline text editing</li>
-                <li>✓ Describing new content to insert</li>
-                <li>✓ Sketching layouts</li>
-                <li>✓ Placing design system components</li>
-                <li>✓ Composing nested components</li>
-                <li>✓ Fine-tuning Tailwind styles</li>
-                <li>✓ Reporting bugs</li>
-              </ul>
-              <p className="mt-4">
-                In a real project, every committed change triggers the MCP <code className="bg-gray-100 text-gray-800 px-1 rounded">implement_next_change</code> tool. Your AI agent (Copilot, Cursor, Claude, etc.) receives the change description, context, and instructions — then writes the code.
+        {/* ── Completion Banner (always visible) ── */}
+        <section className={`rounded-lg shadow-sm border px-6 py-8 text-center ${
+          completedCount === totalSteps
+            ? 'bg-linear-to-br from-green-50 to-teal-50 border-green-200'
+            : 'bg-white border-gray-200'
+        }`}>
+          {completedCount === totalSteps ? (
+            <>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">You did it!</h2>
+              <div className="text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
+                <p>You've explored every major VyBit feature:</p>
+                <ul className="text-left inline-block mt-3 space-y-1">
+                  <li>✓ Selecting elements and sending change messages</li>
+                  <li>✓ Voice messages</li>
+                  <li>✓ Inline text editing</li>
+                  <li>✓ Describing new content to insert</li>
+                  <li>✓ Sketching layouts</li>
+                  <li>✓ Placing design system components</li>
+                  <li>✓ Composing nested components</li>
+                  <li>✓ Fine-tuning Tailwind styles</li>
+                  <li>✓ Reporting bugs</li>
+                </ul>
+                <p className="mt-4">
+                  In a real project, every committed change triggers the MCP <code className="bg-gray-100 text-gray-800 px-1 rounded">implement_next_change</code> tool. Your AI agent (Copilot, Cursor, Claude, etc.) receives the change description, context, and instructions — then writes the code.
+                </p>
+                <p className="mt-4 font-medium text-gray-900">
+                  Ready to try it for real?{' '}
+                  <a
+                    href="https://github.com/bitovi/vybit"
+                    className="text-teal-600 underline hover:text-teal-800"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Install VyBit
+                  </a>{' '}
+                  and connect it to your project.
+                </p>
+              </div>
+              <button
+                onClick={resetProgress}
+                className="mt-6 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-4 py-2 hover:bg-white transition-colors"
+              >
+                ↺ Start Over
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Keep going!</h2>
+              <p className="text-sm text-gray-500">
+                You've completed {completedCount} of {totalSteps} steps. Finish the remaining exercises above to unlock the full summary.
               </p>
-              <p className="mt-4 font-medium text-gray-900">
-                Ready to try it for real?{' '}
-                <a
-                  href="https://github.com/bitovi/vybit"
-                  className="text-teal-600 underline hover:text-teal-800"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Install VyBit
-                </a>{' '}
-                and connect it to your project.
+            </>
+          )}
+        </section>
+
+        {/* ── Bonus Section Intro ── */}
+        <div className="mt-4 border-t border-gray-200 pt-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Bonus: Advanced Features</h2>
+          <p className="text-sm text-gray-500">
+            The core tutorial is complete — nice work! These bonus exercises cover less common but powerful features you might want to explore at your own pace.
+          </p>
+        </div>
+
+        {/* ── Bonus Step: Explore Your Theme ── */}
+        <TutorialSection
+          step={12}
+          title="Explore Your Theme"
+          completed={completedSteps.has(12)}
+          onMarkComplete={() => completeStep(12)}
+          instructions={
+            <>
+              <p>
+                VyBit can edit your project's Tailwind theme — not just individual elements. Click the <strong>Theme</strong> button (<ThemeIcon />) in the panel to open the Theme editor. From there you can adjust global design tokens: colors, font sizes, font weights, spacing, border radius, and font families. Changes preview live across the entire page.
               </p>
-            </div>
-            <button
-              onClick={resetProgress}
-              className="mt-6 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-4 py-2 hover:bg-white transition-colors"
-            >
-              ↺ Start Over
-            </button>
-          </section>
-        )}
+              <ol>
+                <li>Open the panel and click the <strong>Theme</strong> button (<ThemeIcon />) — it's the palette icon in the mode toggle bar</li>
+                <li>Expand a section (e.g., <strong>Colors</strong>) and click a swatch to change it — you'll see every element using that token update live</li>
+                <li>Try adjusting the <strong>spacing</strong> base value — watch all spacing-based padding and margins scale together</li>
+                <li>Each change is automatically queued as a draft — the agent will update your CSS <code className="bg-gray-100 text-gray-800 px-1 rounded text-xs">@theme</code> block</li>
+              </ol>
+              <p className="mt-3">
+                The showcase elements below use a variety of theme tokens. Try changing theme values and watch them update in real time.
+              </p>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-2">
+              <div className="bg-green-600 text-white text-sm font-mono p-1 rounded">
+                <div className="flex"><span className="flex-1">green-600</span><span className="flex-1">text-sm</span><span className="flex-1">font-mono</span><span className="flex-1">p-1</span></div>
+              </div>
+              <div className="bg-green-500 text-white text-base font-sans p-2 rounded">
+                <div className="flex"><span className="flex-1">green-500</span><span className="flex-1">text-base</span><span className="flex-1">font-sans</span><span className="flex-1">p-2</span></div>
+              </div>
+              <div className="bg-blue-400 text-white text-lg font-bold p-3 rounded">
+                <div className="flex"><span className="flex-1">blue-400</span><span className="flex-1">text-lg</span><span className="flex-1">font-bold</span><span className="flex-1">p-3</span></div>
+              </div>
+              <div className="bg-purple-600 text-white text-xl font-medium p-4 rounded">
+                <div className="flex"><span className="flex-1">purple-600</span><span className="flex-1">text-xl</span><span className="flex-1">font-medium</span><span className="flex-1">p-4</span></div>
+              </div>
+              <div className="bg-red-500 text-white text-xs font-semibold p-1.5 rounded">
+                <div className="flex"><span className="flex-1">red-500</span><span className="flex-1">text-xs</span><span className="flex-1">font-semibold</span><span className="flex-1">p-1.5</span></div>
+              </div>
+              <div className="bg-amber-500 text-white text-sm font-bold p-2.5 rounded">
+                <div className="flex"><span className="flex-1">amber-500</span><span className="flex-1">text-sm</span><span className="flex-1">font-bold</span><span className="flex-1">p-2.5</span></div>
+              </div>
+              <div className="bg-teal-600 text-white text-base font-mono p-3.5 rounded">
+                <div className="flex"><span className="flex-1">teal-600</span><span className="flex-1">text-base</span><span className="flex-1">font-mono</span><span className="flex-1">p-3.5</span></div>
+              </div>
+              <div className="bg-indigo-500 text-white text-lg font-light p-5 rounded">
+                <div className="flex"><span className="flex-1">indigo-500</span><span className="flex-1">text-lg</span><span className="flex-1">font-light</span><span className="flex-1">p-5</span></div>
+              </div>
+          </div>
+        </TutorialSection>
       </main>
     </div>
   )

@@ -26,6 +26,7 @@ interface ServerMessage {
   connected?: boolean
   insertMode?: string
   inputMethod?: string
+  elementKey?: string
   patch?: {
     kind?: string
     componentArgs?: Record<string, unknown>
@@ -69,6 +70,7 @@ export function useTutorialProgress() {
         case 'MESSAGE_STAGE':
           if (msg.insertMode) completeStep(6)
           if (msg.inputMethod === 'voice') completeStep(4)
+          if (msg.elementKey === 'theme') completeStep(12)
           break
         case 'TEXT_EDIT_DONE':
           completeStep(5)

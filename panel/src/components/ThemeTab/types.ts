@@ -7,5 +7,6 @@ export interface ThemeOverride {
 export interface ThemeTabProps {
   tailwindConfig: any;
   tailwindVersion: 3 | 4;
-  onStageThemeChange: (description: string) => void;
+  themeEdits: Map<string, ThemeOverride>;
+  onThemeEdit: (tokenKey: string, override: ThemeOverride) => void;
 }

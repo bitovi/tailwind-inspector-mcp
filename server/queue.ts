@@ -70,8 +70,16 @@ export function addPatch(patch: Patch): Patch {
     if (existingIdx !== -1) {
       draftPatches.splice(existingIdx, 1);
     }
+  } else if (patch.kind === 'message' && patch.elementKey === 'theme' && patch.property) {
+    // Dedup: if a staged theme message exists for the same token (property), replace it
+    const existingIdx = draftPatches.findIndex(
+      p => p.kind === 'message' && p.elementKey === 'theme' && p.property === patch.property && p.status === 'staged'
+    );
+    if (existingIdx !== -1) {
+      draftPatches.splice(existingIdx, 1);
+    }
   }
-  // Message patches are always appended (no dedup)
+  // Other message patches are always appended (no dedup)
   draftPatches.push(patch);
   return patch;
 }
