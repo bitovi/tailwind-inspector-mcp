@@ -6,6 +6,7 @@ import { PatchPopover } from "./components/PatchPopover";
 import { BugReportMode } from "./components/BugReportMode";
 import { TabBar } from "./components/TabBar";
 import { ThemeTab } from "./components/ThemeTab";
+import type { ThemeOverride } from "./components/ThemeTab";
 import { usePatchManager } from "./hooks/usePatchManager";
 import { useModeStateMachine } from "./hooks/useModeStateMachine";
 import { Picker } from "./Picker";
@@ -104,15 +105,50 @@ function InspectorApp() {
 		sendTo('overlay', { type: 'REQUEST_THEME_VARS' });
 	}, [mode]);
 
-	const handleStageThemeChange = useCallback((description: string) => {
-		const id = crypto.randomUUID();
-		send({
-			type: 'MESSAGE_STAGE',
-			id,
-			message: description,
-			elementKey: 'theme',
+	// --- Theme edits state (lifted from ThemeTab for discard integration) ---
+	const [themeEdits, setThemeEdits] = useState<Map<string, ThemeOverride>>(new Map());
+
+	// Live-preview theme overrides in the overlay
+	const themeOverrides = useMemo(() => Array.from(themeEdits.values()), [themeEdits]);
+	const tailwindVersion = themeConfig?.tailwindVersion ?? 4;
+	useEffect(() => {
+		sendTo('overlay', { type: 'THEME_PREVIEW', overrides: themeOverrides, tailwindVersion });
+	}, [themeOverrides, tailwindVersion]);
+	// On unmount / mode change away from theme, clear preview
+	useEffect(() => {
+		return () => {
+			sendTo('overlay', { type: 'THEME_PREVIEW', overrides: [], tailwindVersion });
+		};
+	}, [tailwindVersion]);
+
+	const handleThemeEdit = useCallback((tokenKey: string, override: ThemeOverride) => {
+		setThemeEdits(prev => {
+			const next = new Map(prev);
+			next.set(tokenKey, override);
+			return next;
 		});
-	}, []);
+		patchManager.stageTheme(tokenKey, override, tailwindVersion as 3 | 4);
+	}, [patchManager, tailwindVersion]);
+
+	// Wrap discard to also remove theme edits
+	const handleDiscard = useCallback((id: string) => {
+		// Check if the discarded patch is a theme edit
+		const discarded = patchManager.patches.find(p => p.id === id);
+		if (discarded && discarded.elementKey === 'theme' && discarded.property) {
+			setThemeEdits(prev => {
+				const next = new Map(prev);
+				next.delete(discarded.property);
+				return next;
+			});
+		}
+		patchManager.discard(id);
+	}, [patchManager]);
+
+	// Wrap discardAll to also clear all theme edits
+	const handleDiscardAll = useCallback(() => {
+		setThemeEdits(new Map());
+		patchManager.discardAll();
+	}, [patchManager]);
 
 	useEffect(() => {
 		const offConnect = onConnect(() => {
@@ -315,9 +351,9 @@ function InspectorApp() {
 					count={draft}
 					items={draftPatches}
 					activeColor="text-amber-400"
-					onDiscard={(id: string) => patchManager.discard(id)}
+					onDiscard={handleDiscard}
 					onCommitAll={() => patchManager.commitAll()}
-					onDiscardAll={() => patchManager.discardAll()}
+					onDiscardAll={handleDiscardAll}
 				/>
 				<PatchPopover
 					label="committed"
@@ -391,7 +427,8 @@ function InspectorApp() {
 						<ThemeTab
 							tailwindConfig={themeConfig}
 							tailwindVersion={themeConfig.tailwindVersion ?? 4}
-							onStageThemeChange={handleStageThemeChange}
+							themeEdits={themeEdits}
+							onThemeEdit={handleThemeEdit}
 						/>
 					) : (
 						<div className="flex-1 flex items-center justify-center text-[11px] text-bv-text-mid">

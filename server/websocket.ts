@@ -153,7 +153,7 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
         status: 'staged',
         originalClass: '',
         newClass: '',
-        property: '',
+        property: msg.property ?? '',
         timestamp: new Date().toISOString(),
         message: msg.message,
         component: msg.component,

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Patch, PatchStatus, PatchSummary, CommitSummary } from '../../../shared/types';
+import type { ThemeOverride } from '../components/ThemeTab/types';
 import { sendTo, send } from '../ws';
 
 export interface PatchCounts {
@@ -41,6 +42,8 @@ export interface PatchManager {
   stage: (elementKey: string, property: string, originalClass: string, newClass: string) => void;
   /** Stage a message patch */
   stageMessage: (message: string, elementKey: string, componentName?: string) => void;
+  /** Stage a theme token change — upserts by tokenKey. Returns the patch ID. */
+  stageTheme: (tokenKey: string, override: ThemeOverride, tailwindVersion: 3 | 4) => string;
   /** Commit all staged patches to the server */
   commitAll: () => void;
   /** Discard a single staged patch by id */
@@ -161,6 +164,41 @@ export function usePatchManager(): PatchManager {
       : { type: 'MESSAGE_STAGE', id, message, elementKey });
   }, []);
 
+  const stageTheme = useCallback((tokenKey: string, override: ThemeOverride, tailwindVersion: 3 | 4): string => {
+    const configTarget = tailwindVersion === 3 ? 'tailwind.config.js' : 'the CSS @theme block';
+    const message = `In ${configTarget}, set ${override.variable}: ${override.value};`;
+
+    // Discard any existing draft for the same token before staging the new one
+    const existing = patchesRef.current.find(
+      p => p.kind === 'message' && p.elementKey === 'theme' && p.property === tokenKey
+    );
+    if (existing) {
+      send({ type: 'DISCARD_DRAFTS', ids: [existing.id] });
+    }
+
+    const id = crypto.randomUUID();
+    setPatches(prev => {
+      const filtered = prev.filter(
+        p => !(p.kind === 'message' && p.elementKey === 'theme' && p.property === tokenKey)
+      );
+      const patch: Patch = {
+        id,
+        kind: 'message',
+        elementKey: 'theme',
+        status: 'staged',
+        originalClass: '',
+        newClass: '',
+        property: tokenKey,
+        timestamp: new Date().toISOString(),
+        message,
+      };
+      return [...filtered, patch];
+    });
+
+    send({ type: 'MESSAGE_STAGE', id, message, elementKey: 'theme', property: tokenKey });
+    return id;
+  }, []);
+
 
   const commitAll = useCallback(() => {
     // Use server draft as authoritative source — it includes designs and messages
@@ -260,6 +298,7 @@ export function usePatchManager(): PatchManager {
     revertPreview,
     stage,
     stageMessage,
+    stageTheme,
     commitAll,
     discard,
     discardAll,

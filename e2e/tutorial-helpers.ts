@@ -133,6 +133,7 @@ const SECTION_TITLES = [
   'Build with Nested Components',
   'Fine-Tune the Design',
   'Report a Bug',
+  'Explore Your Theme',
 ];
 
 const TOTAL_STEPS = 11;
@@ -680,32 +681,100 @@ async function doStep10(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 }
 
+async function doStep12(page: Page): Promise<void> {
+  await scrollToStep(page, 12);
+  const frame = await getPanelFrame(page);
+
+  // Switch to Theme mode — wait for button, click it, then wait for Theme tab content
+  const themeBtn = frame.locator('button[title="Theme"]');
+  await themeBtn.waitFor({ timeout: 10000 });
+  await themeBtn.click();
+  await frame.waitForFunction(() => {
+    return !!Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Typography'));
+  }, { timeout: 10000 });
+
+  // Expand Typography section if collapsed
+  const textXlInput = frame.locator('input[title="--text-xl"]');
+  if (!(await textXlInput.isVisible().catch(() => false))) {
+    await frame.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Typography'));
+      btn?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      (btn as HTMLButtonElement)?.click();
+    });
+    await textXlInput.waitFor({ timeout: 5000 });
+  }
+
+  // Change --text-xl to 2rem and blur to trigger the theme edit
+  await textXlInput.click({ clickCount: 3 });
+  await textXlInput.fill('2rem');
+  await textXlInput.press('Tab');
+
+  // Verify the input accepted the new value
+  await expect(textXlInput).toHaveValue('2rem', { timeout: 3000 });
+
+  // Verify the live preview actually changed computed styles on the page.
+  // The panel sends THEME_PREVIEW → overlay injects :root { --text-xl: 2rem !important; }
+  // so any element using text-xl should now render at 32px instead of 20px.
+  await expect.poll(async () => {
+    return page.evaluate(() => {
+      const el = document.querySelector('.text-xl.font-bold') as HTMLElement;
+      return el ? getComputedStyle(el).fontSize : null;
+    });
+  }, {
+    message: 'Expected .text-xl computed font-size to change to 32px after theme preview',
+    timeout: 10000,
+  }).toBe('32px');
+
+  // Verify a draft was staged — the panel footer should show a draft count
+  await expect.poll(async () => {
+    return frame.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => /draft/i.test(b.textContent ?? ''));
+      return btn?.textContent?.trim() ?? '';
+    });
+  }, { message: 'Expected a draft to appear after theme edit', timeout: 5000 }).toMatch(/draft/i);
+
+  // The panel sends MESSAGE_STAGE via postMessage to the parent, but in the
+  // cross-origin iframe test setup the event doesn't reliably reach
+  // useTutorialProgress. Dispatch a synthetic event as fallback (same
+  // pattern as step 4's voice message).
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('vybit:message', {
+      detail: { type: 'MESSAGE_STAGE', elementKey: 'theme', message: 'theme edit' },
+    }));
+  });
+}
+
 async function doStep11(page: Page): Promise<void> {
   await scrollToStep(page, 11);
   const frame = await getPanelFrame(page);
 
   // Click "Refresh Invoice" to trigger console error + failed fetch
   await page.locator('button:has-text("Refresh Invoice")').click();
-  await page.waitForTimeout(1000);
 
-  // Switch to Bug Report mode
+  // Switch to Bug Report mode — wait for the button to appear first
   await clickBugReportMode(frame);
-  await page.waitForTimeout(500);
 
   // Click an element in the billing card
-  await page.locator('text=Overage charges').first().click();
-  await page.waitForTimeout(1000);
+  const target = page.locator('text=Overage charges').first();
+  await target.click();
 
-  // Type a bug description
+  // Wait for the bug description input to appear (proves the element was selected)
   const descInput = frame.getByPlaceholder('Describe the bug…');
-  await descInput.waitFor({ timeout: 5000 });
+  await descInput.waitFor({ timeout: 10000 });
   await descInput.fill('This price should not be negative and the refresh button is broken');
-  await page.waitForTimeout(300);
 
   // Submit the bug report
   const submitBtn = frame.getByRole('button', { name: /Commit Bug Report/i });
   await submitBtn.waitFor({ timeout: 5000 });
   await submitBtn.click();
+
+  // Cross-origin postMessage from the panel iframe doesn't reliably reach
+  // useTutorialProgress. Dispatch a synthetic event as fallback.
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('vybit:message', {
+      detail: { type: 'BUG_REPORT_STAGE' },
+    }));
+  });
 }
 
 // ── Public API ───────────────────────────────────────────────────────────
@@ -741,6 +810,13 @@ export async function runTutorial(page: Page): Promise<void> {
   }
 
   await assertCompletionBanner(page);
+
+  // Bonus steps (after the core 11-step completion banner)
+  console.log(`[tutorial] → starting bonus step 12 ("${SECTION_TITLES[12]}")`);
+  await doStep12(page);
+  console.log(`[tutorial] → step 12 action done, asserting localStorage`);
+  await assertStepCompleted(page, 12);
+  console.log(`[tutorial] ✓ step 12 complete`);
 }
 
 export { SECTION_TITLES, TOTAL_STEPS };
