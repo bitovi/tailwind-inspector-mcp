@@ -26,6 +26,7 @@ export default defineConfig({
   projects: [
     {
       name: 'demo',
+      testMatch: /tutorial(?!-angular).*\.spec\.ts/,
       use: {
         baseURL: 'http://localhost:4173',
         ...devices['Desktop Chrome'],
@@ -33,8 +34,17 @@ export default defineConfig({
     },
     {
       name: 'test-app',
+      testMatch: /tutorial(?!-angular).*\.spec\.ts/,
       use: {
         baseURL: 'http://localhost:5173',
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
+      name: 'test-app-angular',
+      testMatch: /tutorial-angular.*\.spec\.ts/,
+      use: {
+        baseURL: 'http://localhost:5177',
         ...devices['Desktop Chrome'],
       },
     },
@@ -77,6 +87,37 @@ export default defineConfig({
       command: 'npm run storybook',
       cwd: path.join(root, 'storybook-test', 'v10'),
       url: 'http://localhost:6008',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'ignore',
+      stderr: 'ignore',
+    },
+    // Angular test app: ng serve on port 5177
+    {
+      command: 'npx ng serve --port 5177',
+      cwd: path.join(root, 'test-app-angular'),
+      url: 'http://localhost:5177',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'ignore',
+      stderr: 'ignore',
+    },
+    // Angular: Express + WS + MCP server on port 3335
+    {
+      command: 'node --import tsx ../server/index.ts',
+      cwd: path.join(root, 'test-app-angular'),
+      url: 'http://localhost:3335/tailwind-config',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'ignore',
+      stderr: 'ignore',
+      env: { PORT: '3335', STORYBOOK_URL: 'http://localhost:6009' },
+    },
+    // Storybook v10 (Angular stories) — needed for component discovery in steps 8/9
+    {
+      command: 'npm run storybook',
+      cwd: path.join(root, 'storybook-test', 'angular-v10'),
+      url: 'http://localhost:6009',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       stdout: 'ignore',

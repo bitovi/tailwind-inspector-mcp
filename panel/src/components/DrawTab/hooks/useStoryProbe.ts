@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ArgType, StoryEntry } from '../types';
 import { STORYBOOK_BASE } from './storybookBase';
+import { discoverAngularSlots } from '../../../../../overlay/src/angular-storybook';
 
 /**
  * Storybook's storyPrepared event sends argTypes with control as an object:
@@ -118,13 +119,55 @@ export function useStoryProbe(stories: StoryEntry[], enabled = true): StoryProbe
         const detected = msg.event.args[0].argTypes ?? {};
         const detectedArgs = msg.event.args[0].initialArgs ?? msg.event.args[0].args ?? {};
 
+        console.log(`[useStoryProbe] storyPrepared for "${currentStory?.id}"`, {
+          rawArgTypeKeys: Object.keys(detected),
+          rawArgTypes: detected,
+          initialArgs: detectedArgs,
+        });
+
         if (Object.keys(detected).length > 0) {
           // Found a story with args
           resolvedRef.current = true;
-          setBestStory(currentStory);
-          setArgTypes(normalizeArgTypes(detected));
-          setDefaultArgs(detectedArgs);
-          setProbing(false);
+          const normalized = normalizeArgTypes(detected);
+          console.log('[useStoryProbe] normalized argTypes:', normalized);
+
+          // Attempt Angular slot discovery after a brief delay for rendering.
+          // Poll up to 3 times (50ms intervals) for the ng debug API.
+          let slotsAttempt = 0;
+          const trySlotDiscovery = () => {
+            slotsAttempt++;
+            const discoveredSlots = iframeRef.current ? discoverAngularSlots(iframeRef.current) : {};
+            const slotCount = Object.keys(discoveredSlots).length;
+            console.log(`[useStoryProbe] slot discovery attempt ${slotsAttempt}: found ${slotCount} slots`);
+
+            if (slotCount > 0) {
+              // Merge discovered slots into argTypes (don't overwrite existing)
+              const merged = { ...normalized };
+              for (const [name, argType] of Object.entries(discoveredSlots)) {
+                if (!merged[name]) {
+                  merged[name] = argType;
+                  console.log(`[useStoryProbe] merged slot argType "${name}" into argTypes`);
+                }
+              }
+              setBestStory(currentStory);
+              setArgTypes(merged);
+              setDefaultArgs(detectedArgs);
+              setProbing(false);
+            } else if (slotsAttempt < 3) {
+              // Angular may not have rendered yet — retry
+              setTimeout(trySlotDiscovery, 100);
+            } else {
+              // No Angular slots found — use argTypes as-is
+              console.log('[useStoryProbe] no Angular slots discovered after retries, using Storybook argTypes only');
+              setBestStory(currentStory);
+              setArgTypes(normalized);
+              setDefaultArgs(detectedArgs);
+              setProbing(false);
+            }
+          };
+
+          // Start slot discovery after a small delay for Angular to render
+          setTimeout(trySlotDiscovery, 50);
         } else {
           // No args — try next story
           if (storyTimeout) clearTimeout(storyTimeout);

@@ -2,6 +2,8 @@
 // Parallels fiber.ts for React — detects Angular component boundaries from DOM nodes.
 
 import type { ComponentInfo } from './fiber';
+import { serializeValue } from './fiber';
+import type { SerializedReactElement } from '../../shared/types';
 
 /**
  * Angular debug API — available in dev mode (not in prod builds).
@@ -158,6 +160,136 @@ export function collectAngularComponentDOMNodes(
       `${tagName.toLowerCase()}[_ngcontent-${suffix}]`,
     ),
   );
+}
+
+// ── Angular Component Props + Slot Extraction ──────
+
+/**
+ * Extract serialized props (inputs + content projection slots) from an Angular component.
+ *
+ * - Reads @Input() values from the live component instance via `ɵcmp.inputs`
+ * - Reads `ɵcmp.ngContentSelectors` to discover content projection slots
+ * - For named slots (e.g. `[leftIcon]`), scans the host element's children
+ *   and serializes projected Angular components as SerializedReactElement
+ * - The unnamed slot (`*`) maps to `children` (text content)
+ *
+ * Returns a record compatible with the panel's `mapFiberPropsToArgs()`.
+ */
+export function extractAngularComponentProps(
+  componentInstance: any,
+  hostEl: Element,
+): Record<string, unknown> | null {
+  if (!componentInstance) return null;
+
+  const result: Record<string, unknown> = {};
+  const cmpDef = componentInstance.constructor?.ɵcmp;
+
+  // 1. Extract @Input() values
+  if (cmpDef?.inputs) {
+    const inputMap: Record<string, string | [string, string]> = cmpDef.inputs;
+    for (const [publicName, mapping] of Object.entries(inputMap)) {
+      // mapping can be a string (public name) or [minifiedName, publicName]
+      const internalName = Array.isArray(mapping) ? mapping[0] : publicName;
+      const value = componentInstance[internalName];
+      if (value === undefined) continue;
+      const serialized = serializeValue(value, 0);
+      if (serialized !== undefined) {
+        result[publicName] = serialized;
+      }
+    }
+  }
+
+  // 2. Extract content projection slots via ngContentSelectors
+  const selectors: string[] | undefined = cmpDef?.ngContentSelectors;
+  if (selectors && hostEl) {
+    const ng = getNgApi();
+    for (const selector of selectors) {
+      if (selector === '*') {
+        // Unnamed slot → children: extract text content from direct text nodes
+        const textContent = getDirectTextContent(hostEl);
+        if (textContent) {
+          result['children'] = textContent;
+        }
+        continue;
+      }
+
+      // Named slot: selector is typically an attribute selector like "[leftIcon]"
+      // or an element selector like "card-title"
+      const slotName = selectorToSlotName(selector);
+      if (!slotName) continue;
+
+      // Find projected content matching this selector
+      const projected = hostEl.querySelector(`:scope > ${cssifySelector(selector)}`);
+      if (!projected) continue;
+
+      // Check if the projected element is itself an Angular component
+      if (ng) {
+        const childComp = ng.getComponent(projected);
+        if (childComp) {
+          const childName = (childComp.constructor?.name || 'Unknown').replace(/^_+/, '');
+          const childProps = extractAngularComponentProps(childComp, projected);
+          const serialized: SerializedReactElement = {
+            __reactElement: true,
+            componentName: childName,
+            props: childProps ?? undefined,
+          };
+          result[slotName] = serialized;
+          continue;
+        }
+      }
+
+      // Not an Angular component — serialize as text
+      const text = projected.textContent?.trim();
+      if (text) {
+        result[slotName] = text;
+      }
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+/**
+ * Convert an ng-content selector to a slot name.
+ * "[leftIcon]" → "leftIcon"
+ * "card-title" → "cardTitle"
+ * "[slot=header]" → "header"
+ */
+function selectorToSlotName(selector: string): string | null {
+  // Attribute selector: [leftIcon] or [slot=header]
+  const attrMatch = selector.match(/^\[([^\]=]+)(?:=([^\]]+))?\]$/);
+  if (attrMatch) {
+    return attrMatch[2] ?? attrMatch[1];
+  }
+  // Element selector: card-title → cardTitle
+  if (/^[a-z]/.test(selector) && !selector.includes('[')) {
+    return selector.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  }
+  // Class selector or complex selector — skip
+  return null;
+}
+
+/**
+ * Convert an ngContentSelector into a valid CSS selector for querySelector.
+ * "[leftIcon]" is already valid CSS. "card-title" is already valid.
+ */
+function cssifySelector(selector: string): string {
+  return selector;
+}
+
+/**
+ * Get the direct text content of an element (not text from child components).
+ * Collects only direct text nodes, excluding Angular component elements.
+ */
+function getDirectTextContent(el: Element): string {
+  const parts: string[] = [];
+  for (const node of el.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) parts.push(text);
+    }
+  }
+  return parts.join(' ');
 }
 
 // ── Helpers ──────────────────────────────────────────

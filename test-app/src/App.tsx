@@ -141,18 +141,7 @@ function App() {
                 Completed sections get a checkmark so you can track your progress.
               </p>
 
-              <p className="mt-3">If you get stuck, refer to the video below for a walkthrough of this tutorial.</p>
-              <div className="mt-4 rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                  <iframe
-                    src="https://www.youtube.com/embed/_pd7UbohrPw"
-                    title="VyBit Tutorial Walkthrough"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                  />
-                </div>
-              </div>
+
               <p className="mt-3 flex gap-2 bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2 text-sm">
                 <span>⚠️</span>
                 <span>No agent is running and receiving the changes you suggest. In the real workflow, committed changes would be picked up by an AI agent. You can see the exact MCP tool output in your browser's developer console.</span>

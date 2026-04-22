@@ -1,130 +1,416 @@
 <div class="min-h-screen bg-gray-50">
   <!-- Header -->
-  <header class="bg-white shadow-sm border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-gray-900">Tailwind Visual Editor — Angular Test App</h1>
-      <div class="flex gap-2">
-        <app-button variant="primary">Save</app-button>
-        <app-button variant="secondary">Cancel</app-button>
+  <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <h1 class="text-xl font-bold text-gray-900">VyBit Interactive Tutorial</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <p class="text-sm text-gray-500">
+          {{ completedCount }} of {{ totalSteps }} completed
+        </p>
+        <button
+          (click)="progress.resetProgress()"
+          class="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors"
+        >
+          ↺ Start Over
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-8">
-    <!-- Cards section — tests multiple instances of same component -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Cards (3 instances of Card)</h2>
-    <div class="grid grid-cols-3 gap-6 mb-12">
+  <main class="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
+
+    <!-- Section 1: Welcome -->
+    <app-tutorial-section
+      [step]="1"
+      title="Welcome to VyBit"
+      [completed]="progress.completedSteps.has(1)"
+      (markComplete)="progress.completeStep(1)"
+    >
+      <div instructions>
+        <p>
+          <a href="https://github.com/bitovi/vybit" class="text-blue-500 hover:underline">VyBit</a> is a visual editing tool that works alongside your running app. You select elements, describe changes in plain language or tweak styles visually, and VyBit sends precise instructions to an AI coding agent that implements the changes in your source code.
+        </p>
+        <p class="mt-3">
+          This tutorial will walk you through the most common features. Each section has a small exercise — try them in any order.
+          Completed sections get a checkmark so you can track your progress.
+        </p>
+
+        <p class="mt-3 flex gap-2 bg-amber-50 border border-amber-300 text-amber-900 rounded-md px-3 py-2 text-sm">
+          <span>⚠️</span>
+          <span>No agent is running and receiving the changes you suggest. In the real workflow, committed changes would be picked up by an AI agent. You can see the exact MCP tool output in your browser's developer console.</span>
+        </p>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 2: Open the Panel -->
+    <app-tutorial-section
+      [step]="2"
+      title="Open the Panel"
+      [completed]="progress.completedSteps.has(2)"
+      (markComplete)="progress.completeStep(2)"
+    >
+      <div instructions>
+        <p>See the round button in the bottom-right corner of the page? That's the <strong>VyBit toggle button</strong>. Click it to open the inspector panel.</p>
+        <p class="mt-3">Once open, you'll see three mode buttons at the top of the panel:</p>
+        <p class="mt-3"><strong>Select</strong> — Click elements in your app to inspect and change them.</p>
+        <p class="mt-3"><strong>Insert</strong> — Add new content to the page.</p>
+        <p class="mt-3"><strong>Bug Report</strong> — Record and describe issues.</p>
+        <p class="mt-3">You'll try all three in the exercises below.</p>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 3: Your First Change -->
+    <app-tutorial-section
+      [step]="3"
+      title="Your First Change"
+      [completed]="progress.completedSteps.has(3)"
+      (markComplete)="progress.completeStep(3)"
+    >
+      <div instructions>
+        <p>Let's make your first change. <strong>Click the issue card below</strong> to select it, then tell VyBit what to do.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>In the panel, click the <strong>Select</strong> button to enter Select mode</li>
+          <li>Click the card below — it will highlight with a teal border</li>
+          <li>In the floating toolbar, type something like: <em>"Make the bug tag flash red"</em></li>
+          <li>Click the <strong>submit</strong> button to queue the message</li>
+          <li>At the bottom of the panel, click the <strong>draft count</strong></li>
+          <li>Click <strong>Commit</strong></li>
+        </ol>
+      </div>
       <app-card
-        title="Design System"
-        description="Create consistent, reusable components for your application."
-        tag="UI"
+        title="Fix Login Page Timeout"
+        description="Users see a blank screen after 30s on the login page."
+        tag="Bug"
       />
-      <app-card
-        title="Performance"
-        description="Optimize bundle size and runtime performance metrics."
-        tag="Engineering"
-      />
-      <app-card
-        title="Accessibility"
-        description="Ensure your app is usable by everyone, including assistive tech."
-        tag="A11y"
-      />
-    </div>
+    </app-tutorial-section>
 
-    <!-- Buttons section — tests multiple instances with different variants -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Buttons (6 instances of Button)</h2>
-    <div class="flex flex-wrap gap-3 mb-12">
-      <app-button variant="primary">Primary</app-button>
-      <app-button variant="secondary">Secondary</app-button>
-      <app-button variant="primary">Submit</app-button>
-      <app-button variant="secondary">Reset</app-button>
-      <app-button variant="primary">Confirm</app-button>
-      <app-button variant="secondary">Back</app-button>
-    </div>
+    <!-- Section 4: Send a Voice Message -->
+    <app-tutorial-section
+      [step]="4"
+      title="Send a Voice Message"
+      [completed]="progress.completedSteps.has(4)"
+      (markComplete)="progress.completeStep(4)"
+    >
+      <div instructions>
+        <p>Sometimes it's easier to talk than type. VyBit has a microphone button for voice messages.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Click the <strong>Select</strong> button in the panel to enter Select mode</li>
+          <li>Click the <strong>Assign</strong> button below to select it</li>
+          <li>In the floating toolbar, click the <strong>microphone</strong> button</li>
+          <li>Speak your change</li>
+          <li>Click the mic again to stop recording, then click the <strong>submit</strong> button</li>
+        </ol>
+      </div>
+      <div class="flex gap-2">
+        <app-button variant="primary">Assign</app-button>
+        <app-button variant="secondary">Close Issue</app-button>
+      </div>
+    </app-tutorial-section>
 
-    <!-- Badges — tests small inline components -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Badges (5 instances of Badge)</h2>
-    <div class="flex flex-wrap gap-2 mb-12">
-      <app-badge color="blue">Active</app-badge>
-      <app-badge color="green">Approved</app-badge>
-      <app-badge color="yellow">Pending</app-badge>
-      <app-badge color="red">Rejected</app-badge>
-      <app-badge color="gray">Draft</app-badge>
-    </div>
+    <!-- Section 5: Edit Text In Place -->
+    <app-tutorial-section
+      [step]="5"
+      title="Edit Text In Place"
+      [completed]="progress.completedSteps.has(5)"
+      (markComplete)="progress.completeStep(5)"
+    >
+      <div instructions>
+        <p>You can edit text directly on the page using the overlay toolbar.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Make sure you're in <strong>Select</strong> mode</li>
+          <li>Click the empty state card below to select it</li>
+          <li>In the floating toolbar, click the <strong>Text</strong> button</li>
+          <li>The text becomes editable — try changing it</li>
+          <li>Click away or press Escape to finish editing</li>
+        </ol>
+      </div>
+      <div class="bg-white rounded-lg shadow p-8 text-center">
+        <p class="text-3xl mb-3">📋</p>
+        <h3 class="text-lg font-semibold text-gray-900 mb-1">No Data Available</h3>
+        <p class="text-sm text-gray-500">There are currently no items to display in this view at this time.</p>
+      </div>
+    </app-tutorial-section>
 
-    <!-- Inline list — tests findInlineRepeatedNodes fallback (no CaseListItem component) -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Case List (inline &#64;for, no item component)</h2>
-    <div class="bg-white rounded-lg shadow p-4 mb-12 w-72">
-      <app-case-list />
-    </div>
-
-    <!-- Tags — tests near-group matching (single-class diff between variants) -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Tags (group test: 1-class diff)</h2>
-    <div class="flex flex-wrap gap-2 mb-12">
-      <app-tag color="blue">Frontend</app-tag>
-      <app-tag color="blue">Backend</app-tag>
-      <app-tag color="red">Urgent</app-tag>
-      <app-tag color="green">Done</app-tag>
-      <app-tag color="green">Shipped</app-tag>
-    </div>
-
-    <!-- Typography section -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Typography Showcase</h2>
-    <div class="bg-white rounded-lg shadow p-6 mb-12 flex flex-col gap-4">
-      <h1 class="font-sans text-4xl font-bold not-italic tracking-tight leading-tight text-left text-gray-900 align-baseline">
-        Sans-serif, 4xl, Bold, Tight Tracking
-      </h1>
-      <h2 class="font-serif text-3xl font-extrabold italic tracking-wide leading-snug text-center text-indigo-700 align-middle">
-        Serif, 3xl, Extrabold, Italic, Wide Tracking
-      </h2>
-      <h3 class="font-mono text-2xl font-light not-italic tracking-widest leading-relaxed text-right text-teal-600 align-top">
-        Mono, 2xl, Light, Widest Tracking
-      </h3>
-      <h4 class="font-sans text-xl font-semibold italic tracking-normal leading-loose text-left text-rose-600 align-baseline">
-        Sans, xl, Semibold, Italic, Loose Line Height
-      </h4>
-      <h5 class="font-serif text-lg font-medium not-italic tracking-wider leading-none text-center text-amber-600 align-middle">
-        Serif, lg, Medium, Wider Tracking, None Line Height
-      </h5>
-      <h6 class="font-mono text-base font-thin italic tracking-tight leading-normal text-right text-gray-500 align-bottom">
-        Mono, base, Thin, Italic, Normal Line Height
-      </h6>
-    </div>
-
-    <!-- Effects — tests opacity scrubber -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Effects (opacity)</h2>
-    <div class="flex flex-wrap gap-4 mb-12">
-      <div class="w-24 h-24 rounded-lg bg-teal-500 opacity-50 flex items-center justify-center text-white font-bold text-sm">50%</div>
-      <div class="w-24 h-24 rounded-lg bg-teal-500 flex items-center justify-center text-white font-bold text-sm">100%</div>
-    </div>
-
-    <!-- Nested structure — tests deep component walking -->
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Nested Structure</h2>
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">JM</div>
-        <div>
-          <p class="font-medium text-gray-900">Justin Meyer</p>
-          <p class="text-sm text-gray-500">Designer</p>
+    <!-- Section 6: Describe What to Add -->
+    <app-tutorial-section
+      [step]="6"
+      title="Describe What to Add"
+      [completed]="progress.completedSteps.has(6)"
+      (markComplete)="progress.completeStep(6)"
+    >
+      <div instructions>
+        <p>Now let's <strong>add a new field</strong> to this form.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>In the panel header, click the <strong>Insert</strong> mode button</li>
+          <li>Hover over the form below — you'll see insertion indicators</li>
+          <li>Click the gap between <strong>Email</strong> and <strong>Role</strong></li>
+          <li>In the floating toolbar, describe the field to add</li>
+          <li>Click the <strong>submit</strong> button</li>
+        </ol>
+      </div>
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-base font-semibold text-gray-900 mb-4">Add Team Member</h3>
+        <div class="flex flex-col gap-4">
+          <app-input label="Full Name" placeholder="Jane Smith" />
+          <app-input label="Email" placeholder="jane&#64;acme.com" type="email" />
+          <app-input label="Role" placeholder="Designer" />
         </div>
       </div>
-      <p class="text-gray-600 mb-4">
-        This section tests deeply nested elements to verify the pseudo-HTML context builder captures the full ancestor chain correctly.
-      </p>
-      <div class="flex gap-2">
-        <app-button variant="primary">Follow</app-button>
-        <app-button variant="secondary">Message</app-button>
-      </div>
-    </div>
-  </main>
+    </app-tutorial-section>
 
-  <!-- Footer -->
-  <footer class="fixed bottom-0 w-full bg-gray-900 text-gray-400 py-3">
-    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between text-sm">
-      <span>Tailwind Visual Editor Test (Angular)</span>
-      <span>v0.1.0</span>
+    <!-- Section 7: Sketch What to Add -->
+    <app-tutorial-section
+      [step]="7"
+      title="Sketch What to Add"
+      [completed]="progress.completedSteps.has(7)"
+      (markComplete)="progress.completeStep(7)"
+    >
+      <div instructions>
+        <p>Don't want to describe in words? Draw it instead.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Switch to <strong>Insert</strong> mode and click between "Monthly Signups" and "January"</li>
+          <li>In the panel's <strong>Place</strong> tab, click <strong>Draw / Screenshot Canvas</strong></li>
+          <li>On the canvas, sketch a bar chart</li>
+          <li>Click <strong>Add to Drafts</strong> to queue the drawing</li>
+        </ol>
+      </div>
+      <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Monthly Signups</h3>
+        <div class="flex flex-col gap-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">January</span>
+            <span class="text-gray-900 font-medium">120</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">February</span>
+            <span class="text-gray-900 font-medium">185</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">March</span>
+            <span class="text-gray-900 font-medium">310</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">April</span>
+            <span class="text-gray-900 font-medium">275</span>
+          </div>
+        </div>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 8: Place a Component -->
+    <app-tutorial-section
+      [step]="8"
+      title="Place a Component"
+      [completed]="progress.completedSteps.has(8)"
+      (markComplete)="progress.completeStep(8)"
+    >
+      <div instructions>
+        <p>VyBit can browse your component library and place components directly onto the page.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Switch to <strong>Insert</strong> mode if not already active</li>
+          <li>In the panel, find a component (e.g., <strong>Badge</strong>) and click its <strong>Place</strong> button</li>
+          <li>Hover over the page — you'll see a ghost preview</li>
+          <li>Click to drop it next to the existing status badges</li>
+        </ol>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-medium text-gray-700">Status:</span>
+        <app-badge color="green">Open</app-badge>
+        <app-badge color="blue">Frontend</app-badge>
+        <app-badge color="red">Priority: High</app-badge>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 9: Build with Nested Components -->
+    <app-tutorial-section
+      [step]="9"
+      title="Build with Nested Components"
+      [completed]="progress.completedSteps.has(9)"
+      (markComplete)="progress.completeStep(9)"
+    >
+      <div instructions>
+        <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>In <strong>Insert</strong> mode, find the <strong>Button</strong> component and click its <strong>Customize</strong> button</li>
+          <li>In the props drawer, switch the <strong>variant</strong> to <code class="bg-gray-100 border border-gray-200 rounded px-1 text-xs">warning</code></li>
+          <li>Find the <strong>leftIcon</strong> row — click the <strong>⊞</strong> button to open the component picker</li>
+          <li>Find the <strong>Icon</strong> component and click its <strong>Set Prop</strong> button</li>
+          <li>Back in the Button drawer, click its <strong>Place</strong> button and drop it onto the page</li>
+        </ol>
+      </div>
+      <div class="flex gap-2">
+        <app-button variant="primary">Assign</app-button>
+        <app-button variant="secondary">Close Issue</app-button>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 10: Fine-Tune the Design -->
+    <app-tutorial-section
+      [step]="10"
+      title="Fine-Tune the Design"
+      [completed]="progress.completedSteps.has(10)"
+      (markComplete)="progress.completeStep(10)"
+      playgroundClassName="bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300"
+    >
+      <div instructions>
+        <p>VyBit isn't just for big changes — you can precisely adjust Tailwind classes too.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Switch to <strong>Select</strong> mode</li>
+          <li>Click the purple banner below</li>
+          <li>Try adjusting <strong>padding</strong>, <strong>color</strong>, <strong>shadow</strong>, <strong>ring</strong>, or <strong>border radius</strong></li>
+          <li>Every change previews live on the page</li>
+        </ol>
+      </div>
+      <h3 class="text-2xl font-bold mb-2">Welcome to Acme Project Tracker</h3>
+      <p class="text-indigo-200">Your hub for issues, roadmaps, and team collaboration.</p>
+    </app-tutorial-section>
+
+    <!-- Section 11: Report a Bug -->
+    <app-tutorial-section
+      [step]="11"
+      title="Report a Bug"
+      [completed]="progress.completedSteps.has(11)"
+      (markComplete)="progress.completeStep(11)"
+    >
+      <div instructions>
+        <p>Found something broken? VyBit's Bug Report mode captures element context, console errors, network failures, and a visual timeline.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>First, click <strong>"Refresh Invoice"</strong> below — it will trigger a failed API call</li>
+          <li>Switch to <strong>Bug Report</strong> mode in the panel</li>
+          <li>Click the element that looks "wrong"</li>
+          <li>Describe the bug and submit the report</li>
+        </ol>
+      </div>
+      <div class="overflow-hidden rounded-lg">
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Billing — Invoice #1042</h3>
+          <div class="flex flex-col gap-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Pro Plan (monthly)</span>
+              <span class="text-gray-900 font-medium">$49.00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Extra seats (3)</span>
+              <span class="text-gray-900 font-medium">$30.00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-red-600 font-semibold">Overage charges</span>
+              <span class="text-red-600 font-bold">$-14,000.00</span>
+            </div>
+            <hr class="my-2 border-gray-200" />
+            <div class="flex justify-between">
+              <span class="text-gray-900 font-semibold">Total</span>
+              <span class="text-red-600 font-bold text-base">-$13,921.00</span>
+            </div>
+          </div>
+          <button
+            class="mt-4 px-4 py-2 text-sm font-medium text-white bg-gray-800 rounded-md hover:bg-gray-700 transition-colors"
+            (click)="triggerInvoiceError()"
+          >
+            Refresh Invoice
+          </button>
+        </div>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Completion Banner -->
+    <section [class]="'rounded-lg shadow-sm border px-6 py-8 text-center ' +
+      (completedCount === totalSteps
+        ? 'bg-gradient-to-br from-green-50 to-teal-50 border-green-200'
+        : 'bg-white border-gray-200')">
+      <ng-container *ngIf="completedCount === totalSteps">
+        <h2 class="text-2xl font-bold text-gray-900 mb-3">You did it!</h2>
+        <div class="text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
+          <p>You've explored every major VyBit feature:</p>
+          <ul class="text-left inline-block mt-3 space-y-1">
+            <li>✓ Selecting elements and sending change messages</li>
+            <li>✓ Voice messages</li>
+            <li>✓ Inline text editing</li>
+            <li>✓ Describing new content to insert</li>
+            <li>✓ Sketching layouts</li>
+            <li>✓ Placing design system components</li>
+            <li>✓ Composing nested components</li>
+            <li>✓ Fine-tuning Tailwind styles</li>
+            <li>✓ Reporting bugs</li>
+          </ul>
+          <p class="mt-4">
+            In a real project, every committed change triggers the MCP <code class="bg-gray-100 text-gray-800 px-1 rounded">implement_next_change</code> tool.
+          </p>
+          <p class="mt-4 font-medium text-gray-900">
+            Ready to try it for real?
+            <a href="https://github.com/bitovi/vybit" class="text-teal-600 underline hover:text-teal-800" target="_blank" rel="noopener noreferrer">Install VyBit</a>
+            and connect it to your project.
+          </p>
+        </div>
+        <button
+          (click)="progress.resetProgress()"
+          class="mt-6 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-4 py-2 hover:bg-white transition-colors"
+        >
+          ↺ Start Over
+        </button>
+      </ng-container>
+      <ng-container *ngIf="completedCount !== totalSteps">
+        <h2 class="text-xl font-bold text-gray-900 mb-2">Keep going!</h2>
+        <p class="text-sm text-gray-500">
+          You've completed {{ completedCount }} of {{ totalSteps }} steps. Finish the remaining exercises above to unlock the full summary.
+        </p>
+      </ng-container>
+    </section>
+
+    <!-- Bonus Section Intro -->
+    <div class="mt-4 border-t border-gray-200 pt-8">
+      <h2 class="text-lg font-bold text-gray-900 mb-1">Bonus: Advanced Features</h2>
+      <p class="text-sm text-gray-500">
+        The core tutorial is complete — nice work! These bonus exercises cover less common but powerful features.
+      </p>
     </div>
-  </footer>
+
+    <!-- Bonus: Explore Your Theme -->
+    <app-tutorial-section
+      [step]="12"
+      title="Explore Your Theme"
+      [completed]="progress.completedSteps.has(12)"
+      (markComplete)="progress.completeStep(12)"
+    >
+      <div instructions>
+        <p>VyBit can edit your project's Tailwind theme — not just individual elements. Click the <strong>Theme</strong> button in the panel to open the Theme editor.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Open the panel and click the <strong>Theme</strong> button</li>
+          <li>Expand a section (e.g., <strong>Colors</strong>) and click a swatch</li>
+          <li>Try adjusting the <strong>spacing</strong> base value</li>
+          <li>Each change is automatically queued as a draft</li>
+        </ol>
+      </div>
+      <div class="flex flex-col gap-2">
+        <div class="bg-green-600 text-white text-sm font-mono p-1 rounded">
+          <div class="flex"><span class="flex-1">green-600</span><span class="flex-1">text-sm</span><span class="flex-1">font-mono</span><span class="flex-1">p-1</span></div>
+        </div>
+        <div class="bg-green-500 text-white text-base font-sans p-2 rounded">
+          <div class="flex"><span class="flex-1">green-500</span><span class="flex-1">text-base</span><span class="flex-1">font-sans</span><span class="flex-1">p-2</span></div>
+        </div>
+        <div class="bg-blue-400 text-white text-lg font-bold p-3 rounded">
+          <div class="flex"><span class="flex-1">blue-400</span><span class="flex-1">text-lg</span><span class="flex-1">font-bold</span><span class="flex-1">p-3</span></div>
+        </div>
+        <div class="bg-purple-600 text-white text-xl font-medium p-4 rounded">
+          <div class="flex"><span class="flex-1">purple-600</span><span class="flex-1">text-xl</span><span class="flex-1">font-medium</span><span class="flex-1">p-4</span></div>
+        </div>
+        <div class="bg-red-500 text-white text-xs font-semibold p-1.5 rounded">
+          <div class="flex"><span class="flex-1">red-500</span><span class="flex-1">text-xs</span><span class="flex-1">font-semibold</span><span class="flex-1">p-1.5</span></div>
+        </div>
+        <div class="bg-amber-500 text-white text-sm font-bold p-2.5 rounded">
+          <div class="flex"><span class="flex-1">amber-500</span><span class="flex-1">text-sm</span><span class="flex-1">font-bold</span><span class="flex-1">p-2.5</span></div>
+        </div>
+        <div class="bg-teal-600 text-white text-base font-mono p-3.5 rounded">
+          <div class="flex"><span class="flex-1">teal-600</span><span class="flex-1">text-base</span><span class="flex-1">font-mono</span><span class="flex-1">p-3.5</span></div>
+        </div>
+        <div class="bg-indigo-500 text-white text-lg font-light p-5 rounded">
+          <div class="flex"><span class="flex-1">indigo-500</span><span class="flex-1">text-lg</span><span class="flex-1">font-light</span><span class="flex-1">p-5</span></div>
+        </div>
+      </div>
+    </app-tutorial-section>
+  </main>
 </div>
 
 

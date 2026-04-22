@@ -1,15 +1,6 @@
 import type { ArgType, ReactNodeArgValue } from '../types';
 import type { SerializedReactElement } from '../../../../../shared/types';
-
-const REACT_NODE_NAMES = new Set(['ReactNode', 'ReactElement', 'Element', 'JSX.Element']);
-
-function isReactNodeProp(name: string, argType: ArgType): boolean {
-  if (name === 'children') return true;
-  const typeName = argType.type?.name;
-  if (typeName && REACT_NODE_NAMES.has(typeName)) return true;
-  if (typeName === 'other' && argType.control === 'object') return true;
-  return false;
-}
+import { isSlotProp } from './isSlotProp';
 
 function isSerializedReactElement(v: unknown): v is SerializedReactElement {
   return !!v && typeof v === 'object' && (v as any).__reactElement === true;
@@ -43,7 +34,7 @@ export function mapFiberPropsToArgs(
     const value = fiberProps[key];
     if (value === undefined) continue;
 
-    if (isReactNodeProp(key, argType)) {
+    if (isSlotProp(key, argType)) {
       // ReactNode field
       if (isSerializedReactElement(value)) {
         const ghost = resolveGhost?.(value.componentName);
