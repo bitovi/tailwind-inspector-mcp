@@ -102,7 +102,7 @@ export default defineConfig({
       cwd: path.join(root, 'test-app-angular'),
       url: 'http://localhost:5177',
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 180_000,
       stdout: 'ignore' as const,
       stderr: 'ignore' as const,
     }] : []),

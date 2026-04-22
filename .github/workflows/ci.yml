@@ -49,6 +49,7 @@ jobs:
             install: |
               cd test-app-angular && npm ci
               cd $GITHUB_WORKSPACE/storybook-test/angular-v10 && npm install
+              cd $GITHUB_WORKSPACE/test-app-angular && npm run build:css
 
     steps:
       - uses: actions/checkout@v4
