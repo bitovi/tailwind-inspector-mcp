@@ -1,7 +1,7 @@
-import type { ReactNodeFieldProps } from './types';
-import type { ReactNodeArgValue } from '../../types';
+import type { SlotFieldProps } from './types';
+import type { SlotArgValue } from '../../types';
 
-function getTextValue(value: ReactNodeArgValue | undefined): string {
+function getTextValue(value: SlotArgValue | undefined): string {
   if (!value) return '';
   // Backward-compat: existing Storybook defaultArgs may be plain strings
   if (typeof value === 'string') return value as string;
@@ -9,7 +9,7 @@ function getTextValue(value: ReactNodeArgValue | undefined): string {
   return '';
 }
 
-export function ReactNodeField({ name, value, onChange, isReceptive, onArmSelf }: ReactNodeFieldProps) {
+export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: SlotFieldProps) {
   const isFilled = value?.type === 'component';
 
   function handleTextChange(raw: string) {

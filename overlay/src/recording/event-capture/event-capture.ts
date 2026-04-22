@@ -1,5 +1,5 @@
 import type { SnapshotTrigger, DomChange } from '../../../../shared/types';
-import { getFiber, findComponentBoundary } from '../../fiber';
+import { getFiber, findOwningComponent } from '../../react/fiber';
 
 const MUTATION_DEBOUNCE_MS = 500;
 const SHADOW_HOST_ID = 'tw-visual-editor-host';
@@ -113,7 +113,7 @@ function isVyBitElement(el: Node): boolean {
 
 function extractElementInfo(el: HTMLElement): { tag: string; classes: string; id?: string; innerText?: string; componentName?: string } {
   const fiber = getFiber(el);
-  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  const boundary = fiber ? findOwningComponent(fiber) : null;
   return {
     tag: el.tagName.toLowerCase(),
     classes: el.className || '',
@@ -144,7 +144,7 @@ function getComponentName(el: Node): string | undefined {
   const htmlEl = el instanceof HTMLElement ? el : el.parentElement;
   if (!htmlEl) return undefined;
   const fiber = getFiber(htmlEl);
-  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  const boundary = fiber ? findOwningComponent(fiber) : null;
   return boundary?.componentName || undefined;
 }
 

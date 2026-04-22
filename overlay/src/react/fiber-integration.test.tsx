@@ -14,7 +14,7 @@ import React, { forwardRef, memo, createContext, useContext } from 'react';
 import { render } from '@testing-library/react';
 import {
   getFiber,
-  findComponentBoundary,
+  findOwningComponent,
   buildPathLabel,
   extractComponentProps,
   findInlineRepeatedNodes,
@@ -37,7 +37,7 @@ function getInfo(container: HTMLElement, selector: string) {
   const fiber = getFiber(el);
   if (!fiber) throw new Error(`No fiber found on element matching "${selector}"`);
 
-  const boundary = findComponentBoundary(fiber);
+  const boundary = findOwningComponent(fiber);
   const pathLabel = boundary ? buildPathLabel(fiber, boundary) : null;
   const props = boundary ? extractComponentProps(boundary.componentFiber) : null;
   const repeated = boundary
@@ -49,7 +49,7 @@ function getInfo(container: HTMLElement, selector: string) {
   const allBoundaries: BoundaryInfo[] = [];
   let current = fiber;
   while (current) {
-    const b = findComponentBoundary(current);
+    const b = findOwningComponent(current);
     if (!b) break;
     allBoundaries.push({
       name: b.componentName,
@@ -253,7 +253,7 @@ describe('Fiber integration: getInfo(jsx, selector)', () => {
       const fiber = getFiber(el);
       // In RTL, there's always a wrapping div from render(), so there may be
       // boundaries from the test harness. Check that there's no *named* component.
-      const boundary = fiber ? findComponentBoundary(fiber) : null;
+      const boundary = fiber ? findOwningComponent(fiber) : null;
       // boundary may be a host element like 'div' or 'span', but no function component
       const isHostOnly = !boundary || typeof boundary.componentType === 'string';
       expect(isHostOnly).toBe(true);

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ArgType } from '../types';
-import { mapFiberPropsToArgs } from '../utils/mapFiberPropsToArgs';
-import type { ComponentGhostResolver } from '../utils/mapFiberPropsToArgs';
+import { mapPropsToArgs } from '../utils/mapPropsToArgs';
+import type { ComponentGhostResolver } from '../utils/mapPropsToArgs';
 
 interface UseSelectionAutoPopulateParams {
   /** Whether this component row matches the currently selected page element */
@@ -22,7 +22,7 @@ interface UseSelectionAutoPopulateParams {
   /**
    * When true, selectionProps are already Storybook story args (e.g. from a
    * ghost element's componentArgs) and should be applied directly — skip
-   * mapFiberPropsToArgs. Also re-applies after liveReady changes so that
+   * mapPropsToArgs. Also re-applies after liveReady changes so that
    * PROBE_COMPLETE default-arg resets don't wipe the selection.
    */
   propsAreStoryArgs?: boolean;
@@ -98,7 +98,7 @@ export function useSelectionAutoPopulate({
     if (appliedKeyRef.current === matchKey) return;
     appliedKeyRef.current = matchKey;
 
-    const mappedArgs = mapFiberPropsToArgs(selectionProps, effectiveArgTypes, resolveComponentGhost);
+    const mappedArgs = mapPropsToArgs(selectionProps, effectiveArgTypes, resolveComponentGhost);
     if (Object.keys(mappedArgs).length > 0) {
       onArgsChange({ ...args, ...mappedArgs });
     }

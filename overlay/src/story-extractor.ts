@@ -6,6 +6,7 @@
  * no shadow DOM, no attribute observation, no custom element registration.
  */
 import { rewriteRootToHost, propertyRulesToFallbacks } from '../../shared/css-utils';
+import { tryAngularDirectUpdate } from './angular/storybook';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -115,16 +116,17 @@ export function createStoryExtractor(opts?: StoryExtractorOptions): StoryExtract
     // Hidden mode — invisible on document.body.
     // Uses opacity:0 rather than visibility:hidden because browsers skip
     // CSS custom-property resolution for visibility:hidden iframes.
+    const debug = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug-extractor');
     Object.assign(iframe.style, {
       position: 'fixed',
       left: '0',
       top: '0',
       width: `${width}px`,
       height: `${height}px`,
-      opacity: '0',
-      pointerEvents: 'none',
-      border: 'none',
-      zIndex: '-999999',
+      opacity: debug ? '1' : '0',
+      pointerEvents: debug ? 'auto' : 'none',
+      border: debug ? '2px solid red' : 'none',
+      zIndex: debug ? '999999' : '-999999',
     });
     document.body.appendChild(iframe);
   }
@@ -418,22 +420,33 @@ export function createStoryExtractor(opts?: StoryExtractorOptions): StoryExtract
   }
 
   function updateArgsMethod(storyId: string, updatedArgs: Record<string, unknown>) {
+    console.log('[StoryExtractor] updateArgs called', { storyId, updatedArgs, tornDown, hasWin: !!iframe.contentWindow, iframeSrc: iframe.src });
     if (tornDown) return;
     const win = iframe.contentWindow;
     if (!win) return;
-    win.postMessage(
-      JSON.stringify({
-        key: 'storybook-channel',
-        event: {
-          type: 'updateStoryArgs',
-          args: [{ storyId, updatedArgs }],
-        },
-      }),
-      '*',
-    );
+
+    // Try Angular direct update first (postMessage doesn't trigger Angular CD)
+    const angularHandled = tryAngularDirectUpdate(iframe, updatedArgs);
+
+    if (!angularHandled) {
+      // React / generic Storybook: use postMessage channel
+      win.postMessage(
+        JSON.stringify({
+          key: 'storybook-channel',
+          event: {
+            type: 'updateStoryArgs',
+            args: [{ storyId, updatedArgs }],
+          },
+        }),
+        '*',
+      );
+    }
+
     // Re-extract after Storybook re-renders
     setTimeout(() => {
       const doc = iframe.contentDocument;
+      const root = doc?.querySelector('#storybook-root');
+      console.log('[StoryExtractor] re-extracting after updateArgs', { hasDoc: !!doc, angularHandled, rootHtml: root?.innerHTML?.substring(0, 300) });
       if (doc) extractGhost(doc);
     }, 300);
   }

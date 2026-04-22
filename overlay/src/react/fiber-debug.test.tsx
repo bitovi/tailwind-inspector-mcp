@@ -2,7 +2,7 @@
 import { it, expect } from 'vitest';
 import React from 'react';
 import { render } from '@testing-library/react';
-import { getFiber, findComponentBoundary } from './fiber';
+import { getFiber, findOwningComponent } from './fiber';
 
 function Button({ variant, children }: { variant: string; children: React.ReactNode }) {
   return <button className={`btn btn-${variant}`}>{children}</button>;
@@ -25,7 +25,7 @@ it('debug HOC boundaries', () => {
   const boundaries: string[] = [];
   let current = fiber;
   while (current) {
-    const b = findComponentBoundary(current);
+    const b = findOwningComponent(current);
     if (!b) break;
     boundaries.push(`${b.componentName} (type: ${typeof b.componentType})`);
     current = b.componentFiber;
@@ -45,13 +45,13 @@ it('debug repeated', () => {
   );
   const li = container.querySelector('li')!;
   const fiber = getFiber(li);
-  const boundary = findComponentBoundary(fiber);
+  const boundary = findOwningComponent(fiber);
   console.log('Li boundary:', boundary?.componentName, 'type:', typeof boundary?.componentType);
 
   let current = fiber;
   const chain: string[] = [];
   while (current) {
-    const b = findComponentBoundary(current);
+    const b = findOwningComponent(current);
     if (!b) break;
     chain.push(b.componentName);
     current = b.componentFiber;

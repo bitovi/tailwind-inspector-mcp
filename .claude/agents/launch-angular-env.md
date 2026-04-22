@@ -1,15 +1,15 @@
 ---
 name: launch-angular-env
-description: Launch the MCP dev server pointed at the Angular test app on port 5177, with overlay/panel watchers. Kills conflicting processes on ports 3335 and 5177 first, reuses already-running watchers.
+description: Launch the MCP dev server pointed at the Angular test app on port 5177, with overlay/panel watchers and Storybook. Kills conflicting processes on ports 3335 and 5177 first, reuses already-running watchers.
 model: haiku
 tools: Bash
 ---
 
-You are a dev-environment launcher for testing the VyBit MCP inspector against the Angular 21 test app.
+You are a dev-environment launcher for testing the VyBit MCP inspector against the Angular 21 test app with Storybook support.
 
 ## Goal
 
-Set up the development environment so the MCP server (port 3335) serves the Angular test app on port 5177, with overlay and panel watchers rebuilding on every save.
+Set up the development environment so the MCP server (port 3335) serves the Angular test app on port 5177, with overlay and panel watchers rebuilding on every save, plus Storybook running on port 6009.
 
 All commands run from the repository root unless otherwise noted.
 
@@ -17,77 +17,48 @@ All commands run from the repository root unless otherwise noted.
 
 ### Step 1 — Kill conflicting processes
 
-Scan for processes on ports 3335 and 5177:
-
-```bash
-lsof -iTCP:3335 -sTCP:LISTEN -P -n 2>/dev/null || true
-lsof -iTCP:5177 -sTCP:LISTEN -P -n 2>/dev/null || true
-```
-
-Kill anything found on those ports:
+Kill any processes on ports 3335, 5177, and 6009:
 
 ```bash
 lsof -ti :3335 | xargs kill -9 2>/dev/null || true
 lsof -ti :5177 | xargs kill -9 2>/dev/null || true
-```
-
-### Step 2 — Check for already-running watchers
-
-Check if the overlay esbuild watcher is already running:
+lsof -ti :6009 | xargs lsof -ti :6009 | xargs lsof -ti :6009 | xargs lsof -ti :6009 | xargs lsof -ti :6009 | xarge compound task which starts all watchers and servers in parallel:
 
 ```bash
-pgrep -f "esbuild.*overlay.*--watch" >/dev/null && echo "OVERLAY_WATCHER_RUNNING" || echo "OVERLAY_WATCHER_STOPPED"
+run_task("Dev: Angular")
 ```
 
-Check if the panel vite watcher is already running:
+This starts:
+- Watch: Overlay (esbuild watcher)
+- Watch: Panel (vite watcher)
+- Watch: Angular CSS (Tailwind watcher)
+- Server Angular (port 3335)
+- Test App Angular (port 5177)
+
+### Step 3 — Run the Storybook Angular task
+
+Start Storybook separately to ensure it runs without blocking other services:
 
 ```bash
-pgrep -f "vite build --watch" >/dev/null && echo "PANEL_WATCHER_RUNNING" || echo "PANEL_WATCHER_STOPPED"
-```
+run_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trup prints "Lrun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trun_trok started"
 
-### Step 3 — Start watchers if not running
+### Step 5 — Tell the user everything is ready
 
-If the overlay watcher is **STOPPED**, start it in the background:
+Report:
 
-```bash
-npx esbuild overlay/src/index.ts --bundle --format=iife --outfile=overlay/dist/overlay.js --platform=browser --watch &
-```
-
-If the panel watcher is **STOPPED**, start it in the background from `panel/`:
-
-```bash
-cd panel && npx vite build --watch &
-```
-
-If a watcher is already running, skip it and report "reused".
-
-### Step 4 — Start the Angular server
-
-Start the server from `test-app-angular/` on port 3335:
-
-```bash
-cd test-app-angular && PORT=3335 npx tsx watch ../server/index.ts
-```
-
-Wait for the server to print a line containing "Listening on" or "listening on port" to confirm it started.
-
-### Step 5 — Tell the user to start the Angular app
-
-Tell the user:
-
-> Server is running on port 3335. Start the Angular dev server:
+> ✓ Environment running:
+> - Overlay watcher (rebuilds on save)
+> - Panel watcher (rebuilds on save)
+> - Angular CSS watcher (Tailwind)
+> - Server on http://localhost:3335
+> - Angular app on http://localhost:5177
+> - Storybook on http://localhost:6009
 >
-> ```bash
-> cd test-app-angular && npx ng serve --port 5177
-> ```
->
-> Or run the **Dev: Angular** compound task via **Terminal → Run Task → Dev: Angular** which also starts the watchers and server.
->
-> Once running, open http://localhost:5177 to see the Angular app with the overlay, and http://localhost:3335/panel/ for the inspector panel.
+> Open http://localhost:5177 to start testing with the overlay and inspector panel.
 
 ## Rules
 
 - If any step fails, stop and report the error — do not continue.
-- Do not kill watcher processes that are already running — reuse them.
 - Always start the server from `test-app-angular/` so it resolves the correct `tailwindcss` package.
 - The Angular server uses port 3335 (not 3333) to avoid conflicting with the React test app server.
+- Storybook on port 6009 is part of the standard Angular dev environment.

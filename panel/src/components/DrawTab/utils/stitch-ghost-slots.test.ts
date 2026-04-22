@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   stitchGhostSlots,
   argsToStorybookArgs,
-  isReactNodeArgValue,
+  isSlotArgValue,
   hasComponentSlots,
   SLOT_PREFIX,
 } from './stitch-ghost-slots';
@@ -13,12 +13,12 @@ import {
 
 describe('isReactNodeArgValue', () => {
   it('returns true for text type', () => {
-    expect(isReactNodeArgValue({ type: 'text', value: 'hello' })).toBe(true);
+    expect(isSlotArgValue({ type: 'text', value: 'hello' })).toBe(true);
   });
 
   it('returns true for component type', () => {
     expect(
-      isReactNodeArgValue({
+      isSlotArgValue({
         type: 'component',
         componentName: 'Icon',
         storyId: 'icon--star',
@@ -27,14 +27,14 @@ describe('isReactNodeArgValue', () => {
   });
 
   it('returns false for primitives', () => {
-    expect(isReactNodeArgValue('hello')).toBe(false);
-    expect(isReactNodeArgValue(42)).toBe(false);
-    expect(isReactNodeArgValue(null)).toBe(false);
-    expect(isReactNodeArgValue(undefined)).toBe(false);
+    expect(isSlotArgValue('hello')).toBe(false);
+    expect(isSlotArgValue(42)).toBe(false);
+    expect(isSlotArgValue(null)).toBe(false);
+    expect(isSlotArgValue(undefined)).toBe(false);
   });
 
   it('returns false for plain objects without type', () => {
-    expect(isReactNodeArgValue({ foo: 'bar' })).toBe(false);
+    expect(isSlotArgValue({ foo: 'bar' })).toBe(false);
   });
 });
 

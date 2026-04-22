@@ -1,18 +1,7 @@
-import type { ArgType } from '../../types';
-import type { ReactNodeArgValue } from '../../types';
-import { ReactNodeField } from '../ReactNodeField';
+import type { SlotArgValue } from '../../types';
+import { SlotField } from '../SlotField';
+import { isSlotProp } from '../../utils/isSlotProp';
 import type { ArgsFormProps } from './types';
-
-const REACT_NODE_NAMES = new Set(['ReactNode', 'ReactElement', 'Element', 'JSX.Element']);
-
-function isReactNodeProp(name: string, argType: ArgType): boolean {
-  if (name === 'children') return true;
-  const typeName = argType.type?.name;
-  if (typeName && REACT_NODE_NAMES.has(typeName)) return true;
-  // Storybook reports React.ReactNode as type "other" with control "object"
-  if (typeName === 'other' && argType.control === 'object') return true;
-  return false;
-}
 
 export function ArgsForm({ argTypes, args, onArgsChange, receptivePropName, onArmField, onClearReceptive }: ArgsFormProps) {
   const entries = Object.entries(argTypes);
@@ -31,7 +20,7 @@ export function ArgsForm({ argTypes, args, onArgsChange, receptivePropName, onAr
           argType={argType}
           value={args[name]}
           onChange={(v) => handleChange(name, v)}
-          isReactNode={isReactNodeProp(name, argType)}
+          isReactNode={isSlotProp(name, argType)}
           isReceptive={receptivePropName === name}
           onArmSelf={onArmField ? () => {
             // Toggle: if this field is already receptive, clear it
@@ -75,9 +64,9 @@ function ArgField({
     <label className="flex items-center gap-2 text-[10px]">
       <span className="text-bv-text-mid font-mono min-w-[60px] shrink-0">{name}</span>
       {isReactNode ? (
-        <ReactNodeField
+        <SlotField
           name={name}
-          value={value as ReactNodeArgValue | undefined}
+          value={value as SlotArgValue | undefined}
           onChange={(v) => onChange(v)}
           isReceptive={isReceptive}
           onArmSelf={onArmSelf}

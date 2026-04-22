@@ -60,7 +60,10 @@ export async function loadStoryArgTypes(
           | { argTypes?: Record<string, ArgTypeInfo> }
           | undefined;
         if (meta?.argTypes) {
+          console.log(`[storybook] loadStoryArgTypes "${componentName}" from ${importPath}:`, Object.keys(meta.argTypes));
           result[componentName] = meta.argTypes;
+        } else {
+          console.log(`[storybook] loadStoryArgTypes "${componentName}" from ${importPath}: no argTypes on meta`);
         }
       } catch (err) {
         // ignore import errors

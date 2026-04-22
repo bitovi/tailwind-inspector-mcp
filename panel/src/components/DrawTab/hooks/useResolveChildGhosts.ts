@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getSharedGhostExtractor } from './SharedGhostExtractor';
-import { isReactNodeArgValue } from '../utils/stitch-ghost-slots';
-import type { ReactNodeArgValue } from '../types';
+import { isSlotArgValue } from '../utils/stitch-ghost-slots';
+import type { SlotArgValue } from '../types';
 
 /**
  * Detects ReactNodeArgValue entries in `args` that have a storyId but are
@@ -22,10 +22,10 @@ export function useResolveChildGhosts(
   callbackRef.current = onArgsResolved;
 
   useEffect(() => {
-    const toExtract: Array<{ key: string; rnv: ReactNodeArgValue & { type: 'component' }; extractionKey: string }> = [];
+    const toExtract: Array<{ key: string; rnv: SlotArgValue & { type: 'component' }; extractionKey: string }> = [];
 
     for (const [key, value] of Object.entries(args)) {
-      if (!isReactNodeArgValue(value)) continue;
+      if (!isSlotArgValue(value)) continue;
       if (value.type !== 'component') continue;
       if (value.ghostHtml) continue; // Already resolved
       if (!value.storyId) continue; // No story to extract from

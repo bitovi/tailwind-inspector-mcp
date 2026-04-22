@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useSelectionAutoPopulate } from './useSelectionAutoPopulate';
 
-// Mock mapFiberPropsToArgs
-vi.mock('../utils/mapFiberPropsToArgs', () => ({
-  mapFiberPropsToArgs: vi.fn(
+// Mock mapPropsToArgs
+vi.mock('../utils/mapPropsToArgs', () => ({
+  mapPropsToArgs: vi.fn(
     (fiberProps: Record<string, unknown>, _argTypes: Record<string, unknown>, _resolver?: unknown) => {
       // Simple passthrough: return all fiberProps keys
       const result: Record<string, unknown> = {};
@@ -240,9 +240,9 @@ describe('useSelectionAutoPopulate', () => {
       expect(onArgsChange).toHaveBeenLastCalledWith({ variant: 'primary' });
     });
 
-    it('does not call mapFiberPropsToArgs', async () => {
-      const mod = await import('../utils/mapFiberPropsToArgs');
-      const spy = vi.mocked(mod.mapFiberPropsToArgs);
+    it('does not call mapPropsToArgs', async () => {
+      const mod = await import('../utils/mapPropsToArgs');
+      const spy = vi.mocked(mod.mapPropsToArgs);
       spy.mockClear();
 
       renderHook(() =>

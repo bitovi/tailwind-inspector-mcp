@@ -196,6 +196,8 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
   argTypesRef.current = state.argTypes;
   const releaseSlotRef = useRef(releaseSlot);
   releaseSlotRef.current = releaseSlot;
+  const liveReadyRef = useRef(state.liveReady);
+  liveReadyRef.current = state.liveReady;
 
   // Teardown extractor on unmount only — not on phase changes
   useEffect(() => {
@@ -218,17 +220,20 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
 
     extractor.load(buildArgsUrl(storyId, {}), {
       onLoaded: () => {
+        console.log('[CGI] onLoaded fired for', storyId);
         dispatch({ type: 'IFRAME_LOADED' });
         releaseSlotRef.current();
         // Apply any args that were queued before the iframe was ready
         const pa = pendingArgsRef.current;
         const bs = bestStoryRef.current;
         if (pa && bs) {
+          console.log('[CGI] applying pending args on load', { storyId: bs.id, pendingArgs: pa });
           extractor.updateArgs(bs.id, argsToStorybookArgs(pa));
           dispatch({ type: 'CLEAR_PENDING_ARGS' });
         }
       },
       onExtracted: (data) => {
+        console.log('[CGI] onExtracted fired', { ghostHtmlLen: data.ghostHtml?.length, ghostCssLen: data.ghostCss?.length, ghostHtmlPreview: data.ghostHtml?.substring(0, 200) });
         const { ghostHtml, ghostCss } = stitchGhostSlots(data.ghostHtml, data.ghostCss, argsRef.current);
         const bg = data.storyBackground;
 
@@ -258,22 +263,28 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
   // ── Args changes ───────────────────────────────────────────────────────
 
   const handleArgsChange = useCallback((newArgs: Record<string, unknown>) => {
+    const isLiveReady = liveReadyRef.current;
+    const bs = bestStoryRef.current;
+    console.log('[CGI] handleArgsChange called', { newArgs, liveReady: isLiveReady, hasExtractor: !!extractorRef.current, bestStory: bs?.id, phase: state.phase });
     dispatch({ type: 'ARGS_CHANGED', args: newArgs });
     // Update argsRef immediately so ghost-extracted fires with the correct args
     // even if React hasn't re-rendered yet before the iframe posts back.
     argsRef.current = newArgs;
 
-    if (!state.liveReady || !extractorRef.current || !state.bestStory) {
+    if (!isLiveReady || !extractorRef.current || !bs) {
       // Iframe not ready — queue args and request live load
+      console.log('[CGI] iframe not ready, requesting live refresh', { liveReady: isLiveReady, hasExtractor: !!extractorRef.current, hasBestStory: !!bs });
       dispatch({ type: 'REQUEST_LIVE_REFRESH' });
       return;
     }
 
     const ext = extractorRef.current;
-    if (ext && state.bestStory) {
-      ext.updateArgs(state.bestStory.id, argsToStorybookArgs(newArgs));
+    if (ext && bs) {
+      const sbArgs = argsToStorybookArgs(newArgs);
+      console.log('[CGI] calling ext.updateArgs', { storyId: bs.id, sbArgs });
+      ext.updateArgs(bs.id, sbArgs);
     }
-  }, [state.bestStory, state.liveReady]);
+  }, [state.phase]);
 
   // ── Resolve child component ghosts (async extraction) ──────────────────
   // When args contain ReactNodeArgValues with a storyId but no ghostHtml,
@@ -554,6 +565,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
                 onArmField={onArmField ? (propName: string) => {
                   // Register a callback that sets the value on this component's args
                   onArmField(group.name, propName, (data) => {
+                    console.log('[CGI] onArmField callback fired', { propName, componentName: data.componentName, storyId: data.storyId, ghostHtml: data.ghostHtml?.substring(0, 100) });
                     handleArgsChange({
                       ...state.args,
                       [propName]: {

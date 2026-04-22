@@ -1,8 +1,8 @@
 // Unified framework detection — tries React first, then Angular, then falls back to tag name.
 // This is the main entry point for component detection used by the overlay.
 
-import { getFiber, findComponentBoundary, type ComponentInfo } from './fiber';
-import { isAngularElement, findAngularComponentBoundary } from './angular-detect';
+import { getFiber, findOwningComponent, type ComponentInfo } from './react/fiber';
+import { isAngularElement, findOwningComponent as findAngularOwningComponent } from './angular/detect';
 
 export type Framework = 'react' | 'angular' | 'unknown';
 
@@ -41,13 +41,13 @@ export function detectComponent(el: Element): ComponentInfo | null {
   const fiber = getFiber(el);
   if (fiber) {
     cachedFramework = 'react';
-    return findComponentBoundary(fiber);
+    return findOwningComponent(fiber);
   }
 
   // Try Angular
   if (isAngularElement(el)) {
     cachedFramework = 'angular';
-    return findAngularComponentBoundary(el);
+    return findAngularOwningComponent(el);
   }
 
   return null;

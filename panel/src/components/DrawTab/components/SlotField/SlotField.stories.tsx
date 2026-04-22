@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { ReactNodeField } from './ReactNodeField';
+import { SlotField } from './SlotField';
 
-const meta: Meta<typeof ReactNodeField> = {
-  component: ReactNodeField,
-  title: 'Panel/ReactNodeField',
+const meta: Meta<typeof SlotField> = {
+  component: SlotField,
+  title: 'Panel/SlotField',
   tags: ['autodocs'],
   decorators: [
     (Story) => (
@@ -16,7 +16,7 @@ const meta: Meta<typeof ReactNodeField> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof ReactNodeField>;
+type Story = StoryObj<typeof SlotField>;
 
 export const Empty: Story = {
   args: { name: 'iconLeft', value: undefined },

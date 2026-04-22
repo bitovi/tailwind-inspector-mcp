@@ -15,23 +15,23 @@ export type ComponentGhostResolver = (componentName: string) => {
 } | null;
 
 /**
- * Map serialized fiber props (from the overlay's extractComponentProps) into
+ * Map serialized component props (from the overlay's extractComponentProps) into
  * ArgsForm-compatible values, guided by the component's argTypes.
  *
  * - Primitives that match an argType are used directly.
- * - Serialized React elements on ReactNode fields become ReactNodeArgValue.
- * - String values on ReactNode fields become { type: 'text', value }.
+ * - Serialized elements on slot fields become SlotArgValue.
+ * - String values on slot fields become { type: 'text', value }.
  * - Props not present in argTypes are skipped.
  */
-export function mapFiberPropsToArgs(
-  fiberProps: Record<string, unknown>,
+export function mapPropsToArgs(
+  props: Record<string, unknown>,
   argTypes: Record<string, ArgType>,
   resolveGhost?: ComponentGhostResolver,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, argType] of Object.entries(argTypes)) {
-    const value = fiberProps[key];
+    const value = props[key];
     if (value === undefined) continue;
 
     if (isSlotProp(key, argType)) {

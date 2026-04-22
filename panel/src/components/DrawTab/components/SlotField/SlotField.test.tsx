@@ -1,26 +1,26 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ReactNodeField } from './ReactNodeField';
+import { SlotField } from './SlotField';
 
 test('renders empty text input by default', () => {
-  render(<ReactNodeField name="iconLeft" value={undefined} onChange={() => {}} />);
+  render(<SlotField name="iconLeft" value={undefined} onChange={() => {}} />);
   expect(screen.getByPlaceholderText('(empty)')).toBeInTheDocument();
 });
 
 test('renders with existing text value', () => {
-  render(<ReactNodeField name="children" value={{ type: 'text', value: 'Hello' }} onChange={() => {}} />);
+  render(<SlotField name="children" value={{ type: 'text', value: 'Hello' }} onChange={() => {}} />);
   expect(screen.getByDisplayValue('Hello')).toBeInTheDocument();
 });
 
 test('calls onChange with text value on typing', () => {
   const onChange = vi.fn();
-  render(<ReactNodeField name="children" value={{ type: 'text', value: '' }} onChange={onChange} />);
+  render(<SlotField name="children" value={{ type: 'text', value: '' }} onChange={onChange} />);
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'New text' } });
   expect(onChange).toHaveBeenCalledWith({ type: 'text', value: 'New text' });
 });
 
 test('shows receptive placeholder when field is receptive', () => {
   render(
-    <ReactNodeField
+    <SlotField
       name="iconLeft"
       value={undefined}
       onChange={() => {}}
@@ -33,7 +33,7 @@ test('shows receptive placeholder when field is receptive', () => {
 test('arm button calls onArmSelf', () => {
   const onArmSelf = vi.fn();
   render(
-    <ReactNodeField
+    <SlotField
       name="iconLeft"
       value={undefined}
       onChange={() => {}}
@@ -46,7 +46,7 @@ test('arm button calls onArmSelf', () => {
 
 test('arm button shows Cancel title when receptive', () => {
   render(
-    <ReactNodeField
+    <SlotField
       name="iconLeft"
       value={undefined}
       onChange={() => {}}
@@ -59,7 +59,7 @@ test('arm button shows Cancel title when receptive', () => {
 
 test('renders component chip when filled', () => {
   render(
-    <ReactNodeField
+    <SlotField
       name="iconLeft"
       value={{
         type: 'component',
@@ -79,7 +79,7 @@ test('renders component chip when filled', () => {
 test('clear button reverts to text input', () => {
   const onChange = vi.fn();
   render(
-    <ReactNodeField
+    <SlotField
       name="iconLeft"
       value={{
         type: 'component',

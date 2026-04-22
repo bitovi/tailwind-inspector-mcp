@@ -11,8 +11,10 @@ import { detectComponent } from "./framework-detect";
 import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
+import { saveScrollRatio } from './preserve-scroll';
 import { findExactMatches } from "./grouping";
-import { getFiber, findComponentBoundary, extractComponentProps } from "./fiber";
+import { getFiber, findOwningComponent, extractComponentProps } from "./react/fiber";
+import { isAngularElement, findOwningComponent as findAngularOwningComponent, extractAngularComponentProps } from "./angular/detect";
 import type { InsertMode } from "./messages";
 import {
 	applyPreview,
@@ -411,13 +413,35 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	let componentProps: Record<string, unknown> | undefined;
 	const fiber = getFiber(targetEl);
 	if (fiber) {
-		const boundary = findComponentBoundary(fiber);
+		const boundary = findOwningComponent(fiber);
 		if (boundary) {
 			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
 			componentName = boundary.componentName;
 			// NOTE: We intentionally do NOT override classString with the component
 			// root element's classes. The user selected this specific element (possibly
 			// via the depth picker), so we send its own classes.
+		}
+	}
+
+	// Extract component props from Angular if available (and React didn't match)
+	if (!componentProps && isAngularElement(targetEl)) {
+		const boundary = findAngularOwningComponent(targetEl);
+		if (boundary) {
+			const instance = boundary.componentFiber;
+			let hostEl: Element;
+
+			if (instance instanceof Element) {
+				// Prod fallback: componentFiber IS the host element
+				hostEl = instance;
+			} else {
+				// Dev mode: componentFiber is the live component instance.
+				// Find the host element via its tag selector.
+				const selector = instance.constructor?.ɵcmp?.selectors?.[0]?.[0];
+				hostEl = (selector ? targetEl.closest(selector) : null) ?? targetEl;
+			}
+
+			componentProps = extractAngularComponentProps(instance, hostEl) ?? undefined;
+			componentName = boundary.componentName;
 		}
 	}
 
@@ -1037,6 +1061,14 @@ function init(): void {
 			state.activeContainer.open(`${SERVER_ORIGIN}/panel`);
 		}
 	}
+
+	// Persist scroll position before unload so the sidebar can restore it.
+	// The browser's own scroll restoration hasn't run yet when the overlay
+	// restructures the DOM, so we save the ratio to sessionStorage.
+	window.addEventListener("beforeunload", () => {
+		const wrapper = document.getElementById('tw-page-wrapper');
+		saveScrollRatio(wrapper);
+	});
 
 	window.addEventListener("overlay-ws-connected", () => {
 		if (state.wasConnected) {

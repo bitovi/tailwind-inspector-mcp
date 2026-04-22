@@ -31,6 +31,26 @@ jobs:
   e2e-tutorial:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [demo, test-app, test-app-angular]
+        include:
+          - project: demo
+            install: |
+              cd demo && npm ci
+              cd $GITHUB_WORKSPACE/storybook-test/v10 && npm install
+              cd $GITHUB_WORKSPACE/test-app && npm ci --legacy-peer-deps
+          - project: test-app
+            install: |
+              cd test-app && npm ci --legacy-peer-deps
+              cd $GITHUB_WORKSPACE/storybook-test/v10 && npm install
+          - project: test-app-angular
+            install: |
+              cd test-app-angular && npm ci
+              cd $GITHUB_WORKSPACE/storybook-test/angular-v10 && npm install
+              cd $GITHUB_WORKSPACE/test-app-angular && npm run build:css
+
     steps:
       - uses: actions/checkout@v4
 
@@ -45,14 +65,8 @@ jobs:
       - name: Install panel deps
         run: cd panel && npm ci
 
-      - name: Install test-app deps
-        run: cd test-app && npm ci --legacy-peer-deps
-
-      - name: Install storybook-test/v10 deps
-        run: cd storybook-test/v10 && npm install
-
-      - name: Install demo deps
-        run: cd demo && npm ci
+      - name: Install project deps
+        run: ${{ matrix.install }}
 
       - name: Build overlay + panel
         run: npm run build
@@ -60,13 +74,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run tutorial E2E tests
-        run: npx playwright test --config e2e/playwright.config.ts
+      - name: Run tutorial E2E tests (${{ matrix.project }})
+        run: PW_PROJECT=${{ matrix.project }} npx playwright test --config e2e/playwright.config.ts --project ${{ matrix.project }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: e2e-tutorial-results
+          name: e2e-tutorial-${{ matrix.project }}
           path: playwright-report/
           retention-days: 7
 

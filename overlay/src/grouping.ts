@@ -3,7 +3,7 @@
 
 import {
   getFiber,
-  findComponentBoundary,
+  findOwningComponent,
   getRootFiber,
   getRootFiberFrom,
   findAllInstances,
@@ -11,13 +11,13 @@ import {
   getChildPath,
   resolvePathToDOM,
   buildPathLabel,
-} from './fiber';
+} from './react/fiber';
 import { detectComponent } from './framework-detect';
 import {
   isAngularElement,
   findAllAngularInstances,
   collectAngularComponentDOMNodes,
-} from './angular-detect';
+} from './angular/detect';
 
 export interface ElementGroup {
   label: string;         // e.g. "+e" or "-a +f"
@@ -108,7 +108,7 @@ export function findExactMatches(
 
   // React-specific: check if we have a fiber for deep tree walking
   const fiber = getFiber(clickedEl);
-  const reactBoundary = fiber ? findComponentBoundary(fiber) : null;
+  const reactBoundary = fiber ? findOwningComponent(fiber) : null;
 
   let exactMatches: HTMLElement[];
 
@@ -181,7 +181,7 @@ export function computeNearGroups(
   // Determine scope
   const boundary = detectComponent(clickedEl);
   const fiber = getFiber(clickedEl);
-  const reactBoundary = fiber ? findComponentBoundary(fiber) : null;
+  const reactBoundary = fiber ? findOwningComponent(fiber) : null;
 
   let candidates: HTMLElement[];
 
@@ -319,7 +319,7 @@ export function findSamePathElements(
   // Try React path first (fiber-based exact path matching)
   const fiber = getFiber(clickedEl);
   if (fiber) {
-    const boundary = findComponentBoundary(fiber);
+    const boundary = findOwningComponent(fiber);
     if (!boundary) return null;
 
     const { label, path } = buildPathLabel(fiber, boundary);

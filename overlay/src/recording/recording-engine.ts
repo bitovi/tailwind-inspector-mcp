@@ -48,16 +48,9 @@ export class RecordingEngine {
 
     await this.snapshotStore.open();
 
-    // Check if resuming (existing snapshots in IndexedDB)
-    const existing = await this.snapshotStore.getAllSnapshots();
-    if (existing.length > 0) {
-      for (let i = existing.length - 1; i >= 0; i--) {
-        if (existing[i].isKeyframe && existing[i].domSnapshot) {
-          this.domDiffer.setBaseline(existing[i].domSnapshot!);
-          break;
-        }
-      }
-    }
+    // Do not resume the DomDiffer baseline from a prior session — each page
+    // load must start fresh so new diffs are never anchored to a stale DOM.
+    // captureSnapshot('page-load') below always forces a new keyframe anyway.
 
     // Start all interceptors — each returns a teardown handle
     this.consoleHandle = createConsoleInterceptor();
