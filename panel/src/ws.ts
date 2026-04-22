@@ -42,8 +42,14 @@ export function connect(): void {
 
     if (winner === 'ws') {
       sendRaw({ type: 'REGISTER', role: 'panel' });
+    } else {
+      // SSE registration happens server-side via ?role= query param,
+      // but we still need to bridge the REGISTER to the parent window
+      // so page-level listeners (e.g. tutorial progress) can observe it.
+      if (window.parent !== window) {
+        try { window.parent.postMessage({ __vybit: true, type: 'REGISTER', role: 'panel' }, '*'); } catch {}
+      }
     }
-    // SSE registration happens server-side via ?role= query param
 
     for (const h of connectHandlers) h();
   };

@@ -26,7 +26,7 @@ export class App {
   readonly totalSteps = 11;
 
   get completedCount(): number {
-    return this.progress.completedCount;
+    return this.progress.completedCount();
   }
 
   triggerInvoiceError(): void {

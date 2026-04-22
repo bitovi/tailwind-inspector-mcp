@@ -15,7 +15,7 @@ export type ContentPart =
 // JSX builder: converts componentArgs to a JSX string
 // ---------------------------------------------------------------------------
 
-interface ReactNodeArgValue {
+interface SlotArgValue {
   type: 'text' | 'component';
   value?: string;
   componentName?: string;
@@ -23,13 +23,13 @@ interface ReactNodeArgValue {
   args?: Record<string, unknown>;
 }
 
-function isReactNodeArgValue(v: unknown): v is ReactNodeArgValue {
+function isSlotArgValue(v: unknown): v is SlotArgValue {
   if (!v || typeof v !== 'object') return false;
   const obj = v as Record<string, unknown>;
   return obj.type === 'text' || obj.type === 'component';
 }
 
-function reactNodeToProp(value: ReactNodeArgValue): string {
+function slotToProp(value: SlotArgValue): string {
   if (value.type === 'text') {
     const str = value.value ?? '';
     if (!str) return '""';
@@ -44,7 +44,7 @@ export function collectNestedImports(args?: Record<string, unknown>): Array<{ co
   if (!args) return [];
   const result: Array<{ componentName: string; componentPath?: string }> = [];
   for (const value of Object.values(args)) {
-    if (!isReactNodeArgValue(value)) continue;
+    if (!isSlotArgValue(value)) continue;
     if (value.type === 'component' && value.componentName) {
       result.push({
         componentName: value.componentName,
@@ -64,7 +64,7 @@ export function buildJsx(componentName: string, args?: Record<string, unknown>):
   const { children, ...rest } = args;
   const props = Object.entries(rest)
     .map(([key, value]) => {
-      if (isReactNodeArgValue(value)) return `${key}=${reactNodeToProp(value)}`;
+      if (isSlotArgValue(value)) return `${key}=${slotToProp(value)}`;
       if (typeof value === 'string') return `${key}="${value}"`;
       if (typeof value === 'boolean') return value ? key : `${key}={false}`;
       return `${key}={${JSON.stringify(value)}}`;
@@ -75,8 +75,8 @@ export function buildJsx(componentName: string, args?: Record<string, unknown>):
 
   if (children != null && children !== '') {
     let childStr: string;
-    if (isReactNodeArgValue(children)) {
-      const propVal = reactNodeToProp(children);
+    if (isSlotArgValue(children)) {
+      const propVal = slotToProp(children);
       if (propVal.startsWith('{') && propVal.endsWith('}')) {
         childStr = propVal.slice(1, -1);
       } else if (propVal.startsWith('"') && propVal.endsWith('"')) {

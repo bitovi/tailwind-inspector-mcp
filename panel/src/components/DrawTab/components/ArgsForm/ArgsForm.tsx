@@ -1,5 +1,5 @@
-import type { ReactNodeArgValue } from '../../types';
-import { ReactNodeField } from '../ReactNodeField';
+import type { SlotArgValue } from '../../types';
+import { SlotField } from '../SlotField';
 import { isSlotProp } from '../../utils/isSlotProp';
 import type { ArgsFormProps } from './types';
 
@@ -64,9 +64,9 @@ function ArgField({
     <label className="flex items-center gap-2 text-[10px]">
       <span className="text-bv-text-mid font-mono min-w-[60px] shrink-0">{name}</span>
       {isReactNode ? (
-        <ReactNodeField
+        <SlotField
           name={name}
-          value={value as ReactNodeArgValue | undefined}
+          value={value as SlotArgValue | undefined}
           onChange={(v) => onChange(v)}
           isReceptive={isReceptive}
           onArmSelf={onArmSelf}

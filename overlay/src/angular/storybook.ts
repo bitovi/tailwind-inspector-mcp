@@ -14,7 +14,7 @@
  *   so this bypasses the channel entirely.
  */
 
-import type { ArgType } from '../../panel/src/components/DrawTab/types';
+import type { ArgType } from '../../../panel/src/components/DrawTab/types';
 
 // ── Slot discovery ─────────────────────────────────────────────────────────
 

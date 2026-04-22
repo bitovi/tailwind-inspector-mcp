@@ -1,10 +1,10 @@
-import type { ReactNodeArgValue } from '../types';
+import type { SlotArgValue } from '../types';
 
 /** Slot prefix character U+229E (⊞) — distinctive enough to avoid false matches */
 export const SLOT_PREFIX = '\u229E';
 
 /** Returns true if a value is a ReactNodeArgValue */
-export function isReactNodeArgValue(value: unknown): value is ReactNodeArgValue {
+export function isSlotArgValue(value: unknown): value is SlotArgValue {
   if (!value || typeof value !== 'object') return false;
   const v = value as Record<string, unknown>;
   return v.type === 'text' || v.type === 'component';
@@ -18,7 +18,7 @@ export function isReactNodeArgValue(value: unknown): value is ReactNodeArgValue 
 export function argsToStorybookArgs(args: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(args)) {
-    if (isReactNodeArgValue(value)) {
+    if (isSlotArgValue(value)) {
       if (value.type === 'text') {
         result[key] = value.value;
       } else {
@@ -34,7 +34,7 @@ export function argsToStorybookArgs(args: Record<string, unknown>): Record<strin
 /** Check whether any arg in a record is a component-type ReactNodeArgValue */
 export function hasComponentSlots(args: Record<string, unknown>): boolean {
   return Object.values(args).some(
-    (v) => isReactNodeArgValue(v) && (v as ReactNodeArgValue).type === 'component',
+    (v) => isSlotArgValue(v) && (v as SlotArgValue).type === 'component',
   );
 }
 
@@ -59,7 +59,7 @@ export function stitchGhostSlots(
 
     let changed = false;
     for (const [key, value] of Object.entries(args)) {
-      if (!isReactNodeArgValue(value) || value.type !== 'component') continue;
+      if (!isSlotArgValue(value) || value.type !== 'component') continue;
       const marker = `${SLOT_PREFIX}${key}`;
       if (!html.includes(marker)) continue;
       if (value.ghostHtml) {

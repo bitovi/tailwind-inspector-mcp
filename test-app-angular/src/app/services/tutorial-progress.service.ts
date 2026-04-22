@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 
 const STORAGE_KEY = 'vybit-tutorial-progress';
 
@@ -18,7 +18,13 @@ interface ServerMessage {
 
 @Injectable({ providedIn: 'root' })
 export class TutorialProgressService {
-  completedSteps = new Set<number>();
+  private _completedSteps = signal<Set<number>>(new Set());
+
+  get completedSteps(): Set<number> { return this._completedSteps(); }
+
+  readonly completedCount = computed(() =>
+    [...this._completedSteps()].filter(s => s <= 11).length,
+  );
 
   constructor() {
     this.loadProgress();
@@ -26,19 +32,17 @@ export class TutorialProgressService {
   }
 
   completeStep(step: number): void {
-    if (this.completedSteps.has(step)) return;
-    this.completedSteps = new Set(this.completedSteps);
-    this.completedSteps.add(step);
+    const current = this._completedSteps();
+    if (current.has(step)) return;
+    const next = new Set(current);
+    next.add(step);
+    this._completedSteps.set(next);
     this.saveProgress();
   }
 
   resetProgress(): void {
-    this.completedSteps = new Set<number>();
+    this._completedSteps.set(new Set<number>());
     this.saveProgress();
-  }
-
-  get completedCount(): number {
-    return [...this.completedSteps].filter(s => s <= 11).length;
   }
 
   private loadProgress(): void {
@@ -47,7 +51,7 @@ export class TutorialProgressService {
       if (raw) {
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) {
-          this.completedSteps = new Set(arr);
+          this._completedSteps.set(new Set(arr));
         }
       }
     } catch { /* ignore */ }
@@ -55,7 +59,7 @@ export class TutorialProgressService {
 
   private saveProgress(): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...this.completedSteps]));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...this._completedSteps()]));
     } catch { /* ignore */ }
   }
 

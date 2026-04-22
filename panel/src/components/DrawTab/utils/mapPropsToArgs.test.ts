@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { mapFiberPropsToArgs } from './mapFiberPropsToArgs';
+import { mapPropsToArgs } from './mapPropsToArgs';
 import type { ArgType } from '../types';
 
-describe('mapFiberPropsToArgs', () => {
+describe('mapPropsToArgs', () => {
   it('maps primitive string props guided by argTypes', () => {
     const fiberProps = { variant: 'primary', children: 'Submit' };
     const argTypes: Record<string, ArgType> = {
       variant: { control: 'select', options: ['primary', 'secondary'] },
       children: { control: 'text' },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({ variant: 'primary', children: { type: 'text', value: 'Submit' } });
   });
 
@@ -19,7 +19,7 @@ describe('mapFiberPropsToArgs', () => {
       disabled: { control: 'boolean' },
       size: { control: 'number' },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({ disabled: true, size: 42 });
   });
 
@@ -30,7 +30,7 @@ describe('mapFiberPropsToArgs', () => {
     const argTypes: Record<string, ArgType> = {
       leftIcon: { control: 'object', type: { name: 'ReactNode' } },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({
       leftIcon: { type: 'component', componentName: 'StarIcon', storyId: '', args: { size: 16 } },
     });
@@ -42,7 +42,7 @@ describe('mapFiberPropsToArgs', () => {
       children: { control: 'text' },
     };
     // children is always treated as ReactNode
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({ children: { type: 'text', value: 'Hello world' } });
   });
 
@@ -51,7 +51,7 @@ describe('mapFiberPropsToArgs', () => {
     const argTypes: Record<string, ArgType> = {
       variant: { control: 'select', options: ['primary', 'secondary'] },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({ variant: 'primary' });
   });
 
@@ -60,7 +60,7 @@ describe('mapFiberPropsToArgs', () => {
     const argTypes: Record<string, ArgType> = {
       variant: { control: 'select', options: ['primary', 'secondary'] },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({});
   });
 
@@ -68,13 +68,13 @@ describe('mapFiberPropsToArgs', () => {
     const argTypes: Record<string, ArgType> = {
       variant: { control: 'select', options: ['primary', 'secondary'] },
     };
-    const result = mapFiberPropsToArgs({}, argTypes);
+    const result = mapPropsToArgs({}, argTypes);
     expect(result).toEqual({});
   });
 
   it('returns empty object when argTypes is empty', () => {
     const fiberProps = { variant: 'primary' };
-    const result = mapFiberPropsToArgs(fiberProps, {});
+    const result = mapPropsToArgs(fiberProps, {});
     expect(result).toEqual({});
   });
 
@@ -85,7 +85,7 @@ describe('mapFiberPropsToArgs', () => {
     const argTypes: Record<string, ArgType> = {
       icon: { control: 'object', type: { name: 'other' } },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({
       icon: { type: 'component', componentName: 'HeartIcon', storyId: '' },
     });
@@ -96,7 +96,7 @@ describe('mapFiberPropsToArgs', () => {
     const argTypes: Record<string, ArgType> = {
       variant: { control: 'select', options: ['primary', 'secondary'] },
     };
-    const result = mapFiberPropsToArgs(fiberProps, argTypes);
+    const result = mapPropsToArgs(fiberProps, argTypes);
     expect(result).toEqual({});
   });
 });

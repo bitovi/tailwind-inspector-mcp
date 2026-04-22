@@ -6,7 +6,7 @@
  * no shadow DOM, no attribute observation, no custom element registration.
  */
 import { rewriteRootToHost, propertyRulesToFallbacks } from '../../shared/css-utils';
-import { tryAngularDirectUpdate } from './angular-storybook';
+import { tryAngularDirectUpdate } from './angular/storybook';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

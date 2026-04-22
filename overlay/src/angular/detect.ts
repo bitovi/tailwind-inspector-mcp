@@ -1,8 +1,8 @@
 // Angular component detection utilities.
 // Parallels fiber.ts for React — detects Angular component boundaries from DOM nodes.
 
-import type { ComponentInfo } from './fiber';
-import { serializeValue } from './fiber';
+import type { ComponentInfo } from '../react/fiber';
+import { serializeValue } from '../react/fiber';
 import type { SerializedReactElement } from '../../shared/types';
 
 /**
@@ -40,7 +40,7 @@ export function isAngularElement(el: Element): boolean {
  * 1. Dev mode: use ng.getComponent(el) or ng.getOwningComponent(el)
  * 2. Prod fallback: walk _ngcontent-* → _nghost-* to find the component host element
  */
-export function findAngularComponentBoundary(el: Element): ComponentInfo | null {
+export function findOwningComponent(el: Element): ComponentInfo | null {
   const ng = getNgApi();
 
   if (ng) {
@@ -84,6 +84,43 @@ export function findAngularComponentBoundary(el: Element): ComponentInfo | null 
   }
 
   return null;
+}
+
+/**
+ * Return all user-authored component ancestors from nearest to farthest.
+ * Walks up the DOM tree, collecting every Angular component host element.
+ */
+export function findComponentAncestors(el: Element): ComponentInfo[] {
+  const ancestors: ComponentInfo[] = [];
+  const ng = getNgApi();
+
+  let current: Element | null = el.parentElement;
+  while (current) {
+    if (ng) {
+      const comp = ng.getComponent(current);
+      if (comp) {
+        const raw = comp.constructor?.name || 'Unknown';
+        const name = raw.replace(/^_+/, '');
+        ancestors.push({
+          componentType: comp.constructor,
+          componentName: name,
+          componentFiber: comp,
+        });
+      }
+    } else {
+      // Prod fallback: look for _nghost-* attributes
+      const hostAttr = findAttrStartingWith(current, '_nghost-');
+      if (hostAttr) {
+        ancestors.push({
+          componentType: current.tagName.toLowerCase(),
+          componentName: formatTagAsComponentName(current.tagName),
+          componentFiber: current,
+        });
+      }
+    }
+    current = current.parentElement;
+  }
+  return ancestors;
 }
 
 /**
@@ -173,7 +210,7 @@ export function collectAngularComponentDOMNodes(
  *   and serializes projected Angular components as SerializedReactElement
  * - The unnamed slot (`*`) maps to `children` (text content)
  *
- * Returns a record compatible with the panel's `mapFiberPropsToArgs()`.
+ * Returns a record compatible with the panel's `mapPropsToArgs()`.
  */
 export function extractAngularComponentProps(
   componentInstance: any,

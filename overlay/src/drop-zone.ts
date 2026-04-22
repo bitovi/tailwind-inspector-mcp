@@ -6,7 +6,7 @@
 
 import { send, sendTo } from './ws';
 import { buildContext } from './context';
-import { getFiber, findComponentBoundary } from './fiber';
+import { getFiber, findOwningComponent } from './react/fiber';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
 
@@ -137,7 +137,7 @@ export function placeAtLockedInsert(
   let parentComponent: { name: string } | undefined;
   const fiber = getFiber(target);
   if (fiber) {
-    const boundary = findComponentBoundary(fiber);
+    const boundary = findOwningComponent(fiber);
     if (boundary) parentComponent = { name: boundary.componentName };
   }
 
@@ -212,7 +212,7 @@ export function replaceElement(
   let parentComponent: { name: string } | undefined;
   const fiber = getFiber(target);
   if (fiber) {
-    const boundary = findComponentBoundary(fiber);
+    const boundary = findOwningComponent(fiber);
     if (boundary) parentComponent = { name: boundary.componentName };
   }
 
@@ -687,7 +687,7 @@ function handleBrowseClick(e: MouseEvent): void {
   showLockedIndicator(dom.currentTarget, dom.currentPosition, parentAxis);
 
   const fiber = getFiber(dom.currentTarget);
-  const boundary = fiber ? findComponentBoundary(fiber) : null;
+  const boundary = fiber ? findOwningComponent(fiber) : null;
   const targetName = boundary?.componentName ?? dom.currentTarget.tagName.toLowerCase();
 
   sendTo('panel', {
@@ -782,7 +782,7 @@ function handleComponentInsertClick(e: MouseEvent): void {
   let parentComponent: { name: string } | undefined;
   const fiber = getFiber(target);
   if (fiber) {
-    const boundary = findComponentBoundary(fiber);
+    const boundary = findOwningComponent(fiber);
     if (boundary) parentComponent = { name: boundary.componentName };
   }
 

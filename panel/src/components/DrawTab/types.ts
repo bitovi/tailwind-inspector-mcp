@@ -7,7 +7,7 @@ export interface ArgType {
 }
 
 /** A value stored in a ReactNode-eligible prop field */
-export type ReactNodeArgValue =
+export type SlotArgValue =
   | { type: 'text'; value: string }
   | {
       type: 'component';

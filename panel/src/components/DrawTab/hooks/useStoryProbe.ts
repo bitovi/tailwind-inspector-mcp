@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ArgType, StoryEntry } from '../types';
 import { STORYBOOK_BASE } from './storybookBase';
-import { discoverAngularSlots } from '../../../../../overlay/src/angular-storybook';
+import { discoverAngularSlots } from '../../../../../overlay/src/angular/storybook';
 
 /**
  * Storybook's storyPrepared event sends argTypes with control as an object:

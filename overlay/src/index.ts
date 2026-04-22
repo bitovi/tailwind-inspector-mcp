@@ -13,8 +13,8 @@ import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { saveScrollRatio } from './preserve-scroll';
 import { findExactMatches } from "./grouping";
-import { getFiber, findComponentBoundary, extractComponentProps } from "./fiber";
-import { isAngularElement, findAngularComponentBoundary, extractAngularComponentProps } from "./angular-detect";
+import { getFiber, findOwningComponent, extractComponentProps } from "./react/fiber";
+import { isAngularElement, findOwningComponent as findAngularOwningComponent, extractAngularComponentProps } from "./angular/detect";
 import type { InsertMode } from "./messages";
 import {
 	applyPreview,
@@ -413,7 +413,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	let componentProps: Record<string, unknown> | undefined;
 	const fiber = getFiber(targetEl);
 	if (fiber) {
-		const boundary = findComponentBoundary(fiber);
+		const boundary = findOwningComponent(fiber);
 		if (boundary) {
 			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
 			componentName = boundary.componentName;
@@ -425,7 +425,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 
 	// Extract component props from Angular if available (and React didn't match)
 	if (!componentProps && isAngularElement(targetEl)) {
-		const boundary = findAngularComponentBoundary(targetEl);
+		const boundary = findAngularOwningComponent(targetEl);
 		if (boundary) {
 			const instance = boundary.componentFiber;
 			let hostEl: Element;

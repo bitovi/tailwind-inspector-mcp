@@ -54,7 +54,7 @@ export function resolveComponentName(type: unknown): string | null {
 
 /** Walk .return up the fiber tree to find the nearest function/class component.
  *  Handles plain functions, forwardRef, and memo wrappers. */
-export function findComponentBoundary(fiber: any): ComponentInfo | null {
+export function findOwningComponent(fiber: any): ComponentInfo | null {
   let current = fiber.return;
   while (current) {
     const t = current.type;
@@ -71,6 +71,26 @@ export function findComponentBoundary(fiber: any): ComponentInfo | null {
     current = current.return;
   }
   return null;
+}
+
+/**
+ * Return all user-authored component ancestors from nearest to farthest.
+ * Walks the fiber .return chain, collecting every component boundary.
+ */
+export function findComponentAncestors(fiber: any): ComponentInfo[] {
+  const ancestors: ComponentInfo[] = [];
+  let current = fiber.return;
+  while (current) {
+    const t = current.type;
+    if (typeof t !== 'string') {
+      const name = resolveComponentName(t);
+      if (name) {
+        ancestors.push({ componentType: t, componentName: name, componentFiber: current });
+      }
+    }
+    current = current.return;
+  }
+  return ancestors;
 }
 
 /**
