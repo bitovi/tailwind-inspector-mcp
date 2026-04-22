@@ -42,11 +42,11 @@ jobs:
           - project: test-app
             install: |
               cd test-app && npm ci --legacy-peer-deps
-              cd storybook-test/v10 && npm install
+              cd $GITHUB_WORKSPACE/storybook-test/v10 && npm install
           - project: test-app-angular
             install: |
               cd test-app-angular && npm ci
-              cd storybook-test/angular-v10 && npm install
+              cd $GITHUB_WORKSPACE/storybook-test/angular-v10 && npm install
 
     steps:
       - uses: actions/checkout@v4
