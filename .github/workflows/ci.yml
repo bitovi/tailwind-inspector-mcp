@@ -39,6 +39,8 @@ jobs:
           - project: demo
             install: |
               cd demo && npm ci
+              cd $GITHUB_WORKSPACE/storybook-test/v10 && npm install
+              cd $GITHUB_WORKSPACE/test-app && npm ci --legacy-peer-deps
           - project: test-app
             install: |
               cd test-app && npm ci --legacy-peer-deps
