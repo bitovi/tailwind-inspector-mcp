@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>052 · 000 — Edit Mode Redesign Mock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --teal:         #00848B;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --green:        #2E7229;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       120ms ease-out;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1e1e1e;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      color: var(--text);
+      padding: 40px;
+    }
+
+    .page-header {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 36px;
+      line-height: 1.6;
+      max-width: 900px;
+    }
+
+    .page-subtitle strong { color: var(--text-mid); }
+
+    .section-divider {
+      width: 100%;
+      border: none;
+      border-top: 1px solid #333;
+      margin: 32px 0 20px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 4px;
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .variations {
+      display: flex;
+      gap: 48px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .col-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      max-width: 500px;
+    }
+
+    .col-description {
+      font-size: 11px;
+      color: var(--text-mid);
+      max-width: 500px;
+      line-height: 1.55;
+      margin-bottom: 4px;
+    }
+
+    .annotation {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--teal);
+      background: var(--teal-dim);
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-left: 6px;
+    }
+
+    .annotation.orange {
+      color: var(--orange);
+      background: rgba(245, 83, 45, 0.12);
+    }
+
+    .annotation.green {
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.12);
+    }
+
+    /* ─── FULL LAYOUT MOCK ─────────────────────────────────── */
+    .layout-mock {
+      display: flex;
+      width: 820px;
+      height: 520px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ─── MOCK PAGE ────────────────────────────────────────── */
+    .mock-page {
+      flex: 1;
+      background: #f8fafc;
+      position: relative;
+      font-family: var(--font-ui);
+      overflow: hidden;
+    }
+
+    .mock-header {
+      background: #0f172a;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mock-logo {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      background: var(--teal);
+    }
+
+    .mock-header-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .mock-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mock-card {
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+    }
+
+    .mock-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .mock-card-text {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    .mock-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    .mock-badge.teal { background: #ccfbf1; color: #0d9488; }
+    .mock-badge.blue { background: #dbeafe; color: #2563eb; }
+    .mock-badge.red { background: #fee2e2; color: #dc2626; }
+
+    .mock-btn-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 600;
+      border: none;
+    }
+
+    .mock-form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .mock-form-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .mock-form-input {
+      padding: 5px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #334155;
+      background: white;
+    }
+
+    /* ─── SELECTED ELEMENT ─────────────────────────────────── */
+    .selected-el {
+      outline: 2px solid var(--teal);
+      outline-offset: 2px;
+      position: relative;
+    }
+
+    /* ─── FLOATING TOOLBAR (element-attached) ──────────────── */
+    .floating-toolbar {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      background: #1a1a1a;
+      border-radius: 6px;
+      padding: 3px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08);
+      z-index: 10;
+    }
+
+    .ft-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: #bbb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .ft-btn.active {
+      background: var(--teal-dark);
+      color: var(--teal);
+    }
+
+    .ft-sep {
+      width: 1px;
+      height: 16px;
+      background: #444;
+      margin: 0 2px;
+    }
+
+    .ft-input {
+      background: #333;
+      border: none;
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 11px;
+      padding: 4px 8px;
+      width: 140px;
+      outline: none;
+    }
+
+    .ft-send {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      border: none;
+      background: var(--teal);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    /* ─── DROP INDICATOR ───────────────────────────────────── */
+    .drop-indicator {
+      height: 3px;
+      background: var(--teal);
+      border-radius: 3px;
+      margin: -1.5px 0;
+    }
+
+    /* ─── DRAG GHOST (follows cursor) ──────────────────────── */
+    .drag-ghost {
+      position: absolute;
+      background: var(--teal);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      pointer-events: none;
+      opacity: 0.9;
+      white-space: nowrap;
+    }
+
+    /* ─── BOTTOM TOOLBAR ───────────────────────────────────── */
+    .bottom-toolbar {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(calc(-50% - 80px)); /* offset for panel width */
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 4px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+      z-index: 20;
+    }
+
+    /* ─── Drag grip ── */
+    .bt-grip {
+      width: 14px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      flex-shrink: 0;
+      opacity: 0.5;
+      transition: opacity var(--t-fast);
+    }
+    .bt-grip:hover { opacity: 1; }
+    .bt-grip svg { width: 6px; height: 10px; }
+
+    /* ─── Combo button (icon + label) ── */
+    .bt-combo {
+      height: 28px;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: #aaa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 8px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      font-family: var(--font-ui);
+      cursor: pointer;
+      transition: all var(--t-fast);
+      flex-shrink: 0;
+    }
+    .bt-combo svg { width: 12px; height: 12px; }
+    .bt-combo:hover { background: #333; color: white; }
+    .bt-combo.dim { opacity: 0.4; }
+
+    /* ─── Mode group (Select + 1+) ── */
+    .bt-group {
+      display: flex;
+      align-items: center;
+      border-radius: 5px;
+      overflow: hidden;
+      transition: opacity var(--t-fast);
+    }
+    .bt-group.dim { opacity: 0.4; }
+    .bt-group .bt-combo { border-radius: 0; }
+    .bt-group-sep {
+      width: 1px;
+      height: 14px;
+      background: rgba(0,132,139,0.5);
+      flex-shrink: 0;
+    }
+
+    /* ─── Adjunct button (1+) ── */
+    .bt-adjunct {
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: #5fd4da;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-ui);
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-radius: 0;
+      transition: all var(--t-fast);
+    }
+    .bt-adjunct:hover { background: #333; }
+    .bt-adjunct .plus { font-size: 9px; margin-left: 1px; opacity: 0.6; }
+
+    /* ─── Engaged (teal) — target locked ── */
+    .bt-combo.engaged {
+      box-shadow: inset 0 0 0 1.5px #00848B;
+      color: #5fd4da;
+    }
+    .bt-group.engaged {
+      box-shadow: inset 0 0 0 1.5px #00848B;
+    }
+    .bt-group.engaged .bt-combo,
+    .bt-group.engaged .bt-adjunct { color: #5fd4da; }
+    .bt-group.engaged .bt-group-sep { background: rgba(0,132,139,0.5); }
+
+    /* ─── Picking (orange) — waiting for click on page ── */
+    .bt-combo.picking {
+      background: rgba(245, 83, 45, 0.15);
+      color: #F5532D;
+    }
+    .bt-group.picking {
+      background: rgba(245, 83, 45, 0.15);
+    }
+    .bt-group.picking .bt-combo,
+    .bt-group.picking .bt-adjunct { color: #F5532D; }
+    .bt-group.picking .bt-group-sep { background: rgba(245,83,45,0.35); }
+
+    .bt-sep {
+      width: 1px;
+      height: 16px;
+      background: #3a3a3a;
+      margin: 0 2px;
+      flex-shrink: 0;
+    }
+
+    /* ─── PANEL ────────────────────────────────────────────── */
+    .panel {
+      width: 310px;
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .panel-head {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-mode-icons {
+      display: flex;
+      gap: 2px;
+    }
+
+    .panel-mode-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all var(--t-fast);
+    }
+
+    .panel-mode-btn:hover { color: var(--text-mid); background: var(--surface); }
+
+    .panel-mode-btn.active {
+      background: var(--teal-dark);
+      color: var(--teal);
+    }
+
+    .panel-container-switcher {
+      display: flex;
+      gap: 4px;
+    }
+
+    .panel-container-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .panel-container-icon.active {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    /* ─── PANEL TABS ───────────────────────────────────────── */
+    .panel-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-tab {
+      flex: 1;
+      padding: 8px 0;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--t-fast);
+    }
+
+    .panel-tab:hover { color: var(--text-mid); }
+
+    .panel-tab.active {
+      color: var(--teal);
+      border-bottom-color: var(--teal);
+    }
+
+    /* ─── PANEL BODY ───────────────────────────────────────── */
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    /* ─── DESIGN TAB CONTENT ───────────────────────────────── */
+    .prop-group-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      margin: 10px 0 6px;
+    }
+
+    .prop-group-title:first-child { margin-top: 0; }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+    }
+
+    .prop-row:hover { background: var(--surface); }
+
+    .prop-name {
+      font-size: 11px;
+      color: var(--text-mid);
+      min-width: 60px;
+    }
+
+    .prop-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+
+    .prop-chip .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* ─── COMPONENTS TAB CONTENT ───────────────────────────── */
+    .component-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 6px;
+      border-radius: 6px;
+      margin-bottom: 2px;
+      cursor: grab;
+      transition: background var(--t-fast);
+    }
+
+    .component-row:hover { background: var(--surface); }
+    .component-row:active { cursor: grabbing; }
+
+    .component-thumb {
+      width: 40px;
+      height: 28px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface-hi);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: var(--muted);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .component-thumb-inner {
+      transform: scale(0.4);
+      pointer-events: none;
+    }
+
+    .component-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .component-path {
+      font-size: 9px;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .component-grip {
+      color: var(--muted);
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+
+    .component-row:hover .component-grip { opacity: 1; }
+
+    .draw-canvas-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      color: var(--text-mid);
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .draw-canvas-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+    /* ─── PANEL FOOTER ─────────────────────────────────────── */
+    .panel-footer {
+      padding: 8px 10px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .footer-count {
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    .footer-count.has-items { color: var(--orange); background: rgba(245, 83, 45, 0.1); }
+
+    /* ─── SEARCH BOX ───────────────────────────────────────── */
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      margin-bottom: 8px;
+    }
+
+    .search-box input {
+      border: none;
+      background: none;
+      color: var(--text);
+      font-size: 11px;
+      outline: none;
+      flex: 1;
+      font-family: var(--font-ui);
+    }
+
+    .search-icon { color: var(--muted); font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <h1 class="page-header">052 · 000 — Edit Mode Redesign</h1>
+  <p class="page-subtitle">
+    Replace the <strong>Select / Insert</strong> mode toggle with a single <strong>Edit</strong> mode
+    and a persistent <strong>bottom toolbar</strong>. Component placement is primarily <strong>drag-drop</strong>
+    from the Components tab. The bottom toolbar contains Select, Text, and Insert tools.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 1: FULL LAYOUT — SELECT TOOL ACTIVE
+       ═══════════════════════════════════════════════════════════ -->
+
+  <div class="section-title">1 · Select Tool Active — Element Selected</div>
+  <div class="section-subtitle">
+    The user clicked the Select tool in the bottom toolbar, then clicked a card on the page.
+    The Design tab shows properties. Only the message row appears below the element — no mode/tab buttons on the element.
+  </div>
+
+  <div class="layout-mock">
+    <!-- PAGE -->
+    <div class="mock-page">
+      <div class="mock-header">
+        <div class="mock-logo"></div>
+        <div class="mock-header-text">Acme Dashboard</div>
+      </div>
+      <div class="mock-content">
+        <div class="mock-card">
+          <div class="mock-card-title">Team Overview</div>
+          <div class="mock-card-text">5 members · 3 active projects</div>
+        </div>
+
+        <!-- Selected element with message row below -->
+        <div class="mock-card selected-el" style="position: relative;">
+          <div class="mock-card-title">Fix Login Timeout</div>
+          <div class="mock-card-text">Users see a blank screen after 30s</div>
+          <div style="margin-top: 6px;">
+            <span class="mock-badge red">Bug</span>
+            <span class="mock-badge blue">Frontend</span>
+          </div>
+          <!-- Message row (only element-attached UI that remains) -->
+          <div class="floating-toolbar" style="position: absolute; bottom: -36px; left: 0;">
+            <input class="ft-input" placeholder="Describe a change…" />
+            <button class="ft-send" title="Send">➤</button>
+          </div>
+        </div>
+
+        <div class="mock-card">
+          <div class="mock-card-title">Add User Form</div>
+          <div class="mock-form-row" style="margin-top: 6px;">
+            <div class="mock-form-label">Email</div>
+            <div class="mock-form-input">jane@acme.com</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom toolbar — Select engaged (element selected → teal) -->
+      <div class="bottom-toolbar">
+        <div class="bt-grip" title="Drag to move"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+        <div class="bt-group engaged">
+          <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+          <div class="bt-group-sep"></div>
+          <button class="bt-adjunct">1<span class="plus">+</span></button>
+        </div>
+        <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+        <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+      </div>
+    </div>
+
+    <!-- PANEL -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-mode-icons">
+          <button class="panel-mode-btn active" title="Edit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="panel-mode-btn" title="Bug Report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0 1 12 0v3c0 3.3-2.7 6-6 6z"/><path d="M6 11H2M22 11h-4M6 15H2M22 15h-4"/></svg>
+          </button>
+          <button class="panel-mode-btn" title="Theme">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.02-.24-.29-.38-.63-.38-1.02 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.5-4.5-9.96-10-9.96z"/></svg>
+          </button>
+        </div>
+        <div class="panel-container-switcher">
+          <button class="panel-container-icon active" title="Sidebar">◧</button>
+          <button class="panel-container-icon" title="Popup">⧉</button>
+        </div>
+      </div>
+
+      <div class="panel-tabs">
+        <button class="panel-tab active">Design</button>
+        <button class="panel-tab">Components</button>
+      </div>
+
+      <div class="panel-body">
+        <div class="prop-group-title">Spacing</div>
+        <div class="prop-row">
+          <span class="prop-name">padding</span>
+          <span class="prop-chip">p-3</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-name">margin-top</span>
+          <span class="prop-chip">mt-0</span>
+        </div>
+
+        <div class="prop-group-title">Typography</div>
+        <div class="prop-row">
+          <span class="prop-name">font-size</span>
+          <span class="prop-chip">text-sm</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-name">color</span>
+          <span class="prop-chip"><span class="swatch" style="background: #64748b;"></span>text-slate-500</span>
+        </div>
+
+        <div class="prop-group-title">Background</div>
+        <div class="prop-row">
+          <span class="prop-name">bg</span>
+          <span class="prop-chip"><span class="swatch" style="background: white;"></span>bg-white</span>
+        </div>
+
+        <div class="prop-group-title">Border</div>
+        <div class="prop-row">
+          <span class="prop-name">border</span>
+          <span class="prop-chip">border</span>
+        </div>
+        <div class="prop-row">
+          <span class="prop-name">radius</span>
+          <span class="prop-chip">rounded-lg</span>
+        </div>
+
+        <div class="prop-group-title">Shadow</div>
+        <div class="prop-row">
+          <span class="prop-name">shadow</span>
+          <span class="prop-chip">shadow-none</span>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="footer-count has-items">1 draft</span>
+        <span class="footer-count">0 committed</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 2: COMPONENTS TAB — DRAG IN PROGRESS
+       ═══════════════════════════════════════════════════════════ -->
+
+  <hr class="section-divider" />
+
+  <div class="section-title">2 · Drag-Drop — Component Being Dragged to Page</div>
+  <div class="section-subtitle">
+    The user grabbed a Badge thumbnail from the Components tab and is dragging it over the page.
+    A teal drop indicator shows where the component will land. The cursor label follows the mouse.
+    <strong>No mode switch required</strong> — drag works from any tool state.
+  </div>
+
+  <div class="layout-mock">
+    <!-- PAGE -->
+    <div class="mock-page">
+      <div class="mock-header">
+        <div class="mock-logo"></div>
+        <div class="mock-header-text">Acme Dashboard</div>
+      </div>
+      <div class="mock-content">
+        <div class="mock-card">
+          <div class="mock-card-title">Team Overview</div>
+          <div class="mock-card-text">5 members · 3 active projects</div>
+        </div>
+
+        <div class="mock-card">
+          <div class="mock-card-title">Fix Login Timeout</div>
+          <div class="mock-card-text">Users see a blank screen after 30s</div>
+          <div style="margin-top: 6px;">
+            <span class="mock-badge red">Bug</span>
+            <span class="mock-badge blue">Frontend</span>
+            <!-- drop indicator between badges -->
+            <span style="display: inline-block; width: 3px; height: 16px; background: var(--teal); border-radius: 3px; vertical-align: middle; margin: 0 2px;"></span>
+          </div>
+          <!-- Drag ghost near the drop point -->
+          <div class="drag-ghost" style="top: 30px; left: 290px;">Badge</div>
+        </div>
+
+        <div class="mock-card">
+          <div class="mock-card-title">Add User Form</div>
+          <div class="mock-form-row" style="margin-top: 6px;">
+            <div class="mock-form-label">Email</div>
+            <div class="mock-form-input">jane@acme.com</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom toolbar (Select engaged, drag works regardless) -->
+      <div class="bottom-toolbar">
+        <div class="bt-grip" title="Drag to move"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+        <div class="bt-group engaged">
+          <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+          <div class="bt-group-sep"></div>
+          <button class="bt-adjunct">1<span class="plus">+</span></button>
+        </div>
+        <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+        <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+      </div>
+    </div>
+
+    <!-- PANEL — Components tab, Badge row dimmed (being dragged) -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-mode-icons">
+          <button class="panel-mode-btn active" title="Edit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="panel-mode-btn" title="Bug Report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0 1 12 0v3c0 3.3-2.7 6-6 6z"/><path d="M6 11H2M22 11h-4M6 15H2M22 15h-4"/></svg>
+          </button>
+          <button class="panel-mode-btn" title="Theme">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.02-.24-.29-.38-.63-.38-1.02 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.5-4.5-9.96-10-9.96z"/></svg>
+          </button>
+        </div>
+        <div class="panel-container-switcher">
+          <button class="panel-container-icon active">◧</button>
+          <button class="panel-container-icon">⧉</button>
+        </div>
+      </div>
+
+      <div class="panel-tabs">
+        <button class="panel-tab">Design</button>
+        <button class="panel-tab active">Components</button>
+      </div>
+
+      <div class="panel-body">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input placeholder="Search components…" />
+        </div>
+
+        <div class="component-row" style="opacity: 0.35;">
+          <div class="component-thumb">
+            <span class="mock-badge teal" style="margin: 0; font-size: 7px;">Badge</span>
+          </div>
+          <div>
+            <div class="component-name">Badge</div>
+            <div class="component-path">Components / Badge</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <span style="font-size: 7px; padding: 2px 5px; background: #3b82f6; color: white; border-radius: 3px;">Btn</span>
+          </div>
+          <div>
+            <div class="component-name">Button</div>
+            <div class="component-path">Components / Button</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <span style="font-size: 7px; color: var(--muted);">★</span>
+          </div>
+          <div>
+            <div class="component-name">Icon</div>
+            <div class="component-path">Components / Icon</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <div style="width: 24px; height: 14px; background: white; border-radius: 2px; border: 1px solid #e2e8f0;"></div>
+          </div>
+          <div>
+            <div class="component-name">Card</div>
+            <div class="component-path">Components / Card</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="draw-canvas-btn">
+          <span style="font-size: 14px;">＋</span>
+          Draw / Screenshot Canvas
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="footer-count">0 draft</span>
+        <span class="footer-count">0 committed</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3: INSERT TOOL — INSERTION POINT SET
+       ═══════════════════════════════════════════════════════════ -->
+
+  <hr class="section-divider" />
+
+  <div class="section-title">3 · Insert Tool Active — Insertion Point Set</div>
+  <div class="section-subtitle">
+    The user clicked the Insert tool in the bottom toolbar, then clicked between form fields.
+    The floating toolbar appears at the insertion point with a message input.
+    The user can type a description or click a component in the Components tab to place it.
+  </div>
+
+  <div class="layout-mock">
+    <!-- PAGE -->
+    <div class="mock-page">
+      <div class="mock-header">
+        <div class="mock-logo"></div>
+        <div class="mock-header-text">Acme Dashboard</div>
+      </div>
+      <div class="mock-content">
+        <div class="mock-card">
+          <div class="mock-card-title">Team Overview</div>
+          <div class="mock-card-text">5 members · 3 active projects</div>
+        </div>
+
+        <div class="mock-card" style="position: relative;">
+          <div class="mock-card-title">Add Team Member</div>
+          <div class="mock-form-row" style="margin-top: 8px;">
+            <div class="mock-form-label">Full Name</div>
+            <div class="mock-form-input">Jane Smith</div>
+          </div>
+          <div class="mock-form-row" style="margin-top: 6px;">
+            <div class="mock-form-label">Email</div>
+            <div class="mock-form-input">jane@acme.com</div>
+          </div>
+
+          <!-- Insertion point indicator + floating toolbar -->
+          <div style="margin: 6px 0; position: relative;">
+            <div class="drop-indicator"></div>
+            <div class="floating-toolbar" style="position: absolute; top: -34px; left: 0; z-index: 10;">
+              <input class="ft-input" value="Add a phone number field" style="width: 180px;" />
+              <button class="ft-send" title="Send">➤</button>
+            </div>
+          </div>
+
+          <div class="mock-form-row" style="margin-top: 6px;">
+            <div class="mock-form-label">Role</div>
+            <div class="mock-form-input">Designer</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom toolbar — Insert engaged (insertion point set → teal) -->
+      <div class="bottom-toolbar">
+        <div class="bt-grip" title="Drag to move"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+        <div class="bt-group dim">
+          <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+          <div class="bt-group-sep"></div>
+          <button class="bt-adjunct">1<span class="plus">+</span></button>
+        </div>
+        <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+        <button class="bt-combo engaged"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+      </div>
+    </div>
+
+    <!-- PANEL — Components tab visible (user can click-to-place) -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-mode-icons">
+          <button class="panel-mode-btn active" title="Edit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="panel-mode-btn" title="Bug Report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0 1 12 0v3c0 3.3-2.7 6-6 6z"/><path d="M6 11H2M22 11h-4M6 15H2M22 15h-4"/></svg>
+          </button>
+          <button class="panel-mode-btn" title="Theme">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.02-.24-.29-.38-.63-.38-1.02 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.5-4.5-9.96-10-9.96z"/></svg>
+          </button>
+        </div>
+        <div class="panel-container-switcher">
+          <button class="panel-container-icon active">◧</button>
+          <button class="panel-container-icon">⧉</button>
+        </div>
+      </div>
+
+      <div class="panel-tabs">
+        <button class="panel-tab">Design</button>
+        <button class="panel-tab active">Components</button>
+      </div>
+
+      <div class="panel-body">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input placeholder="Search components…" />
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <span class="mock-badge teal" style="margin: 0; font-size: 7px;">Badge</span>
+          </div>
+          <div>
+            <div class="component-name">Badge</div>
+            <div class="component-path">Components / Badge</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <span style="font-size: 7px; padding: 2px 5px; background: #3b82f6; color: white; border-radius: 3px;">Btn</span>
+          </div>
+          <div>
+            <div class="component-name">Button</div>
+            <div class="component-path">Components / Button</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <span style="font-size: 7px; color: var(--muted);">★</span>
+          </div>
+          <div>
+            <div class="component-name">Icon</div>
+            <div class="component-path">Components / Icon</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="component-row">
+          <div class="component-thumb">
+            <div style="width: 24px; height: 14px; background: white; border-radius: 2px; border: 1px solid #e2e8f0;"></div>
+          </div>
+          <div>
+            <div class="component-name">Card</div>
+            <div class="component-path">Components / Card</div>
+          </div>
+          <span class="component-grip">⠿</span>
+        </div>
+
+        <div class="draw-canvas-btn">
+          <span style="font-size: 14px;">＋</span>
+          Draw / Screenshot Canvas
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="footer-count">0 draft</span>
+        <span class="footer-count">0 committed</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 4: PANEL ON OPEN — NO TOOL SELECTED
+       ═══════════════════════════════════════════════════════════ -->
+
+  <hr class="section-divider" />
+
+  <div class="section-title">4 · Panel Just Opened — No Tool Selected</div>
+  <div class="section-subtitle">
+    When the panel opens, Edit mode is active but <strong>no tool is pre-selected</strong> in the bottom toolbar.
+    The page is non-interactive until the user picks a tool. The Components tab is visible for immediate drag-drop.
+  </div>
+
+  <div class="variations">
+
+    <!-- Variation A: Design tab (empty state) -->
+    <div class="col">
+      <div class="col-label">Design tab — empty state</div>
+      <div class="col-description">No element selected yet. A hint prompts the user to select something.</div>
+
+      <div class="panel" style="height: 380px;">
+        <div class="panel-head">
+          <div class="panel-mode-icons">
+            <button class="panel-mode-btn active" title="Edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="panel-mode-btn" title="Bug Report">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2"/></svg>
+            </button>
+            <button class="panel-mode-btn" title="Theme">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg>
+            </button>
+          </div>
+          <div class="panel-container-switcher">
+            <button class="panel-container-icon active">◧</button>
+            <button class="panel-container-icon">⧉</button>
+          </div>
+        </div>
+        <div class="panel-tabs">
+          <button class="panel-tab active">Design</button>
+          <button class="panel-tab">Components</button>
+        </div>
+        <div class="panel-body" style="display: flex; align-items: center; justify-content: center; text-align: center;">
+          <div>
+            <div style="font-size: 28px; margin-bottom: 8px; opacity: 0.3;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>
+            </div>
+            <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">
+              Click <strong style="color: var(--text-mid);">Select</strong> in the toolbar below,<br/>then click an element to inspect it.
+            </div>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <span class="footer-count">0 draft</span>
+          <span class="footer-count">0 committed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variation B: Components tab (ready to drag) -->
+    <div class="col">
+      <div class="col-label">Components tab — ready to drag</div>
+      <div class="col-description">Components are immediately available. User can grab one and drag without selecting a tool first.</div>
+
+      <div class="panel" style="height: 380px;">
+        <div class="panel-head">
+          <div class="panel-mode-icons">
+            <button class="panel-mode-btn active" title="Edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="panel-mode-btn" title="Bug Report">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2"/></svg>
+            </button>
+            <button class="panel-mode-btn" title="Theme">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg>
+            </button>
+          </div>
+          <div class="panel-container-switcher">
+            <button class="panel-container-icon active">◧</button>
+            <button class="panel-container-icon">⧉</button>
+          </div>
+        </div>
+        <div class="panel-tabs">
+          <button class="panel-tab">Design</button>
+          <button class="panel-tab active">Components</button>
+        </div>
+        <div class="panel-body">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input placeholder="Search components…" />
+          </div>
+
+          <div class="component-row">
+            <div class="component-thumb">
+              <span class="mock-badge teal" style="margin: 0; font-size: 7px;">Badge</span>
+            </div>
+            <div>
+              <div class="component-name">Badge</div>
+              <div class="component-path">Components / Badge</div>
+            </div>
+            <span class="component-grip">⠿</span>
+          </div>
+
+          <div class="component-row">
+            <div class="component-thumb">
+              <span style="font-size: 7px; padding: 2px 5px; background: #3b82f6; color: white; border-radius: 3px;">Btn</span>
+            </div>
+            <div>
+              <div class="component-name">Button</div>
+              <div class="component-path">Components / Button</div>
+            </div>
+            <span class="component-grip">⠿</span>
+          </div>
+
+          <div class="component-row">
+            <div class="component-thumb">
+              <span style="font-size: 7px; color: var(--muted);">★</span>
+            </div>
+            <div>
+              <div class="component-name">Icon</div>
+              <div class="component-path">Components / Icon</div>
+            </div>
+            <span class="component-grip">⠿</span>
+          </div>
+
+          <div class="component-row">
+            <div class="component-thumb">
+              <div style="width: 24px; height: 14px; background: white; border-radius: 2px; border: 1px solid #e2e8f0;"></div>
+            </div>
+            <div>
+              <div class="component-name">Card</div>
+              <div class="component-path">Components / Card</div>
+            </div>
+            <span class="component-grip">⠿</span>
+          </div>
+
+          <div class="draw-canvas-btn">
+            <span style="font-size: 14px;">＋</span>
+            Draw / Screenshot Canvas
+          </div>
+        </div>
+        <div class="panel-footer">
+          <span class="footer-count">0 draft</span>
+          <span class="footer-count">0 committed</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 5: BOTTOM TOOLBAR — CLOSE-UP
+       ═══════════════════════════════════════════════════════════ -->
+
+  <hr class="section-divider" />
+
+  <div class="section-title">5 · Bottom Toolbar — Close-up States</div>
+  <div class="section-subtitle">
+    The bottom toolbar is centered in the page area (not the full viewport). It's draggable.
+    Only as wide as its contents. Shows tooltips on hover.
+  </div>
+
+  <div class="variations">
+
+    <div class="col">
+      <div class="col-label">No tool selected <span class="annotation">default on open</span></div>
+      <div style="background: #f8fafc; border-radius: 10px; padding: 40px 60px; position: relative; min-width: 360px; min-height: 80px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="display: flex; align-items: center; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <div class="bt-group dim">
+            <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+            <div class="bt-group-sep"></div>
+            <button class="bt-adjunct" style="opacity: 0.4;">1<span class="plus">+</span></button>
+          </div>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Select: picking <span class="annotation" style="background: #F5532D;">orange</span></div>
+      <div style="background: #f8fafc; border-radius: 10px; padding: 40px 60px; position: relative; min-width: 360px; min-height: 80px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="display: flex; align-items: center; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <div class="bt-group picking">
+            <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+            <div class="bt-group-sep"></div>
+            <button class="bt-adjunct">1<span class="plus">+</span></button>
+          </div>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Select: engaged <span class="annotation green">teal</span></div>
+      <div style="background: #f8fafc; border-radius: 10px; padding: 40px 60px; position: relative; min-width: 360px; min-height: 80px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="display: flex; align-items: center; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <div class="bt-group engaged">
+            <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+            <div class="bt-group-sep"></div>
+            <button class="bt-adjunct">1<span class="plus">+</span></button>
+          </div>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Insert: picking <span class="annotation" style="background: #F5532D;">orange</span></div>
+      <div style="background: #f8fafc; border-radius: 10px; padding: 40px 60px; position: relative; min-width: 360px; min-height: 80px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="display: flex; align-items: center; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <div class="bt-group dim">
+            <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+            <div class="bt-group-sep"></div>
+            <button class="bt-adjunct" style="opacity: 0.4;">1<span class="plus">+</span></button>
+          </div>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+          <button class="bt-combo picking"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label">Insert: engaged <span class="annotation green">teal</span></div>
+      <div style="background: #f8fafc; border-radius: 10px; padding: 40px 60px; position: relative; min-width: 360px; min-height: 80px; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="display: flex; align-items: center; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="#666"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <div class="bt-group dim">
+            <button class="bt-combo"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14,0H2C.895,0,0,.895,0,2V14c0,1.105,.895,2,2,2H6c.552,0,1-.448,1-1h0c0-.552-.448-1-1-1H2V2H14V6c0,.552,.448,1,1,1h0c.552,0,1-.448,1-1V2c0-1.105-.895-2-2-2Z"/><path d="M12.043,10.629l2.578-.644c.268-.068,.43-.339,.362-.607-.043-.172-.175-.308-.345-.358l-7-2c-.175-.051-.363-.002-.492,.126-.128,.129-.177,.317-.126,.492l2,7c.061,.214,.257,.362,.48,.362h.009c.226-.004,.421-.16,.476-.379l.644-2.578,3.664,3.664c.397,.384,1.03,.373,1.414-.025,.374-.388,.374-1.002,0-1.389l-3.664-3.664Z"/></svg> Select</button>
+            <div class="bt-group-sep"></div>
+            <button class="bt-adjunct" style="opacity: 0.4;">1<span class="plus">+</span></button>
+          </div>
+          <button class="bt-combo dim"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M14.895,2.553l-1-2c-.169-.339-.516-.553-.895-.553H3c-.379,0-.725,.214-.895,.553L1.105,2.553c-.247,.494-.047,1.095,.447,1.342,.496,.248,1.095,.046,1.342-.447l.724-1.447h3.382V14h-2c-.552,0-1,.448-1,1s.448,1,1,1h6c.552,0,1-.448,1-1s-.448-1-1-1h-2V2h3.382l.724,1.447c.175,.351,.528,.553,.896,.553,.15,0,.303-.034,.446-.105,.494-.247,.694-.848,.447-1.342Z"/></svg> Text</button>
+          <button class="bt-combo engaged"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"><rect x="4" y="2" width="16" height="8" rx="2"/><path d="m17,14h1c1.105,0,2,.895,2,2"/><path d="m4,16c0-1.105.895-2,2-2h1"/><path d="m7,22h-1c-1.105,0-2-.895-2-2"/><path d="m20,20c0,1.105-.895,2-2,2h-1"/><line x1="13" y1="14" x2="11" y2="14"/><line x1="13" y1="22" x2="11" y2="22"/></svg> Insert</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

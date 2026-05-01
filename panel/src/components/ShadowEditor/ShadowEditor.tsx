@@ -52,7 +52,7 @@ export function ShadowEditor({
         <Fragment key={type}>
           {/* Horizontal rule between rows */}
           {idx > 0 && (
-            <div className="h-px bg-bv-border opacity-50" style={{ gridColumn: '1 / -1' }} />
+            <div className="h-px bg-bit-border opacity-50" style={{ gridColumn: '1 / -1' }} />
           )}
 
           {layer ? (
@@ -88,14 +88,14 @@ export function ShadowEditor({
               {/* Col 1: + button */}
               <button
                 type="button"
-                className="w-4 h-4 rounded-[3px] border border-dashed border-bv-border bg-transparent text-bv-muted text-[11px] cursor-pointer flex items-center justify-center transition-all hover:border-bv-teal hover:border-solid hover:text-bv-teal hover:bg-bv-teal/10"
+                className="w-4 h-4 rounded-[3px] border border-dashed border-bit-border bg-transparent text-bit-muted text-[11px] cursor-pointer flex items-center justify-center transition-all hover:border-bit-teal hover:border-solid hover:text-bit-teal hover:bg-bit-teal/10"
                 onClick={() => onAdd(LAYER_DEFAULTS[type])}
                 title={`Add ${LAYER_DEFAULTS[type]}`}
               >
                 +
               </button>
               {/* Col 2: name */}
-              <div className="flex items-center leading-none text-[9px] font-mono uppercase tracking-[0.6px] text-bv-muted whitespace-nowrap">
+              <div className="flex items-center leading-none text-[9px] font-mono uppercase tracking-[0.6px] text-bit-muted whitespace-nowrap">
                 {LAYER_LABELS[type]}
               </div>
             </>

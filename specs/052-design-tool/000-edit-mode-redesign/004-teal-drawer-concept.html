@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>052 · 004 — Teal Drawer Concept</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --orange-light: #ff7b5c;
+      --orange-bg:    rgba(245, 83, 45, 0.12);
+      --teal:         #00848B;
+      --teal-light:   #5fd4da;
+      --teal-dark:    #00464A;
+      --teal-deep:    #003D40;
+      --teal-surface: #005357;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --teal-glow:    rgba(0, 132, 139, 0.5);
+      --orange-glow:  rgba(245, 83, 45, 0.5);
+      --green:        #2E7229;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1e1e1e; font-family: var(--font-ui); font-size: 12px; color: var(--text); padding: 40px; }
+
+    .page-header { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 36px; line-height: 1.6; max-width: 900px; }
+    .page-subtitle strong { color: var(--text-mid); }
+    .section-divider { width: 100%; border: none; border-top: 1px solid #333; margin: 40px 0 20px; }
+    .section-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--teal); margin-bottom: 4px; }
+    .section-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; max-width: 700px; }
+    .variations { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .col-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-mono); color: var(--muted); max-width: 500px; }
+    .annotation { display: inline-block; font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+    .annotation.teal { color: var(--teal); background: var(--teal-dim); }
+    .annotation.orange { color: var(--orange); background: var(--orange-bg); }
+    .annotation.green { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
+    .annotation.gray { color: var(--muted); background: rgba(153,153,153,0.12); }
+
+    /* ── Mock page ── */
+    .mock-page {
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: visible;
+      position: relative;
+      font-family: var(--font-ui);
+      width: 520px;
+    }
+    .mock-header { background: #0f172a; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-radius: 10px 10px 0 0; }
+    .mock-logo { width: 20px; height: 20px; border-radius: 4px; background: var(--teal); }
+    .mock-header-text { font-size: 12px; font-weight: 700; color: white; }
+    .mock-content { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .mock-card { background: white; border: 1px solid #e2e8f0; padding: 16px 18px; border-radius: 12px; }
+    .mock-card-title { font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 2px; }
+    .mock-card-value { font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 2px; line-height: 1.1; }
+    .mock-card-trend { font-size: 12px; font-weight: 600; color: var(--teal); }
+    .mock-card-trend::before { content: '↑ '; }
+    .mock-activity { font-size: 14px; font-weight: 800; color: #0f172a; }
+    .mock-activity-item { font-size: 11px; color: #64748b; }
+
+    /* ── Pulsing teal outline (selected, at rest) ── */
+    .sel-teal {
+      position: absolute;
+      border: 2px solid var(--teal);
+      border-radius: 2px;
+      pointer-events: none;
+      animation: highlight-pulse 2s ease-in-out infinite;
+    }
+    @keyframes highlight-pulse {
+      0%, 100% { border-color: #00848B; box-shadow: 0 0 6px var(--teal-glow); }
+      50%       { border-color: #F5532D; box-shadow: 0 0 6px var(--orange-glow); }
+    }
+
+    /* ── Solid orange outline (text editing) ── */
+    .sel-orange {
+      position: absolute;
+      border: 2px solid var(--orange);
+      border-radius: 2px;
+      pointer-events: none;
+      box-shadow: 0 0 6px var(--orange-glow);
+    }
+
+    /* ── Component tag ── */
+    .comp-tag {
+      position: absolute;
+      top: -20px; right: -2px;
+      background: var(--teal);
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px 4px 0 0;
+      font-family: var(--font-mono);
+      line-height: 1.4;
+    }
+    .value-tag {
+      position: absolute;
+      top: -2px; right: -2px;
+      background: var(--orange);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 0 2px 0 4px;
+      font-family: var(--font-mono);
+      line-height: 1.2;
+    }
+
+    /* ── Resize handles ── */
+    .resize-frame { position: absolute; pointer-events: none; }
+    .resize-handle { position: absolute; background: var(--teal); border: 1.5px solid white; pointer-events: auto; z-index: 5; }
+    .resize-handle.br { bottom: -4px; right: -4px; width: 8px; height: 8px; border-radius: 2px; cursor: se-resize; }
+    .resize-handle.r  { right: -4px; top: 50%; transform: translateY(-50%); width: 6px; height: 20px; border-radius: 3px; cursor: e-resize; }
+    .resize-handle.b  { bottom: -4px; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; border-radius: 3px; cursor: s-resize; }
+
+    /* ── Teal drawer ── */
+    .teal-drawer {
+      background: var(--teal-deep);
+      border-radius: 12px;
+      padding: 0;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,132,139,0.2);
+      overflow: hidden;
+      width: 100%;
+    }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      gap: 8px;
+    }
+    .drawer-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      flex: 1;
+    }
+    .drawer-title svg { width: 16px; height: 16px; }
+    .drawer-close {
+      width: 24px; height: 24px; border-radius: 6px; border: none;
+      background: transparent; color: rgba(255,255,255,0.6);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px; font-weight: 400;
+      transition: background 0.15s, color 0.15s;
+    }
+    .drawer-close:hover { background: rgba(255,255,255,0.1); color: white; }
+
+    /* Editing state header */
+    .editing-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(245, 83, 45, 0.2);
+      border: 1px solid rgba(245, 83, 45, 0.35);
+      color: var(--orange-light);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .editing-pill svg { width: 12px; height: 12px; }
+    .drawer-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.7);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: var(--font-ui);
+    }
+    .drawer-action:hover { background: rgba(255,255,255,0.1); color: white; }
+    .drawer-action.done { color: white; font-weight: 600; }
+    .drawer-action.done::before { content: '✓ '; }
+    .drawer-action.discard::before { content: '✕ '; }
+
+    /* Drawer msg row */
+    .drawer-body { padding: 6px 10px 10px; }
+    .drawer-msg {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      width: 100%;
+    }
+    .drawer-msg textarea {
+      flex: 1;
+      border: none;
+      background: rgba(0,0,0,0.25);
+      color: #e5e5e5;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 8px 12px;
+      border-radius: 8px;
+      outline: none;
+      resize: none;
+      overflow: hidden;
+      height: 36px;
+      box-sizing: border-box;
+    }
+    .drawer-msg textarea::placeholder { color: rgba(255,255,255,0.35); }
+    .drawer-mic {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: transparent; color: rgba(255,255,255,0.4);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .drawer-mic svg { width: 16px; height: 16px; }
+    .drawer-send {
+      width: 36px; height: 36px; border-radius: 8px; border: none;
+      background: var(--teal-surface);
+      color: rgba(255,255,255,0.8);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .drawer-send svg { width: 14px; height: 14px; }
+
+    /* ── Text node highlight ── */
+    .text-highlight {
+      background: #fff3e0;
+      outline: 2px solid var(--orange);
+      outline-offset: 1px;
+      border-radius: 2px;
+      padding: 0 2px;
+      position: relative;
+    }
+
+    /* Arrow connector between outline and drawer */
+    .connector {
+      width: 2px; height: 6px; background: var(--teal); margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 class="page-header">052 · 004 — Teal Drawer Concept</h1>
+  <p class="page-subtitle">
+    A <strong>teal drawer</strong> hangs below the selected element, containing both the action header
+    and the message row. On text edit, the outline turns <strong>orange</strong>, the drawer header morphs
+    to show editing state + Discard/Done, and the msg row stays for inline instructions.
+  </p>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATE 1 — SELECTED, AT REST
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">State 1 — Selected (at rest)</div>
+  <p class="section-subtitle">
+    Pulsing teal↔orange outline. "stat-card" tag top-right. Resize handles on R/B/BR.
+    Teal drawer below: "Aa Edit text" header + close button, msg row underneath.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">ELEMENT SELECTED — DRAWER OPEN</span>
+
+      <div class="mock-page" style="padding-bottom: 0;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content" style="padding-bottom: 10px;">
+
+          <!-- Selected card -->
+          <div style="position: relative;">
+            <div class="mock-card">
+              <div class="mock-card-title">Active tasks</div>
+              <div class="mock-card-value">12</div>
+              <div class="mock-card-trend">3 this week</div>
+            </div>
+            <!-- Pulsing teal outline -->
+            <div class="sel-teal" style="inset: -4px;"></div>
+            <!-- Component tag -->
+            <div class="comp-tag">stat-card</div>
+            <!-- Resize handles -->
+            <div class="resize-frame" style="inset: -5px;">
+              <div class="resize-handle r"></div>
+              <div class="resize-handle b"></div>
+              <div class="resize-handle br"></div>
+            </div>
+          </div>
+
+          <!-- Teal drawer -->
+          <div class="teal-drawer" style="margin-top: 8px;">
+            <div class="drawer-header">
+              <div class="drawer-title">
+                <!-- Aa icon -->
+                <svg viewBox="0 0 16 16" fill="none">
+                  <text x="0" y="12" font-family="Inter, sans-serif" font-size="11" font-weight="800" fill="white">Aa</text>
+                </svg>
+                Edit text
+              </div>
+              <button class="drawer-close">✕</button>
+            </div>
+            <div class="drawer-body">
+              <div class="drawer-msg">
+                <textarea placeholder="Describe a change for this element..."></textarea>
+                <button class="drawer-mic">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg>
+                </button>
+                <button class="drawer-send">
+                  <svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stuff below -->
+          <div style="margin-top: 8px;">
+            <div class="mock-activity">Recent activity</div>
+            <div class="mock-activity-item" style="margin-top:4px;">🔴 Maya Chen shipped Auth refactor</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATE 2 — TEXT EDITING ACTIVE
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">State 2 — Editing Text</div>
+  <p class="section-subtitle">
+    User clicked "Edit text" or a text node. Outline turns <strong>solid orange</strong>.
+    The clicked text node gets an orange highlight + "value" tag. Drawer header morphs:
+    orange "Editing text" pill + Discard + Done. Msg row placeholder changes.
+    Resize handles dim (can't resize while editing text).
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">TEXT NODE SELECTED — EDITING</span>
+
+      <div class="mock-page" style="padding-bottom: 0;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content" style="padding-bottom: 10px;">
+
+          <!-- Card with orange outline + text node highlight -->
+          <div style="position: relative;">
+            <div class="mock-card">
+              <div class="mock-card-title">Active tasks</div>
+              <div class="mock-card-value">
+                <span class="text-highlight">12<span class="value-tag">value</span></span>
+              </div>
+              <div class="mock-card-trend">3 this week</div>
+            </div>
+            <!-- Solid orange outline -->
+            <div class="sel-orange" style="inset: -4px;"></div>
+            <!-- Resize handles dimmed -->
+            <div class="resize-frame" style="inset: -5px;">
+              <div class="resize-handle r" style="opacity: 0.25;"></div>
+              <div class="resize-handle b" style="opacity: 0.25;"></div>
+              <div class="resize-handle br" style="opacity: 0.25;"></div>
+            </div>
+          </div>
+
+          <!-- Teal drawer — editing state -->
+          <div class="teal-drawer" style="margin-top: 8px;">
+            <div class="drawer-header">
+              <div class="editing-pill">
+                <!-- pencil icon -->
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.1.5a1.7 1.7 0 0 1 2.4 0l1 1a1.7 1.7 0 0 1 0 2.4L5.2 14.2a.5.5 0 0 1-.2.1l-3.5 1a.5.5 0 0 1-.6-.6l1-3.5a.5.5 0 0 1 .1-.2L12.1.5z"/></svg>
+                Editing text
+              </div>
+              <div style="flex:1;"></div>
+              <button class="drawer-action discard">Discard</button>
+              <button class="drawer-action done">Done</button>
+            </div>
+            <div class="drawer-body">
+              <div class="drawer-msg">
+                <textarea placeholder="Editing text inline..."></textarea>
+                <button class="drawer-mic">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg>
+                </button>
+                <button class="drawer-send">
+                  <svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px;">
+            <div class="mock-activity">Recent activity</div>
+            <div class="mock-activity-item" style="margin-top:4px;">🔴 Maya Chen shipped Auth refactor</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATE 3 — MSG ROW ONLY (before text edit)
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">State Comparison — Side by Side</div>
+  <p class="section-subtitle">
+    Both states next to each other for quick comparison.
+  </p>
+
+  <div class="variations">
+    <!-- AT REST -->
+    <div class="col">
+      <span class="col-label">AT REST</span>
+
+      <div style="position: relative; width: 400px;">
+        <!-- Card -->
+        <div style="background:white;border:1px solid #e2e8f0;padding:16px 18px;border-radius:12px;">
+          <div style="font-size:13px;font-weight:500;color:#64748b;">Active tasks</div>
+          <div style="font-size:32px;font-weight:800;color:#0f172a;line-height:1.1;">12</div>
+          <div style="font-size:12px;font-weight:600;color:var(--teal);">↑ 3 this week</div>
+        </div>
+        <div class="sel-teal" style="inset: -4px;"></div>
+        <div class="comp-tag">stat-card</div>
+        <div class="resize-frame" style="inset: -5px;">
+          <div class="resize-handle r"></div>
+          <div class="resize-handle b"></div>
+          <div class="resize-handle br"></div>
+        </div>
+      </div>
+
+      <div class="teal-drawer" style="width: 400px;">
+        <div class="drawer-header">
+          <div class="drawer-title">
+            <svg viewBox="0 0 16 16" fill="none"><text x="0" y="12" font-family="Inter, sans-serif" font-size="11" font-weight="800" fill="white">Aa</text></svg>
+            Edit text
+          </div>
+          <button class="drawer-close">✕</button>
+        </div>
+        <div class="drawer-body">
+          <div class="drawer-msg">
+            <textarea placeholder="Describe a change for this element..."></textarea>
+            <button class="drawer-mic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="drawer-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITING TEXT -->
+    <div class="col">
+      <span class="col-label">EDITING TEXT</span>
+
+      <div style="position: relative; width: 400px;">
+        <div style="background:white;border:1px solid #e2e8f0;padding:16px 18px;border-radius:12px;">
+          <div style="font-size:13px;font-weight:500;color:#64748b;">Active tasks</div>
+          <div style="font-size:32px;font-weight:800;color:#0f172a;line-height:1.1;">
+            <span class="text-highlight">12<span class="value-tag">value</span></span>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--teal);">↑ 3 this week</div>
+        </div>
+        <div class="sel-orange" style="inset: -4px;"></div>
+        <div class="resize-frame" style="inset: -5px;">
+          <div class="resize-handle r" style="opacity: 0.25;"></div>
+          <div class="resize-handle b" style="opacity: 0.25;"></div>
+          <div class="resize-handle br" style="opacity: 0.25;"></div>
+        </div>
+      </div>
+
+      <div class="teal-drawer" style="width: 400px;">
+        <div class="drawer-header">
+          <div class="editing-pill">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M12.1.5a1.7 1.7 0 0 1 2.4 0l1 1a1.7 1.7 0 0 1 0 2.4L5.2 14.2a.5.5 0 0 1-.2.1l-3.5 1a.5.5 0 0 1-.6-.6l1-3.5a.5.5 0 0 1 .1-.2L12.1.5z"/></svg>
+            Editing text
+          </div>
+          <div style="flex:1;"></div>
+          <button class="drawer-action discard">Discard</button>
+          <button class="drawer-action done">Done</button>
+        </div>
+        <div class="drawer-body">
+          <div class="drawer-msg">
+            <textarea placeholder="Editing text inline..."></textarea>
+            <button class="drawer-mic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="drawer-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       INTERACTION FLOW
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Interaction Flow</div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:600px;font-size:11px;color:var(--text-mid);line-height:1.6;">
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">1. Click element</strong> — Teal pulsing outline + "stat-card" tag appears. Teal drawer slides in below with "Aa Edit text" + msg row.
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">2. Click "Edit text" (or double-click text)</strong> — Outline goes solid orange. "Aa Edit text" → orange "✏ Editing text" pill + Discard/Done. Text node in page becomes editable with orange highlight + "value" tag.
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--orange);">
+      <strong style="color:var(--text);">3. User edits text inline</strong> — Type directly in the element. Msg row stays available for voice/text instructions to the agent about the change.
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--green);">
+      <strong style="color:var(--text);">4. Click "Done"</strong> — Text change is queued. Returns to State 1 (teal outline + "Aa Edit text").
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--muted);">
+      <strong style="color:var(--text);">5. Click "Discard" or Escape</strong> — Text reverts. Returns to State 1.
+    </div>
+  </div>
+
+
+  <hr class="section-divider" />
+  <div class="section-title">Design Notes</div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:600px;font-size:11px;color:var(--text-mid);line-height:1.6;">
+    <div style="padding:6px 10px;background:var(--surface);border-radius:4px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">Outline → orange on edit</strong> — Clear visual mode change. Teal = selected. Orange = editing. Same colors as the pulse animation (teal↔orange), so they're already in the brand vocabulary.
+    </div>
+    <div style="padding:6px 10px;background:var(--surface);border-radius:4px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">Drawer is the single control surface</strong> — No separate floating buttons. The drawer header morphs between modes. Msg row is always present.
+    </div>
+    <div style="padding:6px 10px;background:var(--surface);border-radius:4px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">"value" tag on text node</strong> — Shows users which text node is being edited. Could extend to "label", "heading", "paragraph" etc.
+    </div>
+    <div style="padding:6px 10px;background:var(--surface);border-radius:4px;border-left:3px solid var(--orange);">
+      <strong style="color:var(--text);">Resize handles dim during text edit</strong> — Can't resize while editing text. Handles fade to 25% opacity.
+    </div>
+    <div style="padding:6px 10px;background:var(--surface);border-radius:4px;border-left:3px solid var(--orange);">
+      <strong style="color:var(--text);">Drawer width</strong> — Could match element width (attached feel) or be fixed width (consistent). Mock shows fixed width for now.
+    </div>
+  </div>
+
+</body>
+</html>

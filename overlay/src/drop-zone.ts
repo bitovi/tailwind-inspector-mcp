@@ -7,10 +7,11 @@
 import { send, sendTo } from './ws';
 import { buildContext } from './context';
 import { getFiber, findOwningComponent } from './react/fiber';
+import { clearTransientOverrides } from './bottom-toolbar';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
 
-type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
+export type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
 
 type InsertCallback = (target: HTMLElement, position: DropPosition) => void;
 type ElementSelectCallback = (target: HTMLElement) => void;
@@ -345,7 +346,7 @@ function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label: string): voi
 
 // ── Drop position computation ────────────────────────────────────────────
 
-function getAxis(el: Element): 'vertical' | 'horizontal' {
+export function getAxis(el: Element): 'vertical' | 'horizontal' {
   const style = getComputedStyle(el);
   if (style.display.includes('flex')) {
     return style.flexDirection.startsWith('row') ? 'horizontal' : 'vertical';
@@ -356,7 +357,7 @@ function getAxis(el: Element): 'vertical' | 'horizontal' {
   return 'vertical';
 }
 
-function computeDropPosition(
+export function computeDropPosition(
   cursor: { x: number; y: number },
   rect: DOMRect,
   axis: 'vertical' | 'horizontal',
@@ -373,7 +374,7 @@ function computeDropPosition(
 
 // ── Hit-test ─────────────────────────────────────────────────────────────
 
-function findTarget(x: number, y: number): HTMLElement | null {
+export function findTarget(x: number, y: number): HTMLElement | null {
   if (dom.indicator) dom.indicator.style.display = 'none';
   const el = document.elementFromPoint(x, y);
   if (dom.indicator) dom.indicator.style.display = '';
@@ -820,6 +821,7 @@ function handleComponentInsertClick(e: MouseEvent): void {
   sendTo('panel', { type: 'COMPONENT_DISARMED' });
 
   cleanup();
+  clearTransientOverrides();
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -833,7 +835,7 @@ export function findGhostAncestor(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-function buildSelector(el: HTMLElement): string {
+export function buildSelector(el: HTMLElement): string {
   const tag = el.tagName.toLowerCase();
   if (el.id) return `#${el.id}`;
   const classes = Array.from(el.classList).slice(0, 3).join('.');
@@ -867,7 +869,7 @@ function cleanup(): void {
  * Ensures all Tailwind utilities and component library CSS resolve for the
  * dropped ghost element, even if the target app's own build doesn't include them.
  */
-function injectGhostCss(componentName: string, css: string): void {
+export function injectGhostCss(componentName: string, css: string): void {
   const id = `vybit-ghost-css-${componentName}`;
   // Remove any existing ghost CSS for this component (refreshes on re-drop)
   const existing = document.getElementById(id);

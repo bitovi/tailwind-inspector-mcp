@@ -34,9 +34,9 @@ function ShadeRow({ hue, shade, value, editedValue, tailwindVersion, onEdit }: S
   }
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bv-orange/5' : ''}`}>
+    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bit-orange/5' : ''}`}>
       {isEdited && (
-        <div className="w-1.5 h-1.5 rounded-full bg-bv-orange shrink-0" />
+        <div className="w-1.5 h-1.5 rounded-full bg-bit-orange shrink-0" />
       )}
       <label
         className="relative w-6 h-6 rounded border border-white/10 shrink-0 cursor-pointer"
@@ -52,7 +52,7 @@ function ShadeRow({ hue, shade, value, editedValue, tailwindVersion, onEdit }: S
           aria-label={`Color picker for ${hue}-${shade}`}
         />
       </label>
-      <span className="text-[10px] text-bv-text-mid w-24 shrink-0 font-mono">
+      <span className="text-[10px] text-bit-text-mid w-24 shrink-0 font-mono">
         {hue}-{shade}
       </span>
       <input
@@ -64,7 +64,7 @@ function ShadeRow({ hue, shade, value, editedValue, tailwindVersion, onEdit }: S
             handleColorInput(v);
           }
         }}
-        className="flex-1 min-w-0 bg-transparent text-[10px] text-bv-text font-mono border border-bv-border rounded px-1.5 py-0.5 focus:border-bv-teal focus:outline-none"
+        className="flex-1 min-w-0 bg-transparent text-[10px] text-bit-text font-mono border border-bit-border rounded px-1.5 py-0.5 focus:border-bit-teal focus:outline-none"
         spellCheck={false}
       />
     </div>
@@ -92,13 +92,13 @@ function HueGroup({ hue, shades, edits, tailwindVersion, onEdit }: {
           height="8"
           viewBox="0 0 10 10"
           fill="currentColor"
-          className={`text-bv-text-mid shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
+          className={`text-bit-text-mid shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
         >
           <path d="M3 1l4 4-4 4" />
         </svg>
-        <span className="text-[10px] font-semibold text-bv-text capitalize">{hue}</span>
+        <span className="text-[10px] font-semibold text-bit-text capitalize">{hue}</span>
         {editedCount > 0 && (
-          <span className="text-[9px] text-bv-orange font-medium">
+          <span className="text-[9px] text-bit-orange font-medium">
             {editedCount} edited
           </span>
         )}
@@ -111,7 +111,7 @@ function HueGroup({ hue, shades, edits, tailwindVersion, onEdit }: {
             return (
               <div
                 key={shade}
-                className={`w-3 h-3 rounded-sm ${editOverride ? 'ring-1 ring-bv-orange' : ''}`}
+                className={`w-3 h-3 rounded-sm ${editOverride ? 'ring-1 ring-bit-orange' : ''}`}
                 style={{ backgroundColor: resolveToHex(displayValue) }}
                 title={`${hue}-${shade}`}
               />
@@ -161,14 +161,14 @@ export function ColorSection({ colors, edits, tailwindVersion, onEdit }: ColorSe
 
   if (allHues.length === 0) {
     return (
-      <div className="px-3 py-4 text-[11px] text-bv-muted text-center">
+      <div className="px-3 py-4 text-[11px] text-bit-muted text-center">
         No color tokens found in theme
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-bv-border/50">
+    <div className="divide-y divide-bit-border/50">
       {allHues.map(hue => (
         <HueGroup
           key={hue}

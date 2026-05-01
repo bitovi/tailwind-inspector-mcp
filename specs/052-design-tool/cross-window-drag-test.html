@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cross-Window Drag Test — Main Page</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui; padding: 20px; background: #f5f5f5; }
+    h1 { margin-bottom: 10px; font-size: 18px; }
+    p { margin-bottom: 16px; color: #666; font-size: 14px; }
+
+    .controls { margin-bottom: 20px; display: flex; gap: 10px; }
+    button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+             font-size: 14px; background: #00848B; color: white; }
+    button:hover { background: #006e74; }
+
+    .log { position: fixed; bottom: 0; left: 0; right: 0; height: 180px;
+           background: #1e1e1e; color: #0f0; font-family: monospace; font-size: 12px;
+           padding: 10px; overflow-y: auto; border-top: 2px solid #333; }
+    .log .entry { margin-bottom: 2px; }
+    .log .entry.warn { color: #ff0; }
+    .log .entry.info { color: #0af; }
+
+    .drop-zone { width: 300px; height: 80px; border: 2px dashed #ccc; border-radius: 8px;
+                 display: flex; align-items: center; justify-content: center; color: #999;
+                 margin-bottom: 12px; transition: all 0.15s; }
+    .drop-zone.over { border-color: #00848B; background: rgba(0,132,139,0.1); color: #00848B; }
+
+    .page-content { margin-bottom: 200px; }
+    .card { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    .drag-preview { position: fixed; pointer-events: none; z-index: 999999;
+                    background: #00848B; color: white; padding: 8px 14px; border-radius: 6px;
+                    font-size: 13px; opacity: 0.85; display: none;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+    .indicator { position: fixed; pointer-events: none; z-index: 999998;
+                 background: #00848B; height: 3px; display: none; border-radius: 2px; }
+
+    .hit-marker { position: fixed; pointer-events: none; z-index: 999997;
+                  width: 10px; height: 10px; border-radius: 50%; background: red;
+                  transform: translate(-50%, -50%); display: none; }
+  </style>
+</head>
+<body>
+  <h1>Cross-Window Drag Test — Main Page</h1>
+  <p>Tests three questions: (1) Does the popup keep getting mousemove during drag? (2) Can postMessage coordinate between popup and page? (3) Can the page do elementFromPoint while popup has focus?</p>
+
+  <div class="controls">
+    <button onclick="openPopup()">Open Popup Panel</button>
+    <button onclick="openIframe()">Open Iframe Panel</button>
+    <button onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <div class="page-content">
+    <div class="drop-zone" data-zone="1">Drop Zone 1</div>
+    <div class="card">Card A — some page content</div>
+    <div class="card">Card B — more page content</div>
+    <div class="drop-zone" data-zone="2">Drop Zone 2</div>
+    <div class="card">Card C — even more content</div>
+    <div class="drop-zone" data-zone="3">Drop Zone 3</div>
+  </div>
+
+  <!-- Iframe panel (for comparison) -->
+  <iframe id="panel-iframe" style="display:none; position:fixed; right:0; top:0; width:320px; height:100vh; border:none; border-left:2px solid #ccc; z-index:100; background:white;"></iframe>
+
+  <!-- Drag preview (rendered in main page) -->
+  <div class="drag-preview" id="dragPreview">Component</div>
+  <div class="indicator" id="indicator"></div>
+  <div class="hit-marker" id="hitMarker"></div>
+
+  <div class="log" id="log"></div>
+
+  <script>
+    let popupWindow = null;
+    let isDragging = false;
+    let dragSource = null; // 'popup' | 'iframe'
+
+    const preview = document.getElementById('dragPreview');
+    const indicator = document.getElementById('indicator');
+    const hitMarker = document.getElementById('hitMarker');
+
+    function log(msg, type = '') {
+      const el = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'entry ' + type;
+      entry.textContent = `[${new Date().toISOString().slice(11,23)}] ${msg}`;
+      el.appendChild(entry);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+
+    // ── Popup approach ──
+
+    function openPopup() {
+      if (popupWindow && !popupWindow.closed) {
+        popupWindow.focus();
+        return;
+      }
+      // Build popup HTML inline (same origin, so postMessage works freely)
+      popupWindow = window.open('', 'drag-panel', 'popup,width=320,height=400,left=100,top=100');
+      popupWindow.document.write(getPanelHTML('popup'));
+      popupWindow.document.close();
+      log('Popup opened', 'info');
+    }
+
+    // ── Iframe approach ──
+
+    function openIframe() {
+      const iframe = document.getElementById('panel-iframe');
+      if (iframe.style.display !== 'none') {
+        iframe.style.display = 'none';
+        return;
+      }
+      iframe.style.display = 'block';
+      // Write panel HTML into iframe (same origin)
+      const doc = iframe.contentDocument;
+      doc.open();
+      doc.write(getPanelHTML('iframe'));
+      doc.close();
+      log('Iframe panel opened', 'info');
+    }
+
+    // ── Listen for postMessage from popup or iframe ──
+
+    window.addEventListener('message', (e) => {
+      if (!e.data || !e.data.__dragTest) return;
+      const d = e.data;
+
+      if (d.type === 'drag-start') {
+        isDragging = true;
+        dragSource = d.source;
+        preview.textContent = d.componentName;
+        preview.style.display = 'block';
+        log(`DRAG_START via postMessage from ${d.source}: "${d.componentName}"`, 'info');
+      }
+
+      if (d.type === 'drag-move' && isDragging) {
+        // d.screenX / d.screenY are screen coordinates from the source window
+        // Translate to page client coordinates
+        const clientX = d.screenX - window.screenX - (window.outerWidth - window.innerWidth);
+        const clientY = d.screenY - window.screenY - (window.outerHeight - window.innerHeight);
+
+        preview.style.left = (clientX + 12) + 'px';
+        preview.style.top = (clientY + 12) + 'px';
+
+        // Try elementFromPoint
+        preview.style.display = 'none';
+        hitMarker.style.display = 'none';
+        const el = document.elementFromPoint(clientX, clientY);
+        preview.style.display = 'block';
+
+        // Show hit marker
+        hitMarker.style.left = clientX + 'px';
+        hitMarker.style.top = clientY + 'px';
+        hitMarker.style.display = 'block';
+
+        // Update drop zones
+        document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('over'));
+        if (el && el.classList.contains('drop-zone')) {
+          el.classList.add('over');
+          const rect = el.getBoundingClientRect();
+          indicator.style.left = rect.left + 'px';
+          indicator.style.top = rect.top + 'px';
+          indicator.style.width = rect.width + 'px';
+          indicator.style.display = 'block';
+        } else {
+          indicator.style.display = 'none';
+        }
+
+        log(`DRAG_MOVE screen(${d.screenX},${d.screenY}) → client(${clientX.toFixed(0)},${clientY.toFixed(0)}) hit=${el?.tagName}.${el?.className.split(' ')[0] || ''}`);
+      }
+
+      if (d.type === 'drag-end' && isDragging) {
+        isDragging = false;
+        preview.style.display = 'none';
+        indicator.style.display = 'none';
+        hitMarker.style.display = 'none';
+        document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('over'));
+        log(`DRAG_END from ${d.source}`, 'warn');
+      }
+    });
+
+    // ── Also test: does the main page get ANY pointer events while popup has focus? ──
+
+    document.addEventListener('pointermove', (e) => {
+      if (isDragging && dragSource === 'popup') {
+        log(`PAGE got pointermove! client(${e.clientX},${e.clientY})`, 'warn');
+      }
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+      if (isDragging && dragSource === 'popup') {
+        log(`PAGE got pointerdown! This would end drag in popup.`, 'warn');
+      }
+    });
+
+    // ── Iframe escape approach: set pointer-events:none on iframe during drag ──
+
+    window.addEventListener('message', (e) => {
+      if (!e.data || !e.data.__dragTest) return;
+      if (e.data.source !== 'iframe') return;
+
+      const iframe = document.getElementById('panel-iframe');
+      if (e.data.type === 'drag-start') {
+        iframe.style.pointerEvents = 'none';
+        log('Set pointer-events:none on iframe', 'info');
+      }
+      if (e.data.type === 'drag-end') {
+        iframe.style.pointerEvents = '';
+        log('Restored pointer-events on iframe', 'info');
+      }
+    });
+
+    // For iframe escape: track pointermove locally when iframe has pointer-events:none
+    document.addEventListener('pointermove', (e) => {
+      if (isDragging && dragSource === 'iframe') {
+        const clientX = e.clientX;
+        const clientY = e.clientY;
+
+        preview.style.left = (clientX + 12) + 'px';
+        preview.style.top = (clientY + 12) + 'px';
+        preview.style.display = 'block';
+
+        preview.style.pointerEvents = 'none';
+        hitMarker.style.pointerEvents = 'none';
+        const el = document.elementFromPoint(clientX, clientY);
+        preview.style.pointerEvents = '';
+        hitMarker.style.pointerEvents = '';
+
+        hitMarker.style.left = clientX + 'px';
+        hitMarker.style.top = clientY + 'px';
+        hitMarker.style.display = 'block';
+
+        document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('over'));
+        if (el && el.classList.contains('drop-zone')) {
+          el.classList.add('over');
+          const rect = el.getBoundingClientRect();
+          indicator.style.left = rect.left + 'px';
+          indicator.style.top = rect.top + 'px';
+          indicator.style.width = rect.width + 'px';
+          indicator.style.display = 'block';
+        } else {
+          indicator.style.display = 'none';
+        }
+      }
+    });
+
+    document.addEventListener('pointerup', (e) => {
+      if (isDragging && dragSource === 'iframe') {
+        isDragging = false;
+        preview.style.display = 'none';
+        indicator.style.display = 'none';
+        hitMarker.style.display = 'none';
+        document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('over'));
+        document.getElementById('panel-iframe').style.pointerEvents = '';
+        log('DROPPED via iframe escape path!', 'warn');
+      }
+    });
+
+    // ── Panel HTML (shared by popup and iframe) ──
+
+    function getPanelHTML(source) {
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui; padding: 16px; background: #fff; }
+    h2 { font-size: 15px; margin-bottom: 12px; color: #333; }
+    .component { padding: 10px 14px; background: #f0f0f0; border-radius: 6px;
+                 margin-bottom: 8px; cursor: grab; user-select: none;
+                 display: flex; align-items: center; gap: 10px; }
+    .component:active { cursor: grabbing; }
+    .component .thumb { width: 40px; height: 30px; background: #00848B; border-radius: 4px; }
+    .component .name { font-size: 13px; }
+    .component.dragging { opacity: 0.4; }
+    .info { font-size: 11px; color: #999; margin-top: 16px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h2>Panel (${source})</h2>
+  <div class="component" data-name="Button" onmousedown="startDrag(event, 'Button')">
+    <div class="thumb"></div><div class="name">Button</div>
+  </div>
+  <div class="component" data-name="Card" onmousedown="startDrag(event, 'Card')">
+    <div class="thumb"></div><div class="name">Card</div>
+  </div>
+  <div class="component" data-name="Hero Section" onmousedown="startDrag(event, 'Hero Section')">
+    <div class="thumb"></div><div class="name">Hero Section</div>
+  </div>
+  <p class="info">Drag a component to the main page.<br>Watch the log for events.</p>
+
+  <script>
+    const SOURCE = '${source}';
+    const DRAG_THRESHOLD = 5;
+    let startX = 0, startY = 0;
+    let dragging = false;
+    let dragEl = null;
+    let componentName = '';
+
+    function getTarget() {
+      // popup: use opener. iframe: use parent.
+      return SOURCE === 'popup' ? window.opener : window.parent;
+    }
+
+    function send(data) {
+      const target = getTarget();
+      if (target) {
+        target.postMessage({ __dragTest: true, source: SOURCE, ...data }, '*');
+      }
+    }
+
+    function startDrag(e, name) {
+      startX = e.screenX;
+      startY = e.screenY;
+      componentName = name;
+      dragEl = e.currentTarget;
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }
+
+    function onMouseMove(e) {
+      const dx = e.screenX - startX;
+      const dy = e.screenY - startY;
+
+      if (!dragging && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+        dragging = true;
+        dragEl.classList.add('dragging');
+        send({ type: 'drag-start', componentName });
+      }
+
+      if (dragging) {
+        send({ type: 'drag-move', screenX: e.screenX, screenY: e.screenY });
+      }
+    }
+
+    function onMouseUp(e) {
+      if (dragging) {
+        send({ type: 'drag-end', screenX: e.screenX, screenY: e.screenY });
+        dragging = false;
+        dragEl.classList.remove('dragging');
+      }
+      dragEl = null;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    }
+  <\/script>
+</body>
+</html>`;
+    }
+  </script>
+</body>
+</html>

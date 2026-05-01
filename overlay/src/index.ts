@@ -1,4 +1,4 @@
-import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone } from "./drop-zone";
+import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone, injectGhostCss, buildSelector } from "./drop-zone";
 import { isTextEditing, handleTextEditingClick, endTextEdit } from "./text-edit";
 import { debugLog } from "../../shared/vybit-env";
 import type { ContainerName } from "./containers/IContainer";
@@ -6,13 +6,14 @@ import { ModalContainer } from "./containers/ModalContainer";
 import { PopoverContainer } from "./containers/PopoverContainer";
 import { PopupContainer } from "./containers/PopupContainer";
 import { SidebarContainer } from "./containers/SidebarContainer";
-import { buildContext } from "./context";
+import { buildContext, buildDeleteContext } from "./context";
 import { detectComponent } from "./framework-detect";
 import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { saveScrollRatio } from './preserve-scroll';
 import { findExactMatches } from "./grouping";
+import { initDragDrop, isDragActive } from "./drag-drop";
 import { getFiber, findOwningComponent, extractComponentProps } from "./react/fiber";
 import { isAngularElement, findOwningComponent as findAngularOwningComponent, extractAngularComponentProps } from "./angular/detect";
 import type { InsertMode } from "./messages";
@@ -26,11 +27,14 @@ import {
 import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab, clearSelectionState } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
-import { showDrawButton, initToolbar, repositionToolbar } from "./element-toolbar";
+import { showDrawButton, initToolbar, repositionToolbar, showGroupPicker } from "./element-toolbar";
+import { initElementDrawer } from "./element-drawer";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
 import { getSameRectCandidates, showDepthPicker, dismissDepthPicker } from "./depth-picker";
+import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides } from "./bottom-toolbar";
 import type { BugReportElement } from "../../shared/types";
+import { setClipboard, getClipboard, extractGhostCssForElement } from "./clipboard";
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
 function onBrowseLocked(target: HTMLElement): void {
@@ -42,6 +46,9 @@ function onBrowseLocked(target: HTMLElement): void {
 		: { componentName: target.tagName.toLowerCase() };
 	state.cachedNearGroups = null;
 	showDrawButton(target);
+	// Insert point locked → teal (engaged)
+	updateToolState('insert', false, true);
+	updateInstanceCount(state.currentEquivalentNodes.length);
 }
 
 const THEME_PREVIEW_STYLE_ID = "vybit-theme-preview";
@@ -244,6 +251,9 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	// While text editing, suppress page click handlers (buttons, links, etc.)
 	if (handleTextEditingClick(e)) return;
 
+	// Ignore clicks while a drag-drop session is active
+	if (isDragActive()) return;
+
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
 
@@ -258,6 +268,15 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 
 	// When select mode is off, only intercept shift+clicks or add-mode clicks
 	if (!state.selectModeOn && !state.addMode && !e.shiftKey) return;
+
+	// ── Persistent select: clicks inside the selected element pass through ──
+	// Don't preventDefault, don't intercept — let the page handle the click normally.
+	const clickTarget = e.target as HTMLElement;
+	if (state.selectModeOn && state.currentTargetEl && !state.addMode && !e.shiftKey) {
+		if (state.currentTargetEl === clickTarget || state.currentTargetEl.contains(clickTarget)) {
+			return;
+		}
+	}
 
 	e.preventDefault();
 	e.stopPropagation();
@@ -396,9 +415,12 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	}];
 
 	clearHoverPreview();
-	setSelectMode(false);
+	// Keep select mode active — don't call setSelectMode(false)
+	// The user can continue selecting other elements or click Select to lock
 
 	showDrawButton(targetEl);
+	updateInstanceCount(state.currentEquivalentNodes.length);
+	updateToolState('select', true, true);
 
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
@@ -533,6 +555,7 @@ function toggleInspect(btn: HTMLButtonElement): void {
 	if (state.active) {
 		btn.classList.add("active");
 		sessionStorage.setItem(PANEL_OPEN_KEY, "1");
+		showBottomToolbar();
 		if (insideStorybook) {
 			// In Storybook the panel is already in the addon tab — go straight to select mode
 			setSelectMode(true);
@@ -547,6 +570,7 @@ function toggleInspect(btn: HTMLButtonElement): void {
 		btn.classList.remove("active");
 		sessionStorage.removeItem(PANEL_OPEN_KEY);
 		setSelectMode(false);
+		hideBottomToolbar();
 		if (!insideStorybook) {
 			state.activeContainer.close();
 		}
@@ -559,6 +583,7 @@ export function showToast(message: string, duration: number = 3000): void {
 	const toast = document.createElement("div");
 	toast.className = "toast";
 	toast.textContent = message;
+	toast.style.left = `${getPageCenterX()}px`;
 	state.shadowRoot.appendChild(toast);
 	requestAnimationFrame(() => toast.classList.add("visible"));
 	setTimeout(() => {
@@ -623,6 +648,11 @@ function init(): void {
 	state.shadowHost = document.createElement("div");
 	state.shadowHost.id = "tw-visual-editor-host";
 	state.shadowHost.style.cssText = css(SHADOW_HOST);
+	// Restore color scheme preference
+	try {
+		const scheme = localStorage.getItem('vybit-color-scheme');
+		if (scheme === 'light') state.shadowHost.classList.add('light');
+	} catch { /* ignore */ }
 	document.body.appendChild(state.shadowHost);
 
 	state.shadowRoot = state.shadowHost.attachShadow({ mode: "open" });
@@ -633,6 +663,75 @@ function init(): void {
 
 	// Wire up toolbar callbacks (avoids circular deps)
 	initToolbar({ setSelectMode, showToast, onBrowseLocked, rebuildSelectionFromSources, setAddMode });
+	initElementDrawer({
+		showToast,
+		deactivateSelectMode: () => {
+			if (state.selectModeOn) {
+				setSelectMode(false);
+				updateToolState('select', false, true);
+			}
+		},
+	});
+	initBottomToolbar({
+		onToolChange: (tool) => {
+			// ── Select re-click toggle ──
+			// When Select is re-clicked (tool === 'select' and already in select mode),
+			// handle the three-way toggle instead of clearing everything.
+			if (tool === 'select' && state.selectModeOn && state.currentTargetEl) {
+				// Orange + element → Teal: stop selecting, keep element
+				setSelectMode(false);
+				updateToolState('select', false, true);
+				sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
+				return;
+			}
+			if (tool === 'select' && !state.selectModeOn && state.currentTargetEl) {
+				// Teal → Orange: re-enable selecting, keep element
+				setSelectMode(true);
+				updateToolState('select', true, false);
+				sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
+				return;
+			}
+
+			// Clear previous selection/mode state (same cleanup as MODE_CHANGED handler)
+			revertPreview();
+			clearHighlights();
+			cancelInsert();
+			clearLockedInsert();
+			clearSelectionState();
+
+			// Enter the new mode
+			if (tool === 'select') {
+				setSelectMode(true);
+				updateToolState('select', true, false); // orange: picking
+			} else if (tool === 'insert') {
+				setSelectMode(false);
+				startBrowse(state.shadowHost, onBrowseLocked);
+				updateToolState('insert', true, false); // orange: browsing
+			} else {
+				setSelectMode(false);
+				updateToolState(null, false, false);
+			}
+		},
+		onAdjunctClick: () => {
+			// Toggle group picker from the bottom toolbar's 1+ button
+			if (state.pickerEl) {
+				state.pickerEl.remove();
+				state.pickerEl = null;
+			} else if (state.currentTargetEl) {
+				// Use a dummy anchor positioned near the bottom toolbar
+				const anchor = state.shadowRoot.querySelector('.bt-adjunct') as HTMLElement;
+				if (anchor) {
+					showGroupPicker(
+						anchor,
+						() => {},
+						(totalCount) => {
+							updateInstanceCount(totalCount);
+						},
+					);
+				}
+			}
+		},
+	});
 	initDesignCanvasManager({ serverOrigin: SERVER_ORIGIN, showToast });
 
 	// Initialize containers
@@ -643,6 +742,25 @@ function init(): void {
 		popup: new PopupContainer(),
 	};
 	state.activeContainer = state.containers[getDefaultContainer()];
+
+	// Initialize drag-drop placement (listens for postMessage from panel)
+	initDragDrop(
+		state.shadowHost,
+		// onDragStart: cancel any active selection / insertion mode
+		() => {
+			cancelInsert();
+			clearLockedInsert();
+			clearHighlights();
+			clearSelectionState();
+			setSelectMode(false);
+			setAddMode(false);
+			sendTo("panel", { type: "DESELECT_ELEMENT" });
+		},
+		// onDrop: select the newly dropped element
+		(el: HTMLElement) => {
+			finalizeSelection(el);
+		},
+	);
 
 	const btn = document.createElement("button");
 	btn.className = "toggle-btn";
@@ -663,7 +781,7 @@ function init(): void {
 		}
 	});
 
-	// Escape key — exit add-mode, deselect element (keep mode), or deactivate mode
+	// Escape key — layered escape for persistent select mode
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
 			// Exit add-mode first if active
@@ -671,31 +789,301 @@ function init(): void {
 				setAddMode(false);
 				return;
 			}
+			// Cancel active drop zone first (e.g. paste placement crosshair)
+			if (isDropZoneActive()) {
+				cancelInsert();
+				clearLockedInsert();
+				clearToolOverrides();
+				sendTo("panel", { type: "MODE_CHANGED", mode: null });
+				return;
+			}
+			if (state.currentTargetEl && state.currentMode === 'select') {
+				if (state.selectModeOn) {
+					// Orange + element → Teal: stop selecting, keep element
+					setSelectMode(false);
+					updateToolState('select', false, true);
+					// Panel will receive SELECT_MODE_CHANGED { active: false } from setSelectMode
+					return;
+				} else {
+					// Teal → Gray: deselect element entirely
+					revertPreview();
+					clearHighlights();
+					clearSelectionState();
+					clearToolOverrides();
+					sendTo("panel", { type: "MODE_CHANGED", mode: null });
+					return;
+				}
+			}
 			if (state.currentTargetEl) {
-				// Deselect element, stay in current mode
+				// Non-select mode with element — existing behavior
 				revertPreview();
 				clearHighlights();
 				clearSelectionState();
-				// Re-enter selection/browse mode (don't send RESET_SELECTION — that nukes the panel to landing)
-				if (state.currentMode === 'select') {
-					setSelectMode(true);
-					sendTo("panel", { type: "DESELECT_ELEMENT" });
-				} else if (state.currentMode === 'insert') {
+				clearToolOverrides();
+				if (state.currentMode === 'insert') {
 					sendTo("panel", { type: "DESELECT_ELEMENT" });
 					startBrowse(state.shadowHost, onBrowseLocked);
 				} else {
 					sendTo("panel", { type: "RESET_SELECTION" });
 				}
 			} else if (state.selectModeOn) {
-				// No element, deactivate select mode → go to landing
+				// Orange + no element → Gray: cancel select mode
 				setSelectMode(false);
+				clearToolOverrides();
 				sendTo("panel", { type: "MODE_CHANGED", mode: null });
 			} else if (isDropZoneActive()) {
 				// No element, cancel insert mode → go to landing
 				cancelInsert();
 				clearLockedInsert();
+				clearToolOverrides();
 				sendTo("panel", { type: "MODE_CHANGED", mode: null });
 			}
+		}
+	});
+
+	// ── Delete / Copy / Paste / Cut / Duplicate ─────────────────────────────
+	document.addEventListener("keydown", (e) => {
+		// Skip when typing in inputs, textareas, or contenteditable
+		const target = e.target as HTMLElement;
+		if (
+			target.tagName === "INPUT" ||
+			target.tagName === "TEXTAREA" ||
+			target.isContentEditable
+		) return;
+		// Skip during text editing mode
+		if (isTextEditing()) return;
+
+		const isMod = e.metaKey || e.ctrlKey;
+
+		// ── Delete / Backspace ────────────────────────────────────────────
+		if ((e.key === "Delete" || e.key === "Backspace") && state.currentTargetEl) {
+			e.preventDefault();
+			const el = state.currentTargetEl;
+			const isGhost = !!el.dataset.twDroppedComponent;
+			const ghostPatchId = el.dataset.twDroppedPatchId;
+
+			if (isGhost && ghostPatchId) {
+				// Ghost element — remove from DOM and discard the draft patch
+				el.remove();
+				send({ type: "DISCARD_DRAFTS", ids: [ghostPatchId] });
+			} else {
+				// Real element — hide and stage a delete-element patch
+				const patchId = crypto.randomUUID();
+				const componentName = state.currentBoundary?.componentName ?? el.tagName.toLowerCase();
+
+				const context = buildDeleteContext(el, new Map());
+
+				el.dataset.twDeleted = patchId;
+				el.style.display = "none";
+
+				send({
+					type: "PATCH_STAGED",
+					patch: {
+						id: patchId,
+						kind: "delete-element",
+						elementKey: componentName,
+						status: "staged",
+						originalClass: "",
+						newClass: "",
+						property: "delete-element",
+						timestamp: new Date().toISOString(),
+						pageUrl: window.location.href,
+						component: { name: componentName },
+						target: {
+							tag: el.tagName.toLowerCase(),
+							classes: typeof el.className === "string" ? el.className : "",
+							innerText: (el.innerText || "").trim().slice(0, 60),
+						},
+						ghostHtml: el.outerHTML,
+						context,
+					},
+				});
+			}
+
+			// Clear selection
+			revertPreview();
+			clearHighlights();
+			clearSelectionState();
+			sendTo("panel", { type: "MODE_CHANGED", mode: null });
+			showToast("Element deleted");
+			return;
+		}
+
+		// ── Cmd+C — Copy ──────────────────────────────────────────────────
+		if (isMod && e.key === "c" && state.currentTargetEl) {
+			const el = state.currentTargetEl;
+			const componentName = state.currentBoundary?.componentName ?? el.tagName.toLowerCase();
+			extractGhostCssForElement(el, SERVER_ORIGIN).then((ghostCss) => {
+				setClipboard({
+					ghostHtml: el.outerHTML,
+					ghostCss,
+					sourceComponentName: componentName,
+					sourceClasses: typeof el.className === "string" ? el.className : "",
+				});
+				showToast("Copied");
+			});
+			// Don't preventDefault — allow native text copy too
+			return;
+		}
+
+		// ── Cmd+X — Cut ──────────────────────────────────────────────────
+		if (isMod && e.key === "x" && state.currentTargetEl) {
+			e.preventDefault();
+			const el = state.currentTargetEl;
+			const componentName = state.currentBoundary?.componentName ?? el.tagName.toLowerCase();
+			extractGhostCssForElement(el, SERVER_ORIGIN).then((ghostCss) => {
+				setClipboard({
+					ghostHtml: el.outerHTML,
+					ghostCss,
+					sourceComponentName: componentName,
+					sourceClasses: typeof el.className === "string" ? el.className : "",
+				});
+
+				// Now delete (same logic as Delete key above)
+				const isGhost = !!el.dataset.twDroppedComponent;
+				const ghostPatchId = el.dataset.twDroppedPatchId;
+
+				if (isGhost && ghostPatchId) {
+					el.remove();
+					send({ type: "DISCARD_DRAFTS", ids: [ghostPatchId] });
+				} else {
+					const patchId = crypto.randomUUID();
+					const context = buildDeleteContext(el, new Map());
+					el.dataset.twDeleted = patchId;
+					el.style.display = "none";
+					send({
+						type: "PATCH_STAGED",
+						patch: {
+							id: patchId,
+							kind: "delete-element",
+							elementKey: componentName,
+							status: "staged",
+							originalClass: "",
+							newClass: "",
+							property: "delete-element",
+							timestamp: new Date().toISOString(),
+							pageUrl: window.location.href,
+							component: { name: componentName },
+							target: {
+								tag: el.tagName.toLowerCase(),
+								classes: typeof el.className === "string" ? el.className : "",
+								innerText: (el.innerText || "").trim().slice(0, 60),
+							},
+							ghostHtml: el.outerHTML,
+							context,
+						},
+					});
+				}
+
+				revertPreview();
+				clearHighlights();
+				clearSelectionState();
+				sendTo("panel", { type: "MODE_CHANGED", mode: null });
+				showToast("Cut");
+			});
+			return;
+		}
+
+		// ── Cmd+V — Paste ─────────────────────────────────────────────────
+		if (isMod && e.key === "v") {
+			const clip = getClipboard();
+			if (!clip) return; // No VyBit clipboard — let native paste through
+			e.preventDefault();
+
+			// Disable select mode so crosshair doesn't interfere with placement
+			if (state.selectModeOn) {
+				setSelectMode(false);
+			}
+
+			const lockedInsert = getLockedInsert();
+			if (lockedInsert) {
+				// Place immediately at the locked insertion point
+				placeAtLockedInsert({
+					componentName: clip.sourceComponentName,
+					storyId: "",
+					ghostHtml: clip.ghostHtml,
+					ghostCss: clip.ghostCss,
+				});
+				// Reset toolbar after immediate placement
+				clearToolOverrides();
+				showToast("Pasted");
+			} else {
+				// Show toolbar: Select = green (done), Insert = orange (placing)
+				setToolOverrides({ select: 'completed', insert: 'picking' });
+
+				// Enter drop-zone crosshair flow
+				armInsert(
+					{
+						componentName: clip.sourceComponentName,
+						storyId: "",
+						ghostHtml: clip.ghostHtml,
+						ghostCss: clip.ghostCss,
+					},
+					state.shadowHost,
+				);
+				showToast("Click to place");
+			}
+			return;
+		}
+
+		// ── Cmd+D — Duplicate ─────────────────────────────────────────────
+		if (isMod && e.key === "d" && state.currentTargetEl) {
+			e.preventDefault();
+			const el = state.currentTargetEl;
+			const componentName = state.currentBoundary?.componentName ?? el.tagName.toLowerCase();
+
+			extractGhostCssForElement(el, SERVER_ORIGIN).then((ghostCss) => {
+				const template = document.createElement("template");
+				template.innerHTML = el.outerHTML.trim();
+				const clone = template.content.firstElementChild as HTMLElement | null;
+				if (!clone) return;
+
+				clone.dataset.twDroppedComponent = componentName;
+				el.insertAdjacentElement("afterend", clone);
+
+				if (ghostCss) injectGhostCss(componentName, ghostCss);
+
+				// Build context and stage a component-drop patch
+				const context = buildContext(el, "", "", new Map());
+				const patchId = crypto.randomUUID();
+				clone.dataset.twDroppedPatchId = patchId;
+
+				let parentComponent: { name: string } | undefined;
+				const fiber = getFiber(el);
+				if (fiber) {
+					const boundary = findOwningComponent(fiber);
+					if (boundary) parentComponent = { name: boundary.componentName };
+				}
+
+				send({
+					type: "COMPONENT_DROPPED",
+					patch: {
+						id: patchId,
+						kind: "component-drop",
+						elementKey: buildSelector(el),
+						status: "staged",
+						originalClass: "",
+						newClass: "",
+						property: "component-drop",
+						timestamp: new Date().toISOString(),
+						component: { name: componentName },
+						target: {
+							tag: el.tagName.toLowerCase(),
+							classes: typeof el.className === "string" ? el.className : "",
+							innerText: (el.innerText || "").trim().slice(0, 60),
+						},
+						ghostHtml: el.outerHTML,
+						ghostCss: ghostCss || undefined,
+						insertMode: "after",
+						context,
+						parentComponent,
+						pageUrl: window.location.href,
+					},
+				});
+
+				showToast("Duplicated");
+			});
+			return;
 		}
 	});
 
@@ -716,6 +1104,8 @@ function init(): void {
 				state.active = true;
 				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
 				setSelectMode(true);
+				showBottomToolbar();
+				updateToolState('select', true, false);
 				// Ensure panel is open (skip in Storybook — panel lives in addon tab)
 				if (!insideStorybook) {
 					const panelUrl = `${SERVER_ORIGIN}/panel`;
@@ -723,6 +1113,10 @@ function init(): void {
 				}
 			} else {
 				setSelectMode(false);
+				// Update toolbar to show engaged (teal) state — element still selected
+				if (state.currentTargetEl) {
+					updateToolState('select', false, true);
+				}
 			}
 		} else if (msg.type === "MODE_CHANGED") {
 			// Mark VyBit as active when any mode is engaged
@@ -750,6 +1144,25 @@ function init(): void {
 				// bug-report or null — no element selection
 				setSelectMode(false);
 			}
+
+			// Show/hide bottom toolbar based on edit mode
+			const isEditMode = msg.mode === 'select' || msg.mode === 'insert' || msg.mode === null;
+			if (isEditMode && state.active) {
+				showBottomToolbar();
+				// Update tool state based on current mode
+				const tool = msg.mode === 'select' ? 'select' : msg.mode === 'insert' ? 'insert' : null;
+				updateToolState(tool, !!tool && !state.currentTargetEl, !!state.currentTargetEl);
+			} else {
+				hideBottomToolbar();
+			}
+		} else if (msg.type === "EDIT_TOOL_CHANGED") {
+			// Panel changed the active edit tool — update overlay toolbar state
+			const tool = msg.tool as import("../../shared/types").EditTool;
+			updateToolState(tool, !!tool && !state.currentTargetEl, !!state.currentTargetEl);
+		} else if (msg.type === "COLOR_SCHEME_CHANGED") {
+			const scheme = msg.colorScheme as 'dark' | 'light';
+			state.shadowHost.classList.toggle('light', scheme === 'light');
+			try { localStorage.setItem('vybit-color-scheme', scheme); } catch { /* ignore */ }
 		} else if (msg.type === "TAB_CHANGED") {
 			state.currentTab = msg.tab;
 			state.tabPreference = (msg.tab === 'replace' || msg.tab === 'place') ? 'component' : 'design';
@@ -757,7 +1170,10 @@ function init(): void {
 			// Rebuild toolbar to highlight the correct action button
 			if (state.currentTargetEl) showDrawButton(state.currentTargetEl);
 		} else if (msg.type === "CANCEL_MODE") {
-			// Panel sent Escape — deactivate select/insert mode
+			// Panel sent cancel — deactivate all modes, clear selection
+			revertPreview();
+			clearHighlights();
+			clearSelectionState();
 			setSelectMode(false);
 			cancelInsert();
 			clearLockedInsert();
@@ -818,6 +1234,13 @@ function init(): void {
 					}
 					styleEl.textContent = msg.ghostCss;
 				}
+			}
+		} else if (msg.type === "REVERT_DELETE" && msg.patchId) {
+			// Un-hide a deleted element when its patch is discarded
+			const deletedEl = document.querySelector(`[data-tw-deleted="${msg.patchId}"]`) as HTMLElement | null;
+			if (deletedEl) {
+				deletedEl.style.display = "";
+				delete deletedEl.dataset.twDeleted;
 			}
 		} else if (
 			msg.type === "PATCH_STAGE" &&
@@ -1057,6 +1480,7 @@ function init(): void {
 	if (sessionStorage.getItem(PANEL_OPEN_KEY) === "1") {
 		state.active = true;
 		btn.classList.add("active");
+		showBottomToolbar();
 		if (!insideStorybook) {
 			state.activeContainer.open(`${SERVER_ORIGIN}/panel`);
 		}

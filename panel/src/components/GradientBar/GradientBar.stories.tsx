@@ -44,7 +44,7 @@ function InteractiveGradientBar({ initialStops }: { initialStops: GradientStop[]
   const sorted = [...stops].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
   return (
-    <div className="p-6 bg-bv-bg" style={{ width: 380 }}>
+    <div className="p-6 bg-bit-bg" style={{ width: 380 }}>
       <GradientBar
         stops={stops}
         direction="to right"
@@ -55,12 +55,12 @@ function InteractiveGradientBar({ initialStops }: { initialStops: GradientStop[]
         onStopRemove={handleRemove}
         selectedStopId={selectedId}
       />
-      <div className="mt-3 text-[10px] font-mono text-bv-text-mid">
+      <div className="mt-3 text-[10px] font-mono text-bit-text-mid">
         {sorted.map((s) => (
           <div key={s.id}>
-            <span className="text-bv-teal">{s.role}</span>-{s.colorName}
+            <span className="text-bit-teal">{s.role}</span>-{s.colorName}
             {s.position != null && ` ${s.position}%`}
-            {s.id === selectedId && <span className="text-bv-orange ml-1">● selected</span>}
+            {s.id === selectedId && <span className="text-bit-orange ml-1">● selected</span>}
           </div>
         ))}
       </div>

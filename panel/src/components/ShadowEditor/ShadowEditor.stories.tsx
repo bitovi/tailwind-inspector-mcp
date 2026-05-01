@@ -21,8 +21,8 @@ const meta: Meta<typeof ShadowEditor> = {
         >
           <div style={{ padding: 12 }}>
             <div className="flex items-center gap-[5px] mb-2.5">
-              <span className="w-[5px] h-[5px] rounded-full bg-bv-teal opacity-50" />
-              <span className="text-[9px] font-semibold uppercase tracking-[1px] text-bv-text-mid font-mono flex-1">
+              <span className="w-[5px] h-[5px] rounded-full bg-bit-teal opacity-50" />
+              <span className="text-[9px] font-semibold uppercase tracking-[1px] text-bit-text-mid font-mono flex-1">
                 Shadows & Rings
               </span>
             </div>

@@ -171,7 +171,11 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
     } else if (msg.type === "DISCARD_DRAFTS") {
       const ids: string[] = msg.ids ?? [];
       for (const id of ids) {
-        discardDraftPatch(id);
+        const discarded = discardDraftPatch(id);
+        // If a delete-element patch was discarded, tell the overlay to un-hide the element
+        if (discarded?.kind === 'delete-element') {
+          broadcastTo("overlay", { type: "REVERT_DELETE", patchId: id });
+        }
       }
       console.error(`[msg] Discarded ${ids.length} draft patch(es)`);
       broadcastPatchUpdate();

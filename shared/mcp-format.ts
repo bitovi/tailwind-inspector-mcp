@@ -103,6 +103,7 @@ export function buildCommitInstructions(commit: Commit, remainingCount: number):
   const designs = commit.patches.filter((p: Patch) => p.kind === 'design');
   const componentDrops = commit.patches.filter((p: Patch) => p.kind === 'component-drop');
   const bugReports = commit.patches.filter((p: Patch) => p.kind === 'bug-report');
+  const deleteElements = commit.patches.filter((p: Patch) => p.kind === 'delete-element');
   const moreText = remainingCount > 0
     ? `${remainingCount} more commit${remainingCount === 1 ? '' : 's'} waiting in the queue after this one.`
     : 'This is the last commit in the queue. After implementing it, call `implement_next_change` again to wait for future changes.';
@@ -229,6 +230,18 @@ ${patch.newHtml ?? ''}
 \`\`\`
 ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 `;
+    } else if (patch.kind === 'delete-element') {
+      const comp = patch.component?.name ?? 'unknown component';
+      const tag = patch.target?.tag ?? 'element';
+      const context = patch.context ?? '';
+      const innerText = patch.target?.innerText?.replace(/\s+/g, ' ').trim().slice(0, 60) || '';
+      const targetDesc = innerText ? `\`<${tag}>\` containing "${innerText}"` : `\`<${tag}>\``;
+      patchList += `### ${stepNum}. Delete element \`${patch.id}\`
+- **Component:** \`${comp}\`
+- **Element:** ${targetDesc}
+- **Action:** Remove this element entirely from the source code.
+${patch.ghostHtml ? `- **Element HTML:**\n\`\`\`html\n${patch.ghostHtml}\n\`\`\`\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
+`;
     } else if (patch.kind === 'bug-report') {
       patchList += `### ${stepNum}. Bug report \`${patch.id}\`
 - **Description:** ${patch.bugDescription ?? '(no description)'}
@@ -309,18 +322,23 @@ ${patch.bugTimeline && patch.bugTimeline.length > 0 ? (() => {
   if (designs.length) summaryParts.push(`${designs.length} design${designs.length === 1 ? '' : 's'}`);
   if (componentDrops.length) summaryParts.push(`${componentDrops.length} component drop${componentDrops.length === 1 ? '' : 's'}`);
   if (bugReports.length) summaryParts.push(`${bugReports.length} bug report${bugReports.length === 1 ? '' : 's'}`);
+  if (deleteElements.length) summaryParts.push(`${deleteElements.length} element deletion${deleteElements.length === 1 ? '' : 's'}`);
 
   const resultsPart = classChanges.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const textResultsPart = textChanges.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const designResultsPart = designs.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const dropResultsPart = componentDrops.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const bugResultsPart = bugReports.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
-  const allResultsPart = [resultsPart, textResultsPart, designResultsPart, dropResultsPart, bugResultsPart].filter(Boolean).join(',\n');
+  const deleteResultsPart = deleteElements.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
+  const allResultsPart = [resultsPart, textResultsPart, designResultsPart, dropResultsPart, bugResultsPart, deleteResultsPart].filter(Boolean).join(',\n');
 
   // Build step instructions
   const stepInstructions: string[] = [];
-  if (classChanges.length || componentDrops.length || textChanges.length) {
+  if (classChanges.length || componentDrops.length || textChanges.length || deleteElements.length) {
     let step1 = '1. For each change above, find the source file and apply it.';
+    if (deleteElements.length) {
+      step1 += '\n   For element deletions: remove the specified element from the source JSX/TSX.';
+    }
     if (componentDrops.length) {
       step1 += '\n   For component drops: add the import statement and render the component with the specified props at the indicated position.';
     }
@@ -374,12 +392,14 @@ You are in a **continuous processing loop**. After marking done, you MUST call \
 // ---------------------------------------------------------------------------
 
 export function buildContentParts(commit: Commit, remainingCount: number): ContentPart[] {
-  // Strip ghostHtml from the commit — it's large rendered HTML that would
-  // confuse the agent into pasting it instead of importing the component
+  // Strip ghostHtml from component-drop patches that have a story ID —
+  // for those, the agent should import the component, not paste HTML.
+  // Keep ghostHtml for pasted elements (no storyId) so the agent knows what to render,
+  // and for delete-element patches so the agent can identify what to remove.
   const sanitizedCommit = {
     ...commit,
     patches: commit.patches.map(p =>
-      p.kind === 'component-drop' ? { ...p, ghostHtml: undefined } : p
+      p.kind === 'component-drop' && p.componentStoryId ? { ...p, ghostHtml: undefined } : p
     ),
   };
 

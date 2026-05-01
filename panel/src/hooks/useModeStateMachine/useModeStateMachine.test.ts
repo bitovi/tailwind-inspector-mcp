@@ -6,8 +6,7 @@ import {
   computeCurrentTabs,
   computeIsPicking,
   getModeButtonColor,
-  SELECT_TABS,
-  INSERT_TABS,
+  EDIT_TABS,
 } from './types';
 import type { ElementData, InsertPoint } from './types';
 
@@ -56,13 +55,9 @@ function overlayMessages(result: ReducerResult): Record<string, unknown>[] {
 // ============================================================================
 
 describe('computeActiveTab', () => {
-  it('returns "place" when mode is insert', () => {
-    expect(computeActiveTab('insert', 'design')).toBe('place');
-    expect(computeActiveTab('insert', 'component')).toBe('place');
-  });
-
-  it('returns "replace" when tabPreference is component in select mode', () => {
-    expect(computeActiveTab('select', 'component')).toBe('replace');
+  it('returns "components" when tabPreference is component', () => {
+    expect(computeActiveTab('insert', 'component')).toBe('components');
+    expect(computeActiveTab('select', 'component')).toBe('components');
   });
 
   it('returns "design" when tabPreference is design in select mode', () => {
@@ -75,16 +70,10 @@ describe('computeActiveTab', () => {
 });
 
 describe('computeCurrentTabs', () => {
-  it('returns INSERT_TABS for insert mode', () => {
-    expect(computeCurrentTabs('insert')).toBe(INSERT_TABS);
-  });
-
-  it('returns SELECT_TABS for select mode', () => {
-    expect(computeCurrentTabs('select')).toBe(SELECT_TABS);
-  });
-
-  it('returns SELECT_TABS for null mode', () => {
-    expect(computeCurrentTabs(null)).toBe(SELECT_TABS);
+  it('returns EDIT_TABS for any mode', () => {
+    expect(computeCurrentTabs('insert')).toBe(EDIT_TABS);
+    expect(computeCurrentTabs('select')).toBe(EDIT_TABS);
+    expect(computeCurrentTabs(null)).toBe(EDIT_TABS);
   });
 });
 
@@ -158,7 +147,7 @@ describe('Flow A: Place (component-first)', () => {
     expect(state.insertBrowseActive).toBe(true);
     expect(state.insertPoint).toBeNull();
     expect(state.elementData).toBeNull();
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('place');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
     expect(computeIsPicking(state.mode, state.selectModeActive, state.insertPoint, state.insertBrowseActive)).toBe(true);
     expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('orange');
 
@@ -179,7 +168,7 @@ describe('Flow A: Place (component-first)', () => {
     expect(state.insertBrowseActive).toBe(false);
     expect(state.elementData).toBeNull();
     expect(state.insertPoint).toBeNull();
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('place');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
     // After placement, button is gray (resting insert — not browsing, not locked)
     expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('gray');
   });
@@ -211,7 +200,7 @@ describe('Flow B: Place (location-first)', () => {
     expect(state.insertBrowseActive).toBe(false);
     expect(computeIsPicking(state.mode, state.selectModeActive, state.insertPoint, state.insertBrowseActive)).toBe(false);
     expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('teal');
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('place');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
   });
 
   it('Step 4: COMPONENT_DISARMED after placement → mode stays, tab stays, gray', () => {
@@ -226,7 +215,7 @@ describe('Flow B: Place (location-first)', () => {
     expect(state.insertPoint).toBeNull();
     expect(state.elementData).toBeNull();
     expect(state.insertBrowseActive).toBe(false);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('place');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
     expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('gray');
   });
 });
@@ -246,7 +235,7 @@ describe('Flow C: Replace (element-first)', () => {
     expect(computeActiveTab(state.mode, state.tabPreference)).toBe('design');
   });
 
-  it('Step 3: ELEMENT_SELECTED → teal, Design tab', () => {
+  it('Step 3: ELEMENT_SELECTED → orange (selecting persists), Design tab', () => {
     const afterSelect = dispatch(INITIAL_STATE, { type: 'MODE_CHANGE', mode: 'select' });
     const result = dispatch(afterSelect.state, {
       type: 'WS_ELEMENT_SELECTED',
@@ -255,31 +244,31 @@ describe('Flow C: Replace (element-first)', () => {
     const { state } = result;
 
     expect(state.mode).toBe('select');
-    expect(state.selectModeActive).toBe(false);
+    expect(state.selectModeActive).toBe(true);
     expect(state.elementData).toBe(MOCK_ELEMENT);
-    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('teal');
+    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('orange');
     expect(computeActiveTab(state.mode, state.tabPreference)).toBe('design');
   });
 
-  it('Step 4: Switch to Replace tab', () => {
+  it('Step 4: Switch to Replace tab (still orange — selecting persists)', () => {
     const afterElement = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
     ]);
-    const result = dispatch(afterElement.state, { type: 'TAB_CHANGE', tab: 'replace' });
+    const result = dispatch(afterElement.state, { type: 'TAB_CHANGE', tab: 'components' });
     const { state } = result;
 
     expect(state.mode).toBe('select');
     expect(state.elementData).toBe(MOCK_ELEMENT);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('replace');
-    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('teal');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
+    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('orange');
   });
 
   it('Step 5: COMPONENT_DISARMED → mode stays select, tab stays replace, gray', () => {
     const afterReplace = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
-      { type: 'TAB_CHANGE', tab: 'replace' },
+      { type: 'TAB_CHANGE', tab: 'components' },
     ]);
     const result = dispatch(afterReplace.state, { type: 'WS_COMPONENT_DISARMED' });
     const { state } = result;
@@ -287,7 +276,7 @@ describe('Flow C: Replace (element-first)', () => {
     expect(state.mode).toBe('select');
     expect(state.elementData).toBeNull();
     expect(state.selectModeActive).toBe(false);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('replace');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
   });
 });
 
@@ -299,20 +288,20 @@ describe('Flow D: Replace (component-first)', () => {
   it('Step 2→3: Click Select → Replace tab → still orange', () => {
     const result = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
-      { type: 'TAB_CHANGE', tab: 'replace' },
+      { type: 'TAB_CHANGE', tab: 'components' },
     ]);
     const { state } = result;
 
     expect(state.mode).toBe('select');
     expect(state.selectModeActive).toBe(true);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('replace');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
     expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('orange');
   });
 
   it('Step 5: COMPONENT_DISARMED → mode stays select, tab replace, gray', () => {
     const afterArm = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
-      { type: 'TAB_CHANGE', tab: 'replace' },
+      { type: 'TAB_CHANGE', tab: 'components' },
     ]);
     const result = dispatch(afterArm.state, { type: 'WS_COMPONENT_DISARMED' });
     const { state } = result;
@@ -320,7 +309,7 @@ describe('Flow D: Replace (component-first)', () => {
     expect(state.mode).toBe('select');
     expect(state.elementData).toBeNull();
     expect(state.selectModeActive).toBe(false);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('replace');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
   });
 });
 
@@ -336,11 +325,11 @@ describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(s1.state.selectModeActive).toBe(true);
     expect(getModeButtonColor(s1.state.mode, s1.state.selectModeActive, s1.state.elementData, s1.state.insertPoint, s1.state.insertBrowseActive)).toBe('orange');
 
-    // Step 2: Element selected
+    // Step 2: Element selected (stays orange — persistent select)
     const s2 = dispatch(s1.state, { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT });
     expect(s2.state.mode).toBe('select');
     expect(s2.state.elementData).toBe(MOCK_ELEMENT);
-    expect(getModeButtonColor(s2.state.mode, s2.state.selectModeActive, s2.state.elementData, s2.state.insertPoint, s2.state.insertBrowseActive)).toBe('teal');
+    expect(getModeButtonColor(s2.state.mode, s2.state.selectModeActive, s2.state.elementData, s2.state.insertPoint, s2.state.insertBrowseActive)).toBe('orange');
     expect(computeActiveTab(s2.state.mode, s2.state.tabPreference)).toBe('design');
 
     // Step 3: Click Insert on overlay toolbar (MODE_CHANGED from overlay)
@@ -349,7 +338,7 @@ describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(s3.state.elementData).toBeNull(); // cleared
     expect(s3.state.selectModeActive).toBe(false);
     expect(s3.state.insertBrowseActive).toBe(true);
-    expect(computeActiveTab(s3.state.mode, s3.state.tabPreference)).toBe('place');
+    expect(computeActiveTab(s3.state.mode, s3.state.tabPreference)).toBe('components');
     expect(getModeButtonColor(s3.state.mode, s3.state.selectModeActive, s3.state.elementData, s3.state.insertPoint, s3.state.insertBrowseActive)).toBe('orange');
     // fromOverlay=true, so no outbound messages
     expect(overlayMessages(s3)).toEqual([]);
@@ -368,11 +357,11 @@ describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(getModeButtonColor(s5.state.mode, s5.state.selectModeActive, s5.state.elementData, s5.state.insertPoint, s5.state.insertBrowseActive)).toBe('orange');
     expect(computeActiveTab(s5.state.mode, s5.state.tabPreference)).toBe('design');
 
-    // Step 6: Element selected again
+    // Step 6: Element selected again (stays orange — persistent select)
     const s6 = dispatch(s5.state, { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT });
     expect(s6.state.mode).toBe('select');
     expect(s6.state.elementData).toBe(MOCK_ELEMENT);
-    expect(getModeButtonColor(s6.state.mode, s6.state.selectModeActive, s6.state.elementData, s6.state.insertPoint, s6.state.insertBrowseActive)).toBe('teal');
+    expect(getModeButtonColor(s6.state.mode, s6.state.selectModeActive, s6.state.elementData, s6.state.insertPoint, s6.state.insertBrowseActive)).toBe('orange');
     expect(computeActiveTab(s6.state.mode, s6.state.tabPreference)).toBe('design');
   });
 });
@@ -382,7 +371,7 @@ describe('Flow E: Cross-mode switching via overlay toolbar', () => {
 // ============================================================================
 
 describe('Escape key', () => {
-  it('with element selected → deselect, stay in mode (select)', () => {
+  it('with element selected + selecting active → stop selecting, keep element (teal)', () => {
     const withElement = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
@@ -390,12 +379,33 @@ describe('Escape key', () => {
     const result = dispatch(withElement.state, { type: 'ESCAPE' });
     const { state } = result;
 
+    // Orange + element → Teal: stop selecting, keep element
     expect(state.mode).toBe('select');
-    expect(state.elementData).toBeNull();
-    // Should re-enter picking (sends CLEAR_HIGHLIGHTS + TOGGLE_SELECT_MODE)
+    expect(state.elementData).toBe(MOCK_ELEMENT);
+    expect(state.selectModeActive).toBe(false);
+    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('teal');
     const msgs = overlayMessages(result);
-    expect(msgs).toContainEqual({ type: 'CLEAR_HIGHLIGHTS', deselect: true });
-    expect(msgs).toContainEqual({ type: 'TOGGLE_SELECT_MODE', active: true });
+    expect(msgs).toContainEqual({ type: 'TOGGLE_SELECT_MODE', active: false });
+  });
+
+  it('with element selected + selecting off (teal) → deselect, cancel mode (gray)', () => {
+    // First get to teal: select → element → escape (stops selecting)
+    const tealState = dispatchAll(INITIAL_STATE, [
+      { type: 'MODE_CHANGE', mode: 'select' },
+      { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
+    ]);
+    const afterFirstEscape = dispatch(tealState.state, { type: 'ESCAPE' });
+    expect(afterFirstEscape.state.selectModeActive).toBe(false);
+    expect(afterFirstEscape.state.elementData).toBe(MOCK_ELEMENT);
+
+    // Second escape: teal → gray
+    const result = dispatch(afterFirstEscape.state, { type: 'ESCAPE' });
+    const { state } = result;
+
+    expect(state.mode).toBeNull();
+    expect(state.elementData).toBeNull();
+    expect(state.selectModeActive).toBe(false);
+    expect(overlayMessages(result)).toContainEqual({ type: 'CANCEL_MODE' });
   });
 
   it('with insert point locked → clear point, stay in insert mode', () => {
@@ -436,15 +446,36 @@ describe('Escape key', () => {
 // ============================================================================
 
 describe('Mode toggle', () => {
-  it('re-click select with element → deselect, stay in select', () => {
+  it('re-click select with element + selecting active → stop selecting, keep element (teal)', () => {
     const withElement = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
     ]);
     const result = dispatch(withElement.state, { type: 'MODE_CHANGE', mode: 'select' });
 
+    // Orange + element → Teal: stop selecting, keep element
     expect(result.state.mode).toBe('select');
-    expect(result.state.elementData).toBeNull();
+    expect(result.state.elementData).toBe(MOCK_ELEMENT);
+    expect(result.state.selectModeActive).toBe(false);
+    expect(getModeButtonColor(result.state.mode, result.state.selectModeActive, result.state.elementData, result.state.insertPoint, result.state.insertBrowseActive)).toBe('teal');
+  });
+
+  it('re-click select when teal (element, not selecting) → re-enable selecting (orange)', () => {
+    // Get to teal: select → element → click Select (stop selecting)
+    const withElement = dispatchAll(INITIAL_STATE, [
+      { type: 'MODE_CHANGE', mode: 'select' },
+      { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
+    ]);
+    const teal = dispatch(withElement.state, { type: 'MODE_CHANGE', mode: 'select' });
+    expect(teal.state.selectModeActive).toBe(false);
+    expect(teal.state.elementData).toBe(MOCK_ELEMENT);
+
+    // Click Select again: teal → orange (re-enable selecting)
+    const result = dispatch(teal.state, { type: 'MODE_CHANGE', mode: 'select' });
+    expect(result.state.mode).toBe('select');
+    expect(result.state.selectModeActive).toBe(true);
+    expect(result.state.elementData).toBe(MOCK_ELEMENT);
+    expect(overlayMessages(result)).toContainEqual({ type: 'TOGGLE_SELECT_MODE', active: true });
   });
 
   it('re-click select with no element → toggle off', () => {
@@ -513,7 +544,7 @@ describe('Mode toggle', () => {
     expect(state.mode).toBe('insert');
     expect(state.elementData).toBeNull();
     expect(state.selectModeActive).toBe(false);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('place');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
   });
 
   it('switch from insert to select → clear insert point, enter select', () => {
@@ -536,12 +567,14 @@ describe('Mode toggle', () => {
 // ============================================================================
 
 describe('Invariants', () => {
-  it('#1: selectModeActive is false when element is selected (no double-orange)', () => {
+  it('#1: selectModeActive stays true when element is selected (persistent select)', () => {
     const result = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
     ]);
-    expect(result.state.selectModeActive).toBe(false);
+    // Persistent select: selectModeActive stays true, button is orange
+    expect(result.state.selectModeActive).toBe(true);
+    expect(getModeButtonColor(result.state.mode, result.state.selectModeActive, result.state.elementData, result.state.insertPoint, result.state.insertBrowseActive)).toBe('orange');
   });
 
   it('#2: COMPONENT_DISARMED keeps mode (tab stays visible)', () => {
@@ -556,11 +589,11 @@ describe('Invariants', () => {
     const selectResult = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
-      { type: 'TAB_CHANGE', tab: 'replace' },
+      { type: 'TAB_CHANGE', tab: 'components' },
       { type: 'WS_COMPONENT_DISARMED' },
     ]);
     expect(selectResult.state.mode).toBe('select');
-    expect(computeActiveTab(selectResult.state.mode, selectResult.state.tabPreference)).toBe('replace');
+    expect(computeActiveTab(selectResult.state.mode, selectResult.state.tabPreference)).toBe('components');
   });
 
   it('#3: tab never disappears after place/replace (mode stays active)', () => {
@@ -571,30 +604,34 @@ describe('Invariants', () => {
       { type: 'WS_COMPONENT_DISARMED' },
     ]);
     expect(placeResult.state.mode).not.toBeNull();
-    expect(computeCurrentTabs(placeResult.state.mode)).toBe(INSERT_TABS);
+    expect(computeCurrentTabs(placeResult.state.mode)).toBe(EDIT_TABS);
 
     // After replacing in select mode
     const replaceResult = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
-      { type: 'TAB_CHANGE', tab: 'replace' },
+      { type: 'TAB_CHANGE', tab: 'components' },
       { type: 'WS_COMPONENT_DISARMED' },
     ]);
     expect(replaceResult.state.mode).not.toBeNull();
-    expect(computeCurrentTabs(replaceResult.state.mode)).toBe(SELECT_TABS);
+    expect(computeCurrentTabs(replaceResult.state.mode)).toBe(EDIT_TABS);
   });
 
-  it('#5: teal only when target locked', () => {
+  it('#5: teal only when target locked and not picking', () => {
     // No target → not teal
     const noTarget = dispatch(INITIAL_STATE, { type: 'MODE_CHANGE', mode: 'select' });
     expect(getModeButtonColor(noTarget.state.mode, noTarget.state.selectModeActive, noTarget.state.elementData, noTarget.state.insertPoint, noTarget.state.insertBrowseActive)).not.toBe('teal');
 
-    // With element → teal
-    const withEl = dispatchAll(INITIAL_STATE, [
+    // With element + selectModeActive → orange (persistent select), not teal
+    const withElPicking = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
     ]);
-    expect(getModeButtonColor(withEl.state.mode, withEl.state.selectModeActive, withEl.state.elementData, withEl.state.insertPoint, withEl.state.insertBrowseActive)).toBe('teal');
+    expect(getModeButtonColor(withElPicking.state.mode, withElPicking.state.selectModeActive, withElPicking.state.elementData, withElPicking.state.insertPoint, withElPicking.state.insertBrowseActive)).toBe('orange');
+
+    // With element + selectModeActive off → teal (locked)
+    const tealState = dispatch(withElPicking.state, { type: 'MODE_CHANGE', mode: 'select' });
+    expect(getModeButtonColor(tealState.state.mode, tealState.state.selectModeActive, tealState.state.elementData, tealState.state.insertPoint, tealState.state.insertBrowseActive)).toBe('teal');
 
     // With insert point → teal
     const withIP = dispatchAll(INITIAL_STATE, [
@@ -692,24 +729,25 @@ describe('Side effects', () => {
   });
 
   it('TAB_CHANGE sends TAB_CHANGED to overlay', () => {
-    const result = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'replace' });
-    expect(overlayMessages(result)).toContainEqual({ type: 'TAB_CHANGED', tab: 'replace' });
+    const result = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'components' });
+    expect(overlayMessages(result)).toContainEqual({ type: 'TAB_CHANGED', tab: 'components' });
   });
 
   it('TAB_CHANGE from overlay does NOT send back', () => {
-    const result = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'replace', fromOverlay: true });
+    const result = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'components', fromOverlay: true });
     expect(overlayMessages(result)).toEqual([]);
   });
 
-  it('ESCAPE with element sends CLEAR_HIGHLIGHTS + TOGGLE_SELECT_MODE', () => {
+  it('ESCAPE with element + selecting active sends TOGGLE_SELECT_MODE(false)', () => {
     const withElement = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
       { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT },
     ]);
     const result = dispatch(withElement.state, { type: 'ESCAPE' });
     const msgs = overlayMessages(result);
-    expect(msgs).toContainEqual({ type: 'CLEAR_HIGHLIGHTS', deselect: true });
-    expect(msgs).toContainEqual({ type: 'TOGGLE_SELECT_MODE', active: true });
+    // Orange + element → Teal: sends TOGGLE_SELECT_MODE(false)
+    expect(msgs).toContainEqual({ type: 'TOGGLE_SELECT_MODE', active: false });
+    expect(msgs).not.toContainEqual(expect.objectContaining({ type: 'CLEAR_HIGHLIGHTS' }));
   });
 
   it('ESCAPE with no selection sends CANCEL_MODE', () => {
@@ -736,13 +774,13 @@ describe('Tab preference', () => {
   });
 
   it('switching to insert keeps component preference', () => {
-    const withComponent = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'replace' });
+    const withComponent = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'components' });
     const result = dispatch(withComponent.state, { type: 'MODE_CHANGE', mode: 'insert' });
     expect(result.state.tabPreference).toBe('component');
   });
 
   it('switching to select from null resets preference to design', () => {
-    const withComponent = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'replace' });
+    const withComponent = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'components' });
     const result = dispatch(withComponent.state, { type: 'MODE_CHANGE', mode: 'select' });
     expect(result.state.tabPreference).toBe('design');
     expect(computeActiveTab(result.state.mode, result.state.tabPreference)).toBe('design');

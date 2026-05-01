@@ -479,7 +479,7 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
 	}
 
 	return (
-		<div className="divide-y divide-bv-border">
+		<div className="divide-y divide-bit-border">
 			{/* ── Box Model ─────────────────────────────────────────── */}
 			<div className="px-4 py-3">
 				<div
@@ -487,14 +487,14 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
 					onClick={() => setBoxModelCollapsed((c) => !c)}
 				>
 					<svg
-						className={`w-3 h-3 text-bv-muted transition-transform ${boxModelCollapsed ? "" : "rotate-90"}`}
+						className={`w-3 h-3 text-bit-muted transition-transform ${boxModelCollapsed ? "" : "rotate-90"}`}
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
 					>
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
 					</svg>
-					<span className="text-[10px] font-semibold text-bv-text">
+					<span className="text-[10px] font-semibold text-bit-text">
 						Box model
 					</span>
 				</div>
@@ -1067,7 +1067,7 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
                     onRemoveHover={align.hasValue ? () => handlePreview(align.effectiveClass, '') : undefined}
                   />
                 </div>
-                <div className="h-px w-full bg-bv-border opacity-50 my-2" />
+                <div className="h-px w-full bg-bit-border opacity-50 my-2" />
                 <GapModel
                   slots={gapSlots}
                   onSlotHover={(_key, value) => {
@@ -1152,8 +1152,8 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
                   key={cls.fullClass}
                   className={`group flex items-center gap-1 px-2 py-0.5 rounded cursor-pointer text-[11px] font-mono border transition-colors ${
                     (selectedClass?.fullClass === cls.fullClass || chipColorPicker?.cls.fullClass === cls.fullClass)
-                      ? 'border-bv-border bg-bv-surface-hi text-bv-text'
-                      : 'bg-bv-surface text-bv-text-mid border-transparent hover:border-bv-teal hover:text-bv-teal'
+                      ? 'border-bit-border bg-bit-surface-hi text-bit-text'
+                      : 'bg-bit-surface text-bit-text-mid border-transparent hover:border-bit-teal hover:text-bit-teal'
                   }`}
                   onClick={(e) => handleChipClick(cls, e.currentTarget)}
                 >
@@ -1267,7 +1267,7 @@ export function Picker({ componentName, instanceCount, rawClasses, parsedClasses
                   <div
                     key={`pending-${prefix}`}
                     data-testid={`pending-ghost-${prefix}`}
-                    className="px-2 py-0.5 rounded cursor-pointer text-[11px] font-mono border border-dashed border-bv-border text-bv-muted hover:border-bv-teal hover:text-bv-teal transition-colors"
+                    className="px-2 py-0.5 rounded cursor-pointer text-[11px] font-mono border border-dashed border-bit-border text-bit-muted hover:border-bit-teal hover:text-bit-teal transition-colors"
                     onClick={(e) => {
                       const ghostToken: ParsedToken = {
                         property: 'text',

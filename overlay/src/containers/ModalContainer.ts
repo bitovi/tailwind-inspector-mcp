@@ -52,7 +52,7 @@ export class ModalContainer implements IContainer {
     // Drag handle
     const handle = document.createElement('div');
     handle.style.cssText = css(DRAG_HANDLE);
-    handle.innerHTML = `<svg width="32" height="6" viewBox="0 0 32 6" fill="none"><rect x="0" y="0" width="32" height="2" rx="1" fill="#585b70"/><rect x="0" y="4" width="32" height="2" rx="1" fill="#585b70"/></svg>`;
+    handle.innerHTML = `<svg width="32" height="6" viewBox="0 0 32 6" fill="none"><rect x="0" y="0" width="32" height="2" rx="1" fill="var(--ov-text-dim)"/><rect x="0" y="4" width="32" height="2" rx="1" fill="var(--ov-text-dim)"/></svg>`;
     this.setupDrag(handle, host);
     host.appendChild(handle);
 
@@ -66,7 +66,7 @@ export class ModalContainer implements IContainer {
     // Resize gripper
     const gripper = document.createElement('div');
     gripper.style.cssText = css(CORNER_GRIPPER);
-    gripper.innerHTML = '<span style="position:absolute;bottom:2px;right:4px;color:#585b70;font-size:10px;">◢</span>';
+    gripper.innerHTML = '<span style="position:absolute;bottom:2px;right:4px;color:var(--ov-text-dim);font-size:10px;">◢</span>';
     this.setupResize(gripper, host, iframe);
     host.appendChild(gripper);
 

@@ -17,9 +17,9 @@ function Interactive() {
   const [value, setValue] = useState('items-stretch');
 
   return (
-    <div className="p-6 bg-bv-bg flex flex-col gap-4">
+    <div className="p-6 bg-bit-bg flex flex-col gap-4">
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-mono text-bv-muted uppercase tracking-wide">Direction</span>
+        <span className="text-[9px] font-mono text-bit-muted uppercase tracking-wide">Direction</span>
         <FlexDirection
           value={dir}
           lockedValue={null}
@@ -30,7 +30,7 @@ function Interactive() {
         />
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[9px] font-mono text-bv-muted uppercase tracking-wide">Align</span>
+        <span className="text-[9px] font-mono text-bit-muted uppercase tracking-wide">Align</span>
         <FlexAlign
           currentValue={value}
           lockedValue={null}
@@ -42,7 +42,7 @@ function Interactive() {
           onRemove={() => setValue('items-stretch')}
         />
       </div>
-      <span className="text-[11px] font-mono text-bv-teal">{value}</span>
+      <span className="text-[11px] font-mono text-bit-teal">{value}</span>
     </div>
   );
 }

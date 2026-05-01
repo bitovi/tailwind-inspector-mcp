@@ -57,11 +57,11 @@ export function ShadowLayerRow({
     <>
       {/* Col 1: orange dot */}
       <span className="flex items-center justify-center" {...cellHoverProps}>
-        <span className="w-1 h-1 rounded-full bg-bv-orange" />
+        <span className="w-1 h-1 rounded-full bg-bit-orange" />
       </span>
 
       {/* Col 2: layer name */}
-      <span className="flex items-center text-[9px] font-semibold uppercase tracking-[0.8px] text-bv-text-mid font-mono whitespace-nowrap" {...cellHoverProps}>
+      <span className="flex items-center text-[9px] font-semibold uppercase tracking-[0.8px] text-bit-text-mid font-mono whitespace-nowrap" {...cellHoverProps}>
         {LAYER_LABELS[layer.type]}
       </span>
 
@@ -83,8 +83,8 @@ export function ShadowLayerRow({
         type="button"
         className={`w-[26px] h-[26px] rounded-[5px] border shrink-0 cursor-pointer transition-[border-color] ${
           layer.colorHex
-            ? 'border-bv-border hover:border-bv-teal'
-            : 'border-dashed border-bv-border hover:border-bv-teal'
+            ? 'border-bit-border hover:border-bit-teal'
+            : 'border-dashed border-bit-border hover:border-bit-teal'
         } ${isDisabled ? 'opacity-30 pointer-events-none' : ''}`}
         onClick={(e) => onColorClick(e.currentTarget)}
         title={layer.colorClass ? layer.colorClass : 'Default color — click to override'}
@@ -101,7 +101,7 @@ export function ShadowLayerRow({
         ) : (
           /* Ghost state: default color — show a small dark dot to hint "dark, implicit" */
           <div className="w-full h-full rounded-[4px] flex items-center justify-center">
-            <span className="w-2 h-2 rounded-full bg-bv-text-mid opacity-40" />
+            <span className="w-2 h-2 rounded-full bg-bit-text-mid opacity-40" />
           </div>
         )}
       </button>
@@ -122,15 +122,15 @@ export function ShadowLayerRow({
             onClick={onOpacityClick}
           />
         ) : (
-          <span className="flex items-center justify-center w-full h-[26px] bg-bv-surface border border-bv-border rounded-[5px]">
-            <span className="font-mono text-[11px] text-bv-muted select-none">—</span>
+          <span className="flex items-center justify-center w-full h-[26px] bg-bit-surface border border-bit-border rounded-[5px]">
+            <span className="font-mono text-[11px] text-bit-muted select-none">—</span>
           </span>
         )}
       </span>
 
       {/* Col 6: Inline preview square */}
       <span
-        className="ml-4 flex w-[26px] h-[26px] rounded-[5px] bg-bv-surface-hi border border-bv-border transition-[box-shadow] duration-200 items-center justify-center overflow-hidden"
+        className="ml-4 flex w-[26px] h-[26px] rounded-[5px] bg-bit-surface-hi border border-bit-border transition-[box-shadow] duration-200 items-center justify-center overflow-hidden"
         style={layer.type === 'text-shadow'
           ? {}
           : { boxShadow: previewShadow }
@@ -140,7 +140,7 @@ export function ShadowLayerRow({
       >
         {layer.type === 'text-shadow' && (
           <span
-            className="text-[11px] font-semibold text-bv-text select-none transition-[text-shadow] duration-200"
+            className="text-[11px] font-semibold text-bit-text select-none transition-[text-shadow] duration-200"
             style={{ textShadow: previewTextShadow }}
           >
             Aa
@@ -151,7 +151,7 @@ export function ShadowLayerRow({
       {/* Col 7: Remove button */}
       <button
         type="button"
-        className={`ml-4 w-[18px] h-[18px] rounded-[3px] border-none bg-transparent text-bv-muted text-xs cursor-pointer flex items-center justify-center transition-all hover:text-bv-orange hover:bg-bv-orange/10 ${hovered ? 'opacity-100' : 'opacity-0'}`}
+        className={`ml-4 w-[18px] h-[18px] rounded-[3px] border-none bg-transparent text-bit-muted text-xs cursor-pointer flex items-center justify-center transition-all hover:text-bit-orange hover:bg-bit-orange/10 ${hovered ? 'opacity-100' : 'opacity-0'}`}
         onClick={onRemove}
         onMouseEnter={() => { clearTimeout(hideTimer.current); setHovered(true); onRemoveHover(); }}
         onMouseLeave={() => { hideTimer.current = setTimeout(() => setHovered(false), 60); }}

@@ -7,4 +7,6 @@ export interface ModeToggleProps {
   isPicking?: boolean;
   /** True when a target is locked (element selected or insert point set). Shows teal. */
   isEngaged?: boolean;
+  /** True when panel is in edit context (select/insert/null — not bug-report/theme). */
+  isEditMode?: boolean;
 }

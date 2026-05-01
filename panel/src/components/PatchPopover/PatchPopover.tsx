@@ -123,7 +123,7 @@ export function PatchPopover({
 			<button
 				ref={buttonRef}
 				className={`flex items-center gap-1 text-[11px] tabular-nums border-none bg-transparent cursor-pointer px-0 py-0 ${
-					isActive ? `${activeColor} font-medium` : "text-bv-muted"
+					isActive ? `${activeColor} font-medium` : "text-bit-muted"
 				} ${isActive ? "hover:underline" : ""}`}
 				onClick={() => isActive && setOpen(!open)}
 				disabled={!isActive}
@@ -137,20 +137,20 @@ export function PatchPopover({
 
 			{open && (
 				<div
-					className="absolute bottom-full mb-1 min-w-[220px] max-w-[calc(100vw-24px)] w-max bg-bv-surface border border-bv-border rounded-lg shadow-lg overflow-hidden flex flex-col z-[9999]"
+					className="absolute bottom-full mb-1 min-w-[220px] max-w-[calc(100vw-24px)] w-max bg-bit-surface border border-bit-border rounded-lg shadow-lg overflow-hidden flex flex-col z-[9999]"
 					style={
 						popoverLeft !== undefined ? { left: `${popoverLeft}px` } : undefined
 					}
 				>
 					{/* Header */}
-					<div className="px-3 py-1.5 border-b border-bv-border text-[11px] font-semibold text-bv-text-mid uppercase tracking-wide">
+					<div className="px-3 py-1.5 border-b border-bit-border text-[11px] font-semibold text-bit-text-mid uppercase tracking-wide">
 						{label} ({count})
 					</div>
 
 					{/* Patch list */}
 					<div className="flex-1 overflow-auto">
 						{items.length === 0 ? (
-							<div className="px-3 py-2 text-[11px] text-bv-muted italic">
+							<div className="px-3 py-2 text-[11px] text-bit-muted italic">
 								No patches
 							</div>
 						) : (
@@ -163,32 +163,32 @@ export function PatchPopover({
 								return (
 									<div
 										key={item.id}
-										className="flex items-center gap-1.5 px-3 py-1.5 border-b border-bv-border last:border-b-0 group"
+										className="flex items-center gap-1.5 px-3 py-1.5 border-b border-bit-border last:border-b-0 group"
 									>
 										<div className="flex-1 min-w-0">
 											{!isMessage && !isDesign && !isComponentDrop && !isTextChange && !isBugReport && item.component?.name && (
-												<div className="text-[10px] text-bv-muted truncate">
+												<div className="text-[10px] text-bit-muted truncate">
 													{item.component.name}
 												</div>
 											)}
 											{isBugReport ? (
-												<div className="text-[11px] text-bv-text">
+												<div className="text-[11px] text-bit-text">
 													<div className="flex items-center gap-1.5">
 														<span>🐛</span>
 														<span className="font-semibold">Bug Report</span>
 													</div>
 													{"bugDescription" in item && item.bugDescription && (
-														<div className="text-[10px] text-bv-muted mt-0.5 whitespace-pre-wrap break-words line-clamp-3">
+														<div className="text-[10px] text-bit-muted mt-0.5 whitespace-pre-wrap break-words line-clamp-3">
 															{(item.bugDescription as string).slice(0, 200)}
 														</div>
 													)}
 												</div>
 											) : isComponentDrop ? (
-												<div className="text-[11px] text-bv-text truncate">
+												<div className="text-[11px] text-bit-text truncate">
 												{describeComponentDrop(item)}
 												</div>
 											) : isDesign ? (
-												<div className="text-[11px] text-bv-text">
+												<div className="text-[11px] text-bit-text">
 													<div className="flex items-center gap-1.5 mb-1">
 														<span>✏️</span>
 														<span className="truncate">
@@ -202,17 +202,17 @@ export function PatchPopover({
 														<img
 															src={item.image as string}
 															alt="Design drawing"
-															className="max-w-full max-h-16 object-contain rounded border border-bv-border bg-white"
+															className="max-w-full max-h-16 object-contain rounded border border-bit-border bg-white"
 														/>
 													)}
 												</div>
 											) : isMessage ? (
-												<div className="text-[11px] text-bv-text truncate">
+												<div className="text-[11px] text-bit-text truncate">
 													<span className="mr-1">💬</span>"
 													{("message" in item && item.message) || ""}"
 												</div>
 											) : isTextChange ? (
-												<div className="text-[11px] text-bv-text">
+												<div className="text-[11px] text-bit-text">
 													<div className="flex items-center gap-1.5">
 														<span>✏️</span>
 														<span className="truncate">
@@ -223,27 +223,27 @@ export function PatchPopover({
 														</span>
 													</div>
 													{"originalHtml" in item && item.originalHtml && "newHtml" in item && item.newHtml && (
-														<div className="mt-0.5 text-[10px] font-mono text-bv-muted break-words">
+														<div className="mt-0.5 text-[10px] font-mono text-bit-muted break-words">
 															<span className="line-through">{stripHtml(item.originalHtml as string, 30)}</span>
 															{" → "}
-															<span className="text-bv-teal">{stripHtml(item.newHtml as string, 30)}</span>
+															<span className="text-bit-teal">{stripHtml(item.newHtml as string, 30)}</span>
 														</div>
 													)}
 												</div>
 											) : (
-												<div className="text-[11px] font-mono text-bv-text truncate">
+												<div className="text-[11px] font-mono text-bit-text truncate">
 													{item.originalClass ? (
 														<>
-															<span className="line-through text-bv-muted">
+															<span className="line-through text-bit-muted">
 																{item.originalClass}
 															</span>
 															{" → "}
-															<span className="text-bv-teal">
+															<span className="text-bit-teal">
 																{item.newClass}
 															</span>
 														</>
 													) : (
-														<span className="text-bv-teal">
+														<span className="text-bit-teal">
 															+{item.newClass}
 														</span>
 													)}
@@ -256,7 +256,7 @@ export function PatchPopover({
 											<div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
 												{onCommit && (
 													<button
-														className="text-[10px] px-1.5 py-0.5 rounded border-none cursor-pointer bg-bv-teal text-white hover:bg-bv-teal-dark transition-colors"
+														className="text-[10px] px-1.5 py-0.5 rounded border-none cursor-pointer bg-bit-teal text-white hover:bg-bit-teal-dark transition-colors"
 														onClick={(e) => {
 															e.stopPropagation();
 															onCommit(item.id);
@@ -269,7 +269,7 @@ export function PatchPopover({
 												)}
 												{onDiscard && (
 													<button
-														className="text-[10px] px-1.5 py-0.5 rounded border-none cursor-pointer bg-transparent text-bv-muted hover:text-bv-orange hover:bg-bv-surface-hi transition-colors"
+														className="text-[10px] px-1.5 py-0.5 rounded border-none cursor-pointer bg-transparent text-bit-muted hover:text-bit-orange hover:bg-bit-surface-hi transition-colors"
 														onClick={(e) => {
 															e.stopPropagation();
 															onDiscard(item.id);
@@ -290,10 +290,10 @@ export function PatchPopover({
 
 					{/* Bulk actions footer */}
 					{hasActions && items.length > 0 && (onCommitAll || onDiscardAll) && (
-						<div className="flex gap-2 px-3 py-1.5 border-t border-bv-border">
+						<div className="flex gap-2 px-3 py-1.5 border-t border-bit-border">
 							{onCommitAll && (
 								<button
-									className="text-[10px] px-2 py-1 rounded border-none cursor-pointer font-semibold bg-bv-teal text-white hover:bg-bv-teal-dark transition-colors"
+									className="text-[10px] px-2 py-1 rounded border-none cursor-pointer font-semibold bg-bit-teal text-white hover:bg-bit-teal-dark transition-colors"
 									onClick={() => {
 										onCommitAll();
 										setOpen(false);
@@ -305,7 +305,7 @@ export function PatchPopover({
 							)}
 							{onDiscardAll && (
 								<button
-									className="text-[10px] px-2 py-1 rounded cursor-pointer font-semibold bg-transparent border border-bv-border text-bv-text-mid hover:text-bv-orange hover:border-bv-orange transition-colors"
+									className="text-[10px] px-2 py-1 rounded cursor-pointer font-semibold bg-transparent border border-bit-border text-bit-text-mid hover:text-bit-orange hover:border-bit-orange transition-colors"
 									onClick={() => {
 										onDiscardAll();
 										setOpen(false);

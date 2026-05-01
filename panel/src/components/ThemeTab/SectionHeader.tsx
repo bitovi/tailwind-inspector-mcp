@@ -16,15 +16,15 @@ export function SectionHeader({ title, expanded, onToggle, badge }: SectionHeade
         height="10"
         viewBox="0 0 10 10"
         fill="currentColor"
-        className={`text-bv-text-mid shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
+        className={`text-bit-text-mid shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
       >
         <path d="M3 1l4 4-4 4" />
       </svg>
-      <span className="text-[11px] font-semibold text-bv-text uppercase tracking-wider">
+      <span className="text-[11px] font-semibold text-bit-text uppercase tracking-wider">
         {title}
       </span>
       {badge && (
-        <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-bv-teal/15 text-bv-teal">
+        <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded bg-bit-teal/15 text-bit-teal">
           {badge}
         </span>
       )}

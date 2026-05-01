@@ -2,6 +2,8 @@
 // Extracted from index.ts — operates on shared overlay state.
 
 import { detectComponent } from "./framework-detect";
+import { isDragActive } from "./drag-drop";
+import { removeElementDrawer } from "./element-drawer";
 import { state } from "./overlay-state";
 
 export function highlightElement(el: HTMLElement): void {
@@ -22,6 +24,7 @@ export function removeDrawButton(): void {
 	state.msgRowEl = null;
 	state.pickerEl?.remove();
 	state.pickerEl = null;
+	removeElementDrawer();
 }
 
 export function clearHighlights(): void {
@@ -81,6 +84,9 @@ export function showHoverPreview(el: HTMLElement, componentName: string): void {
 }
 
 export function mouseMoveHandler(e: MouseEvent): void {
+	// Suppress hover previews during drag-drop to avoid visual conflicts
+	if (isDragActive()) return;
+
 	const now = Date.now();
 	if (now - state.lastMoveTime < 16) return;
 	state.lastMoveTime = now;
@@ -96,6 +102,14 @@ export function mouseMoveHandler(e: MouseEvent): void {
 		clearHoverPreview();
 		return;
 	}
+
+	// ── Persistent select: suppress hover outlines inside the selected element ──
+	if (state.currentTargetEl && (target === state.currentTargetEl || state.currentTargetEl.contains(target))) {
+		clearHoverPreview();
+		state.lastHoveredEl = target;
+		return;
+	}
+
 	if (target === state.lastHoveredEl) return;
 	state.lastHoveredEl = target;
 

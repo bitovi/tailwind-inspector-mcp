@@ -320,3 +320,82 @@ function buildInsertLevel(
 
   return `${pad}<${tag}${attrs}>\n${inner}${pad}</${tag}>`;
 }
+
+/**
+ * Build context for a delete-element patch. Same ancestor walk as buildInsertContext
+ * but annotates the target with "delete this element" and expands it one level deep
+ * so the agent can unambiguously identify which element to remove.
+ */
+export function buildDeleteContext(
+  target: HTMLElement,
+  originalClassMap: Map<HTMLElement, string>,
+): string {
+  const annotation = 'delete this element';
+  const ancestors: HTMLElement[] = [];
+  let current: HTMLElement | null = target;
+  while (current && current !== document.documentElement) {
+    ancestors.push(current);
+    current = current.parentElement;
+  }
+  ancestors.reverse(); // body → ... → target
+
+  return buildDeleteLevel(ancestors, 0, target, annotation, 0);
+}
+
+function buildDeleteLevel(
+  ancestors: HTMLElement[],
+  ancestorIndex: number,
+  target: HTMLElement,
+  annotation: string,
+  indent: number,
+): string {
+  const el = ancestors[ancestorIndex];
+  const pad = '  '.repeat(indent);
+  const tag = el.tagName.toLowerCase();
+
+  let attrs = '';
+  if (el.id) attrs += ` id="${el.id}"`;
+  const classStr = typeof el.className === 'string' ? el.className.trim() : '';
+  if (classStr) attrs += ` class="${classStr}"`;
+
+  const isTarget = el === target;
+
+  if (isTarget) {
+    return renderTargetExpanded(el, indent, annotation);
+  }
+
+  if (ancestorIndex >= ancestors.length - 1) {
+    return `${pad}<${tag}${attrs} />`;
+  }
+
+  const nextAncestor = ancestors[ancestorIndex + 1];
+  const children = Array.from(el.children) as HTMLElement[];
+  const relevantIndex = children.indexOf(nextAncestor);
+
+  let inner = '';
+
+  if (relevantIndex === -1) {
+    inner = buildDeleteLevel(ancestors, ancestorIndex + 1, target, annotation, indent + 1);
+  } else {
+    const start = Math.max(0, relevantIndex - 3);
+    const end = Math.min(children.length - 1, relevantIndex + 3);
+
+    if (start > 0) {
+      inner += `${pad}  …\n`;
+    }
+
+    for (let i = start; i <= end; i++) {
+      if (i === relevantIndex) {
+        inner += buildDeleteLevel(ancestors, ancestorIndex + 1, target, annotation, indent + 1) + '\n';
+      } else {
+        inner += renderSiblingWithDeepText(children[i], indent + 1) + '\n';
+      }
+    }
+
+    if (end < children.length - 1) {
+      inner += `${pad}  …\n`;
+    }
+  }
+
+  return `${pad}<${tag}${attrs}>\n${inner}${pad}</${tag}>`;
+}

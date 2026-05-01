@@ -87,7 +87,7 @@ export function CanvasToolbar({
   }, [showFillPalette, showStrokePalette]);
 
   return (
-    <div className="flex items-center gap-0.5 px-1.5 py-1 bg-bv-bg border-b border-bv-border text-[10px] shrink-0 flex-wrap">
+    <div className="flex items-center gap-0.5 px-1.5 py-1 bg-bit-bg border-b border-bit-border text-[10px] shrink-0 flex-wrap">
       {TOOLS.map(tool => (
         <button
           key={tool.id}
@@ -95,50 +95,50 @@ export function CanvasToolbar({
           onClick={() => onToolChange(tool.id)}
           className={`w-7 h-[26px] rounded border flex items-center justify-center text-[13px] cursor-pointer transition-all
             ${activeTool === tool.id
-              ? 'bg-bv-teal/10 border-bv-teal text-bv-teal'
-              : 'bg-transparent border-transparent text-bv-text-mid hover:bg-bv-surface hover:border-bv-border hover:text-bv-text'
+              ? 'bg-bit-teal/10 border-bit-teal text-bit-teal'
+              : 'bg-transparent border-transparent text-bit-text-mid hover:bg-bit-surface hover:border-bit-border hover:text-bit-text'
             }`}
         >
           {tool.icon}
         </button>
       ))}
 
-      <div className="w-px h-[18px] bg-bv-border mx-1" />
+      <div className="w-px h-[18px] bg-bit-border mx-1" />
 
       {/* Fill color */}
       <div ref={fillRef} className="relative">
         <button
           title="Fill color"
-          className="w-7 h-[26px] rounded border border-transparent flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-all hover:bg-bv-surface hover:border-bv-border"
+          className="w-7 h-[26px] rounded border border-transparent flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-all hover:bg-bit-surface hover:border-bit-border"
           onClick={() => { setShowFillPalette(!showFillPalette); setShowStrokePalette(false); }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-bv-text-mid">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-bit-text-mid">
             <path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 0 0 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/>
             <path d="M0 20h24v4H0z" style={{ fill: fillColor === 'transparent' ? 'none' : fillColor, stroke: fillColor === 'transparent' ? '#aaa' : 'none', strokeWidth: fillColor === 'transparent' ? 1 : 0 }} />
           </svg>
         </button>
         {showFillPalette && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-bv-bg border border-bv-border rounded-lg shadow-lg p-2 w-[164px]">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted mb-1.5">Fill Color</div>
+          <div className="absolute top-full left-0 mt-1 z-50 bg-bit-bg border border-bit-border rounded-lg shadow-lg p-2 w-[164px]">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-bit-muted mb-1.5">Fill Color</div>
             <div className="grid grid-cols-6 gap-1 mb-2">
               {BASIC_COLORS.map(c => (
                 <button
                   key={c}
                   className={`w-[22px] h-[22px] rounded cursor-pointer transition-all hover:scale-110
-                    ${fillColor === c ? 'ring-2 ring-bv-teal ring-offset-1' : 'border border-black/10'}`}
+                    ${fillColor === c ? 'ring-2 ring-bit-teal ring-offset-1' : 'border border-black/10'}`}
                   style={{ background: c }}
                   onClick={() => { onFillChange(c); setShowFillPalette(false); }}
                 />
               ))}
             </div>
-            <div className="pt-1 border-t border-bv-border flex items-center gap-1.5">
+            <div className="pt-1 border-t border-bit-border flex items-center gap-1.5">
               <button
-                className={`w-[22px] h-[22px] rounded cursor-pointer border border-bv-border
-                  ${fillColor === 'transparent' ? 'ring-2 ring-bv-teal ring-offset-1' : ''}`}
+                className={`w-[22px] h-[22px] rounded cursor-pointer border border-bit-border
+                  ${fillColor === 'transparent' ? 'ring-2 ring-bit-teal ring-offset-1' : ''}`}
                 style={{ background: 'repeating-conic-gradient(#ddd 0% 25%, white 0% 50%) 50%/8px 8px' }}
                 onClick={() => { onFillChange('transparent'); setShowFillPalette(false); }}
               />
-              <span className="text-[9px] text-bv-muted">None</span>
+              <span className="text-[9px] text-bit-muted">None</span>
             </div>
           </div>
         )}
@@ -148,23 +148,23 @@ export function CanvasToolbar({
       <div ref={strokeRef} className="relative">
         <button
           title="Stroke color"
-          className="w-7 h-[26px] rounded border border-transparent flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-all hover:bg-bv-surface hover:border-bv-border"
+          className="w-7 h-[26px] rounded border border-transparent flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-all hover:bg-bit-surface hover:border-bit-border"
           onClick={() => { setShowStrokePalette(!showStrokePalette); setShowFillPalette(false); }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-bv-text-mid">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-bit-text-mid">
             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
             <rect x="0" y="21" width="24" height="3" style={{ fill: strokeColor }} />
           </svg>
         </button>
         {showStrokePalette && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-bv-bg border border-bv-border rounded-lg shadow-lg p-2 w-[164px]">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted mb-1.5">Stroke Color</div>
+          <div className="absolute top-full left-0 mt-1 z-50 bg-bit-bg border border-bit-border rounded-lg shadow-lg p-2 w-[164px]">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-bit-muted mb-1.5">Stroke Color</div>
             <div className="grid grid-cols-6 gap-1">
               {BASIC_COLORS.map(c => (
                 <button
                   key={c}
                   className={`w-[22px] h-[22px] rounded cursor-pointer transition-all hover:scale-110
-                    ${strokeColor === c ? 'ring-2 ring-bv-teal ring-offset-1' : 'border border-black/10'}`}
+                    ${strokeColor === c ? 'ring-2 ring-bit-teal ring-offset-1' : 'border border-black/10'}`}
                   style={{ background: c }}
                   onClick={() => { onStrokeChange(c); setShowStrokePalette(false); }}
                 />
@@ -174,7 +174,7 @@ export function CanvasToolbar({
         )}
       </div>
 
-      <div className="w-px h-[18px] bg-bv-border mx-1" />
+      <div className="w-px h-[18px] bg-bit-border mx-1" />
 
       {/* Undo/Redo/Clear */}
       <button
@@ -182,7 +182,7 @@ export function CanvasToolbar({
         onClick={onUndo}
         disabled={!canUndo}
         className={`w-7 h-[26px] rounded border border-transparent flex items-center justify-center text-[13px] cursor-pointer transition-all
-          ${!canUndo ? 'opacity-35 cursor-default' : 'text-bv-text-mid hover:bg-bv-surface hover:border-bv-border hover:text-bv-text'}`}
+          ${!canUndo ? 'opacity-35 cursor-default' : 'text-bit-text-mid hover:bg-bit-surface hover:border-bit-border hover:text-bit-text'}`}
       >
         ↶
       </button>
@@ -191,14 +191,14 @@ export function CanvasToolbar({
         onClick={onRedo}
         disabled={!canRedo}
         className={`w-7 h-[26px] rounded border border-transparent flex items-center justify-center text-[13px] cursor-pointer transition-all
-          ${!canRedo ? 'opacity-35 cursor-default' : 'text-bv-text-mid hover:bg-bv-surface hover:border-bv-border hover:text-bv-text'}`}
+          ${!canRedo ? 'opacity-35 cursor-default' : 'text-bit-text-mid hover:bg-bit-surface hover:border-bit-border hover:text-bit-text'}`}
       >
         ↷
       </button>
       <button
         title="Clear canvas"
         onClick={onClear}
-        className="w-7 h-[26px] rounded border border-transparent flex items-center justify-center text-[13px] cursor-pointer text-bv-text-mid hover:bg-bv-surface hover:border-bv-border hover:text-bv-text transition-all"
+        className="w-7 h-[26px] rounded border border-transparent flex items-center justify-center text-[13px] cursor-pointer text-bit-text-mid hover:bg-bit-surface hover:border-bit-border hover:text-bit-text transition-all"
       >
         <TrashIcon />
       </button>
@@ -206,7 +206,7 @@ export function CanvasToolbar({
       {onClose && (
         <button
           onClick={onClose}
-          className="ml-auto px-2.5 py-0.5 rounded border border-bv-border bg-bv-bg text-bv-muted text-[10px] font-medium cursor-pointer hover:bg-bv-orange/10 hover:border-bv-orange hover:text-bv-orange transition-all"
+          className="ml-auto px-2.5 py-0.5 rounded border border-bit-border bg-bit-bg text-bit-muted text-[10px] font-medium cursor-pointer hover:bg-bit-orange/10 hover:border-bit-orange hover:text-bit-orange transition-all"
         >
           ✕ Close
         </button>
@@ -214,7 +214,7 @@ export function CanvasToolbar({
       {onSubmit && (
         <button
           onClick={onSubmit}
-          className="px-2.5 py-0.5 rounded border border-bv-teal bg-bv-teal text-white text-[10px] font-medium cursor-pointer hover:bg-bv-teal/80 transition-all"
+          className="px-2.5 py-0.5 rounded border border-bit-teal bg-bit-teal text-white text-[10px] font-medium cursor-pointer hover:bg-bit-teal/80 transition-all"
         >
           ✓ Add to Drafts
         </button>

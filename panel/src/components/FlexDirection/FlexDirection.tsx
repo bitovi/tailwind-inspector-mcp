@@ -21,7 +21,7 @@ export function FlexDirection({
 
   return (
     <div
-      className="inline-flex rounded border border-bv-border overflow-hidden"
+      className="inline-flex rounded border border-bit-border overflow-hidden"
       onMouseLeave={onLeave}
     >
       {OPTIONS.map((opt) => {
@@ -32,12 +32,12 @@ export function FlexDirection({
             type="button"
             title={opt.title}
             disabled={foreignLocked}
-            className={`w-7 h-[22px] flex items-center justify-center text-xs transition-all duration-150 border-r border-bv-border last:border-r-0
+            className={`w-7 h-[22px] flex items-center justify-center text-xs transition-all duration-150 border-r border-bit-border last:border-r-0
               ${isActive
-                ? 'bg-bv-teal text-white'
+                ? 'bg-bit-teal text-white'
                 : foreignLocked
-                ? 'bg-bv-bg text-bv-muted cursor-default'
-                : 'bg-bv-bg text-bv-text-mid hover:bg-bv-teal/9 hover:text-bv-teal cursor-pointer'
+                ? 'bg-bit-bg text-bit-muted cursor-default'
+                : 'bg-bit-bg text-bit-text-mid hover:bg-bit-teal/9 hover:text-bit-teal cursor-pointer'
               }`}
             onMouseEnter={() => !foreignLocked && onHover(opt.value)}
             onClick={() => !foreignLocked && onClick(opt.value)}

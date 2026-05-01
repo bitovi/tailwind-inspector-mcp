@@ -29,11 +29,11 @@ function FontSizeRow({ name, sizeValue, lineHeightValue, editedSize, editedLineH
   const isEdited = editedSize !== undefined || editedLineHeight !== undefined;
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bv-orange/5' : ''}`}>
+    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bit-orange/5' : ''}`}>
       {isEdited && (
-        <div className="w-1.5 h-1.5 rounded-full bg-bv-orange shrink-0" />
+        <div className="w-1.5 h-1.5 rounded-full bg-bit-orange shrink-0" />
       )}
-      <span className="text-[10px] text-bv-text-mid w-20 shrink-0 font-mono">
+      <span className="text-[10px] text-bit-text-mid w-20 shrink-0 font-mono">
         text-{name}
       </span>
       <input
@@ -42,20 +42,20 @@ function FontSizeRow({ name, sizeValue, lineHeightValue, editedSize, editedLineH
         onChange={(e) => {
           onEdit(`fontSize-${name}`, { variable: `--text-${name}`, value: e.target.value });
         }}
-        className="flex-1 min-w-0 bg-transparent text-[10px] text-bv-text font-mono border border-bv-border rounded px-1.5 py-0.5 focus:border-bv-teal focus:outline-none"
+        className="flex-1 min-w-0 bg-transparent text-[10px] text-bit-text font-mono border border-bit-border rounded px-1.5 py-0.5 focus:border-bit-teal focus:outline-none"
         spellCheck={false}
         title={`--text-${name}`}
       />
       {(lineHeightValue !== undefined || editedLineHeight !== undefined) && (
         <>
-          <span className="text-[9px] text-bv-muted shrink-0">/</span>
+          <span className="text-[9px] text-bit-muted shrink-0">/</span>
           <input
             type="text"
             value={displayLH}
             onChange={(e) => {
               onEdit(`fontSizeLH-${name}`, { variable: `--text-${name}--line-height`, value: e.target.value });
             }}
-            className="w-24 bg-transparent text-[10px] text-bv-text font-mono border border-bv-border rounded px-1.5 py-0.5 focus:border-bv-teal focus:outline-none"
+            className="w-24 bg-transparent text-[10px] text-bit-text font-mono border border-bit-border rounded px-1.5 py-0.5 focus:border-bit-teal focus:outline-none"
             spellCheck={false}
             title={`--text-${name}--line-height`}
             placeholder="line-height"
@@ -78,11 +78,11 @@ function TokenRow({ label, tokenKey, value, editedValue, onEdit, variable }: {
   const isEdited = editedValue !== undefined;
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bv-orange/5' : ''}`}>
+    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bit-orange/5' : ''}`}>
       {isEdited && (
-        <div className="w-1.5 h-1.5 rounded-full bg-bv-orange shrink-0" />
+        <div className="w-1.5 h-1.5 rounded-full bg-bit-orange shrink-0" />
       )}
-      <span className="text-[10px] text-bv-text-mid w-20 shrink-0 font-mono">
+      <span className="text-[10px] text-bit-text-mid w-20 shrink-0 font-mono">
         {label}
       </span>
       <input
@@ -91,7 +91,7 @@ function TokenRow({ label, tokenKey, value, editedValue, onEdit, variable }: {
         onChange={(e) => {
           onEdit(tokenKey, { variable, value: e.target.value });
         }}
-        className="flex-1 min-w-0 bg-transparent text-[10px] text-bv-text font-mono border border-bv-border rounded px-1.5 py-0.5 focus:border-bv-teal focus:outline-none"
+        className="flex-1 min-w-0 bg-transparent text-[10px] text-bit-text font-mono border border-bit-border rounded px-1.5 py-0.5 focus:border-bit-teal focus:outline-none"
         spellCheck={false}
       />
     </div>
@@ -113,7 +113,7 @@ export function TypographySectionV4({ fontSize, fontSizeLineHeight, fontWeight, 
       {sizeKeys.length > 0 && (
         <div>
           <div className="px-3 py-1.5 bg-white/2">
-            <span className="text-[10px] font-semibold text-bv-text">Font Size</span>
+            <span className="text-[10px] font-semibold text-bit-text">Font Size</span>
           </div>
           {sizeKeys.map(key => (
             <FontSizeRow
@@ -131,7 +131,7 @@ export function TypographySectionV4({ fontSize, fontSizeLineHeight, fontWeight, 
       {weightKeys.length > 0 && (
         <div>
           <div className="px-3 py-1.5 bg-white/2">
-            <span className="text-[10px] font-semibold text-bv-text">Font Weight</span>
+            <span className="text-[10px] font-semibold text-bit-text">Font Weight</span>
           </div>
           {weightKeys.map(key => {
             const tokenKey = `fontWeight-${key}`;

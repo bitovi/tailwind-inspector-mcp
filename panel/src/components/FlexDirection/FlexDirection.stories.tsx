@@ -6,7 +6,7 @@ import type { FlexDirectionValue } from './types';
 function Interactive() {
   const [value, setValue] = useState<FlexDirectionValue>('flex-row');
   return (
-    <div className="flex items-center gap-4 p-6 bg-bv-bg">
+    <div className="flex items-center gap-4 p-6 bg-bit-bg">
       <FlexDirection
         value={value}
         lockedValue={null}
@@ -15,7 +15,7 @@ function Interactive() {
         onLeave={() => {}}
         onClick={setValue}
       />
-      <span className="text-[11px] font-mono text-bv-teal">{value}</span>
+      <span className="text-[11px] font-mono text-bit-teal">{value}</span>
     </div>
   );
 }

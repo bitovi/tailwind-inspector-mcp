@@ -1,5 +1,5 @@
 import type { ParsedToken } from '../../../../overlay/src/tailwind/grammar';
-import type { AppMode, PanelTab } from '../../../../shared/types';
+import type { AppMode, EditTool, PanelTab } from '../../../../shared/types';
 import type { Tab } from '../../components/TabBar';
 
 // ---------------------------------------------------------------------------
@@ -29,6 +29,7 @@ export interface InsertPoint {
 
 export interface ModeStateMachineState {
   mode: AppMode;
+  editTool: EditTool;
   tabPreference: 'design' | 'component';
   selectModeActive: boolean;
   insertBrowseActive: boolean;
@@ -44,6 +45,7 @@ export interface ModeStateMachineState {
 
 export type ModeAction =
   | { type: 'MODE_CHANGE'; mode: AppMode; fromOverlay?: boolean }
+  | { type: 'EDIT_TOOL_CHANGE'; tool: EditTool; fromOverlay?: boolean }
   | { type: 'TAB_CHANGE'; tab: string; fromOverlay?: boolean }
   | { type: 'DESELECT_AND_REENTER'; fromOverlay?: boolean }
   | { type: 'ESCAPE' }
@@ -53,6 +55,7 @@ export type ModeAction =
   | { type: 'WS_ELEMENT_SELECTED'; elementData: ElementData }
   | { type: 'WS_SELECT_MODE_CHANGED'; active: boolean }
   | { type: 'WS_MODE_CHANGED'; mode: AppMode }
+  | { type: 'WS_EDIT_TOOL_CHANGED'; tool: EditTool }
   | { type: 'WS_TAB_CHANGED'; tab: string }
   | { type: 'WS_TEXT_EDIT_ACTIVE' }
   | { type: 'WS_TEXT_EDIT_DONE' }
@@ -74,6 +77,8 @@ export type SideEffect =
 export interface ModeStateMachine {
   /** Current mode: 'select' | 'insert' | 'bug-report' | 'theme' | null */
   mode: AppMode;
+  /** Active tool within edit mode: 'select' | 'text' | 'insert' | null */
+  editTool: EditTool;
   /** Currently selected element (null if none) */
   elementData: ElementData | null;
   /** Monotonically increasing ID — bumped on every selection change */
@@ -92,9 +97,13 @@ export interface ModeStateMachine {
   activeTab: string;
   /** True when the active mode is waiting for user action (crosshair / browse) */
   isPicking: boolean;
+  /** True when panel is in edit context (mode is select/insert/null with edit active) */
+  isEditMode: boolean;
 
   /** Handle mode button click (works for both panel & overlay origin) */
   handleModeChange: (mode: AppMode, fromOverlay?: boolean) => void;
+  /** Handle edit tool change from bottom toolbar */
+  handleEditToolChange: (tool: EditTool, fromOverlay?: boolean) => void;
   /** Handle tab change (works for both panel & overlay origin) */
   handleTabChange: (tabId: string, fromOverlay?: boolean) => void;
   /** Process an inbound WebSocket message (mode-related only; returns false if not handled) */
@@ -112,6 +121,11 @@ export const SELECT_TABS: Tab[] = [
 
 export const INSERT_TABS: Tab[] = [
   { id: 'place', label: 'Place' },
+];
+
+export const EDIT_TABS: Tab[] = [
+  { id: 'design', label: 'Design' },
+  { id: 'components', label: 'Components' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -138,13 +152,12 @@ export function getModeButtonColor(
 }
 
 export function computeActiveTab(mode: AppMode, tabPreference: 'design' | 'component'): string {
-  if (mode === 'insert') return 'place';
-  if (tabPreference === 'component') return 'replace';
+  if (tabPreference === 'component') return 'components';
   return 'design';
 }
 
 export function computeCurrentTabs(mode: AppMode): Tab[] {
-  return mode === 'insert' ? INSERT_TABS : SELECT_TABS;
+  return EDIT_TABS;
 }
 
 export function computeIsPicking(

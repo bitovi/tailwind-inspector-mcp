@@ -1,5 +1,5 @@
 import type { IContainer } from './IContainer';
-import { css, CONTAINER_HOST, PANEL_SHADOW, IFRAME_FLEX, RESIZE_HANDLE_H } from '../styles';
+import { css, CONTAINER_HOST, PANEL_SHADOW, IFRAME_FLEX } from '../styles';
 import { captureScrollPosition } from '../preserve-scroll';
 
 export class SidebarContainer implements IContainer {
@@ -70,14 +70,6 @@ export class SidebarContainer implements IContainer {
       display: 'flex',
     });
 
-    // Resize handle on left edge
-    const resizeHandle = document.createElement('div');
-    resizeHandle.style.cssText = css(RESIZE_HANDLE_H);
-    resizeHandle.addEventListener('mouseenter', () => { resizeHandle.style.background = '#45475a'; });
-    resizeHandle.addEventListener('mouseleave', () => { resizeHandle.style.background = 'transparent'; });
-    this.setupResize(resizeHandle, host);
-    host.appendChild(resizeHandle);
-
     const iframe = document.createElement('iframe');
     iframe.src = panelUrl;
     iframe.allow = 'microphone';
@@ -130,28 +122,5 @@ export class SidebarContainer implements IContainer {
 
   isOpen(): boolean {
     return this.host !== null;
-  }
-
-  private setupResize(handle: HTMLElement, host: HTMLElement): void {
-    let startX = 0, startW = 0;
-
-    const onMove = (e: MouseEvent) => {
-      this.width = Math.max(280, startW - (e.clientX - startX));
-      host.style.width = `${this.width}px`;
-      document.documentElement.style.paddingRight = `${this.width}px`;
-    };
-
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-
-    handle.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      startX = e.clientX;
-      startW = this.width;
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
   }
 }

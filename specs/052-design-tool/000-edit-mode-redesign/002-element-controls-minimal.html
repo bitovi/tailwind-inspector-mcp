@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>052 · 002 — Element Controls (Minimal)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --teal:         #00848B;
+      --teal-light:   #5fd4da;
+      --teal-dark:    #00464A;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --green:        #22c55e;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --radius:       6px;
+      --radius-lg:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1e1e1e; font-family: var(--font-ui); font-size: 12px; color: var(--text); padding: 40px; }
+
+    .page-header { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 36px; line-height: 1.6; max-width: 900px; }
+    .page-subtitle strong { color: var(--text-mid); }
+    .section-divider { width: 100%; border: none; border-top: 1px solid #333; margin: 40px 0 20px; }
+    .section-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--teal); margin-bottom: 4px; }
+    .section-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; max-width: 700px; }
+    .variations { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .col-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-mono); color: var(--muted); max-width: 500px; }
+    .col-description { font-size: 11px; color: var(--text-mid); max-width: 500px; line-height: 1.55; margin-bottom: 4px; }
+    .annotation { display: inline-block; font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+    .annotation.teal { color: var(--teal); background: var(--teal-dim); }
+    .annotation.orange { color: var(--orange); background: rgba(245, 83, 45, 0.12); }
+    .annotation.green { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
+    .annotation.gray { color: var(--muted); background: rgba(153,153,153,0.12); }
+
+    /* ── Mock page ── */
+    .mock-page { background: #f8fafc; border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; position: relative; font-family: var(--font-ui); width: 520px; }
+    .mock-header { background: #0f172a; padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
+    .mock-logo { width: 20px; height: 20px; border-radius: 4px; background: var(--teal); }
+    .mock-header-text { font-size: 12px; font-weight: 700; color: white; }
+    .mock-content { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .mock-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 14px; position: relative; }
+    .mock-card-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .mock-card-text { font-size: 11px; color: #64748b; line-height: 1.5; }
+
+    /* ── Msg row (exact match: overlay/src/styles.ts) ── */
+    .msg-row { display: flex; align-items: flex-end; gap: 4px; width: fit-content; background: #1a1a1a; border-radius: 8px; padding: 3px 4px 3px 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06); }
+    .msg-row textarea { width: 260px; border: none; background: #2a2a2a; color: #e5e5e5; font-family: 'Inter', system-ui, sans-serif; font-size: 13px; line-height: 1.4; padding: 4px 8px; border-radius: 5px; outline: none; resize: none; overflow: hidden; height: 26px; box-sizing: border-box; margin: 0; }
+    .msg-row textarea::placeholder { color: #888; }
+    .mic-btn { width: 24px; height: 24px; border-radius: 5px; border: none; background: transparent; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; padding: 0; }
+    .mic-btn svg { width: 13px; height: 13px; }
+    .msg-send { width: 24px; height: 24px; border-radius: 5px; border: none; background: #00848B; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .msg-send svg { width: 12px; height: 12px; }
+
+    /* ── Selection outline ── */
+    .sel-outline { outline: 2px solid var(--teal); outline-offset: 0px; }
+
+    /* ── Queue bar ── */
+    .queue-bar { display: flex; align-items: center; gap: 6px; }
+    .queue-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 5px; border: none; font-size: 10px; font-weight: 600; font-family: var(--font-ui); cursor: pointer; }
+    .queue-btn.primary { background: var(--teal); color: white; }
+    .queue-btn.cancel { background: #333; color: #aaa; }
+
+    /* ── Resize handles (R, B, BR only) ── */
+    .resize-frame { position: absolute; inset: -1px; pointer-events: none; }
+    .resize-handle { position: absolute; background: var(--teal); border: 1.5px solid white; pointer-events: auto; z-index: 5; }
+    .resize-handle.br { bottom: -4px; right: -4px; width: 8px; height: 8px; border-radius: 2px; cursor: se-resize; }
+    .resize-handle.r  { right: -3px; top: 50%; transform: translateY(-50%); width: 5px; height: 20px; border-radius: 3px; cursor: e-resize; }
+    .resize-handle.b  { bottom: -3px; left: 50%; transform: translateX(-50%); width: 20px; height: 5px; border-radius: 3px; cursor: s-resize; }
+
+    /* ── Drop indicator (insertion line) ── */
+    .drop-line { height: 3px; background: var(--teal); border-radius: 3px; position: relative; }
+    .drop-line::before, .drop-line::after { content: ''; position: absolute; top: 50%; transform: translateY(-50%); width: 7px; height: 7px; background: var(--teal); border: 1.5px solid white; border-radius: 50%; }
+    .drop-line::before { left: -2px; }
+    .drop-line::after { right: -2px; }
+
+    /* ── Bottom toolbar ── */
+    .bottom-toolbar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; background: #1a1a1a; border-radius: 10px; padding: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08); z-index: 20; }
+    .bt-grip { width: 14px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: grab; flex-shrink: 0; opacity: 0.5; }
+    .bt-grip svg { width: 6px; height: 10px; }
+    .bt-combo { height: 28px; border-radius: 5px; border: none; background: transparent; color: #aaa; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.2px; font-family: var(--font-ui); cursor: pointer; flex-shrink: 0; }
+    .bt-combo svg { width: 12px; height: 12px; }
+    .bt-combo.engaged { box-shadow: inset 0 0 0 1.5px var(--teal); color: var(--teal-light); }
+    .bt-combo.dim { opacity: 0.4; }
+    .bt-sep { width: 1px; height: 16px; background: #3a3a3a; margin: 0 2px; flex-shrink: 0; }
+
+    /* ── Text icon (T with serif) ── */
+    .text-icon { display: inline-flex; align-items: center; justify-content: center; }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+
+  <h1 class="page-header">052 · 002 — Element Controls (Minimal)</h1>
+  <p class="page-subtitle">
+    Stripped-down controls: <strong>no drag handle</strong> (drag anywhere on the outline),
+    <strong>no delete button</strong> (press ⌫/Del). The only visible control is a
+    <strong>text edit button</strong> + resize handles. Exploring where/how the text button appears.
+  </p>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION A — TEXT CIRCLE ON OUTLINE (top-right)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">Option A — Teal Circle on Outline</div>
+  <p class="section-subtitle">
+    Single teal circle sitting on the top-right of the selection outline.
+    Feels part of the outline frame. Inverts to white bg when active.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">SELECTED — AT REST</span>
+
+      <div class="mock-page" style="height: 280px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="mock-card sel-outline" style="overflow: visible;">
+            <!-- Text button: teal circle, top-right on outline -->
+            <div style="position: absolute; top: -12px; right: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--teal); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 6; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame"><div class="resize-handle r"></div><div class="resize-handle b"></div><div class="resize-handle br"></div></div>
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has 12 active tasks and 3 pending reviews. Click any card to view details.</div>
+          </div>
+          <div class="msg-row" style="margin-top: 2px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="col-label">TEXT EDITING ACTIVE</span>
+
+      <div class="mock-page" style="height: 320px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="queue-bar">
+            <button class="queue-btn primary">✓ Queue as Change</button>
+            <button class="queue-btn cancel">✕ Cancel</button>
+          </div>
+          <div class="mock-card sel-outline" style="overflow: visible;">
+            <!-- Text button: ACTIVE — inverted white bg + teal icon -->
+            <div style="position: absolute; top: -12px; right: -12px; width: 22px; height: 22px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 6; box-shadow: 0 0 0 2px var(--teal), 0 1px 4px rgba(0,0,0,0.3);">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame"><div class="resize-handle r" style="opacity:0.35;"></div><div class="resize-handle b" style="opacity:0.35;"></div><div class="resize-handle br" style="opacity:0.35;"></div></div>
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has <span style="background:#fef3c7;padding:0 2px;border-radius:2px;">24 active tasks</span> and 3 pending reviews. Click any card to view details.</div>
+          </div>
+          <div class="msg-row" style="margin-top: 2px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Single circle, part of the outline</span>
+    <span class="annotation green">Inverts on active — clear toggle state</span>
+    <span class="annotation gray">22px circle — good touch target</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION B — GHOST TEXT ICON (no background)
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Option B — Ghost Text Icon</div>
+  <p class="section-subtitle">
+    Just a bare teal "T" glyph floating above the top-right corner. No background, no circle.
+    Almost invisible until you need it. Goes white when active.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">SELECTED — AT REST</span>
+
+      <div class="mock-page" style="height: 280px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="mock-card sel-outline" style="overflow: visible;">
+            <!-- Ghost T icon -->
+            <div style="position: absolute; top: -20px; right: -2px; color: var(--teal); cursor: pointer; opacity: 0.7; z-index: 6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame"><div class="resize-handle r"></div><div class="resize-handle b"></div><div class="resize-handle br"></div></div>
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has 12 active tasks and 3 pending reviews. Click any card to view details.</div>
+          </div>
+          <div class="msg-row" style="margin-top: 2px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="col-label">TEXT EDITING ACTIVE</span>
+
+      <div class="mock-page" style="height: 320px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="queue-bar">
+            <button class="queue-btn primary">✓ Queue as Change</button>
+            <button class="queue-btn cancel">✕ Cancel</button>
+          </div>
+          <div class="mock-card sel-outline" style="overflow: visible;">
+            <div style="position: absolute; top: -20px; right: -2px; color: white; cursor: pointer; z-index: 6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame"><div class="resize-handle r" style="opacity:0.35;"></div><div class="resize-handle b" style="opacity:0.35;"></div><div class="resize-handle br" style="opacity:0.35;"></div></div>
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has <span style="background:#fef3c7;padding:0 2px;border-radius:2px;">24 active tasks</span> and 3 pending reviews. Click any card to view details.</div>
+          </div>
+          <div class="msg-row" style="margin-top: 2px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Zero visual weight — just a glyph</span>
+    <span class="annotation gray">Risk: small touch target, hard to see on dark bg</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION C — EMBEDDED IN OUTLINE (top-right corner)
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Option C — Embedded in Outline Corner</div>
+  <p class="section-subtitle">
+    The T sits inside a small filled teal rectangle that extends the top-right corner of the outline.
+    Feels like the outline grew a tab. Inverts on active.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">SELECTED — AT REST</span>
+
+      <div class="mock-page" style="height: 280px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div style="position: relative; border: 2px solid var(--teal); border-radius: 4px; overflow: visible;">
+            <!-- Text tab in top-right corner -->
+            <div style="position: absolute; top: -2px; right: -2px; background: var(--teal); border-radius: 0 3px 0 4px; padding: 3px 5px; cursor: pointer; display: flex; align-items: center; z-index: 6;">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame"><div class="resize-handle r"></div><div class="resize-handle b"></div><div class="resize-handle br"></div></div>
+            <div class="mock-card" style="border: none; border-radius: 2px;">
+              <div class="mock-card-title">Dashboard Overview</div>
+              <div class="mock-card-text">Your project has 12 active tasks and 3 pending reviews. Click any card to view details.</div>
+            </div>
+          </div>
+          <div class="msg-row" style="margin-top: 4px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="col-label">TEXT EDITING ACTIVE</span>
+
+      <div class="mock-page" style="height: 320px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="queue-bar">
+            <button class="queue-btn primary">✓ Queue as Change</button>
+            <button class="queue-btn cancel">✕ Cancel</button>
+          </div>
+          <div style="position: relative; border: 2px solid var(--teal); border-radius: 4px; overflow: visible;">
+            <!-- Text tab: ACTIVE — inverted -->
+            <div style="position: absolute; top: -2px; right: -2px; background: white; border-radius: 0 3px 0 4px; padding: 3px 5px; cursor: pointer; display: flex; align-items: center; z-index: 6; box-shadow: inset 0 0 0 2px var(--teal);">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame"><div class="resize-handle r" style="opacity:0.35;"></div><div class="resize-handle b" style="opacity:0.35;"></div><div class="resize-handle br" style="opacity:0.35;"></div></div>
+            <div class="mock-card" style="border: none; border-radius: 2px;">
+              <div class="mock-card-title">Dashboard Overview</div>
+              <div class="mock-card-text">Your project has <span style="background:#fef3c7;padding:0 2px;border-radius:2px;">24 active tasks</span> and 3 pending reviews. Click any card to view details.</div>
+            </div>
+          </div>
+          <div class="msg-row" style="margin-top: 4px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Tab is part of the outline — most integrated</span>
+    <span class="annotation green">Works on any background</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       OPTION D — NO TEXT BUTTON AT ALL (keyboard only: T)
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Option D — No Text Button (keyboard only)</div>
+  <p class="section-subtitle">
+    The ultimate minimal: just the outline, resize handles, and message row.
+    Press <strong>T</strong> to enter text edit. Nothing else visible.
+    Cleanest look, but requires knowing the shortcut.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">SELECTED — AT REST</span>
+
+      <div class="mock-page" style="height: 280px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="mock-card sel-outline" style="overflow: visible;">
+            <div class="resize-frame"><div class="resize-handle r"></div><div class="resize-handle b"></div><div class="resize-handle br"></div></div>
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has 12 active tasks and 3 pending reviews. Click any card to view details.</div>
+          </div>
+          <div class="msg-row" style="margin-top: 2px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="col-label">TEXT EDITING ACTIVE (press T)</span>
+
+      <div class="mock-page" style="height: 320px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="queue-bar">
+            <button class="queue-btn primary">✓ Queue as Change</button>
+            <button class="queue-btn cancel">✕ Cancel</button>
+          </div>
+          <div class="mock-card sel-outline" style="overflow: visible;">
+            <div class="resize-frame"><div class="resize-handle r" style="opacity:0.35;"></div><div class="resize-handle b" style="opacity:0.35;"></div><div class="resize-handle br" style="opacity:0.35;"></div></div>
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has <span style="background:#fef3c7;padding:0 2px;border-radius:2px;">24 active tasks</span> and 3 pending reviews. Click any card to view details.</div>
+          </div>
+          <div class="msg-row" style="margin-top: 2px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Absolute minimum — outline + resize + msg row</span>
+    <span class="annotation green">Cleanest, least visual clutter</span>
+    <span class="annotation orange">Discoverable? New users won't know to press T</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       INSERTION POINT
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Insertion Point</div>
+  <p class="section-subtitle">
+    The insertion point is a <strong>horizontal teal line</strong> — not a box. No drag, no delete.
+    A text button on the line lets users type text at that position.
+    Clicking it creates a placeholder element, which then becomes a normal selected element.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">INSERTION LINE — TEXT BUTTON ON LINE</span>
+
+      <div class="mock-page" style="height: 310px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="mock-card">
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has 12 active tasks and 3 pending reviews.</div>
+          </div>
+
+          <!-- Insertion line -->
+          <div style="position: relative; padding: 4px 0;">
+            <div class="drop-line"></div>
+            <div style="position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 50%; background: var(--teal); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 6; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+          </div>
+
+          <div class="msg-row">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+
+          <div class="mock-card" style="opacity: 0.5;">
+            <div class="mock-card-title">Recent Activity</div>
+            <div class="mock-card-text">No recent activity to display.</div>
+          </div>
+        </div>
+
+        <div class="bottom-toolbar">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="currentColor"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <button class="bt-combo dim"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 1L1 6.5l4.5 5.5"/><path d="M3 6.5h8.5a3 3 0 0 1 0 6H10"/></svg>Select</button>
+          <div class="bt-sep"></div>
+          <button class="bt-combo engaged"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1.5" width="12" height="13" rx="1.5"/><path d="M5 5h6M5 8h4"/></svg>Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="col-label">TEXT CREATED AT INSERTION POINT</span>
+      <p class="col-description">After clicking text on the line — a placeholder element is created. It becomes a normal selected element with outline, resize, and text active.</p>
+
+      <div class="mock-page" style="height: 350px;">
+        <div class="mock-header"><div class="mock-logo"></div><span class="mock-header-text">My App</span></div>
+        <div class="mock-content">
+          <div class="mock-card">
+            <div class="mock-card-title">Dashboard Overview</div>
+            <div class="mock-card-text">Your project has 12 active tasks and 3 pending reviews.</div>
+          </div>
+
+          <div class="queue-bar">
+            <button class="queue-btn primary">✓ Queue as Change</button>
+            <button class="queue-btn cancel">✕ Cancel</button>
+          </div>
+
+          <!-- Inserted element — dashed outline, text editing -->
+          <div style="position: relative; background: rgba(0,132,139,0.06); border: 1.5px dashed var(--teal); border-radius: 4px; padding: 8px 12px; overflow: visible;">
+            <!-- Text button: ACTIVE -->
+            <div style="position: absolute; top: -12px; right: -10px; width: 22px; height: 22px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 6; box-shadow: 0 0 0 2px var(--teal), 0 1px 4px rgba(0,0,0,0.3);">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round"><path d="M4 3h8M8 3v10"/></svg>
+            </div>
+            <div class="resize-frame" style="inset:0;"><div class="resize-handle r" style="opacity:0.4;"></div><div class="resize-handle b" style="opacity:0.4;"></div><div class="resize-handle br" style="opacity:0.4;"></div></div>
+            <span style="font-size:12px;color:#0f172a;">Hello world<span style="display:inline-block;width:1px;height:14px;background:var(--teal);margin-left:1px;vertical-align:text-bottom;animation:blink 1s step-end infinite;"></span></span>
+          </div>
+
+          <div class="msg-row" style="margin-top: 4px;">
+            <textarea placeholder="add your message"></textarea>
+            <button class="mic-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="msg-send"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M15.7,7.3l-14-7C1.4,0.1,1.1,0.1,0.8,0.3C0.6,0.4,0.5,0.7,0.5,1l1.8,6H9v2H2.3L0.5,15c-0.1,0.3,0,0.6,0.2,0.7C0.8,15.9,1,16,1.1,16c0.1,0,0.3,0,0.4-0.1l14-7C15.8,8.7,16,8.4,16,8S15.8,7.3,15.7,7.3z"/></svg></button>
+          </div>
+
+          <div class="mock-card" style="opacity: 0.5;">
+            <div class="mock-card-title">Recent Activity</div>
+            <div class="mock-card-text">No recent activity to display.</div>
+          </div>
+        </div>
+
+        <div class="bottom-toolbar">
+          <div class="bt-grip"><svg viewBox="0 0 6 10" fill="currentColor"><circle cx="1.5" cy="1.5" r="1"/><circle cx="4.5" cy="1.5" r="1"/><circle cx="1.5" cy="5" r="1"/><circle cx="4.5" cy="5" r="1"/><circle cx="1.5" cy="8.5" r="1"/><circle cx="4.5" cy="8.5" r="1"/></svg></div>
+          <button class="bt-combo dim"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 1L1 6.5l4.5 5.5"/><path d="M3 6.5h8.5a3 3 0 0 1 0 6H10"/></svg>Select</button>
+          <div class="bt-sep"></div>
+          <button class="bt-combo engaged"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="1.5" width="12" height="13" rx="1.5"/><path d="M5 5h6M5 8h4"/></svg>Insert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Line → text button → creates element → normal selection</span>
+    <span class="annotation orange">No drag/delete on the line itself</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       COMPARISON + INTERACTIONS
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Comparison</div>
+
+  <table style="border-collapse:collapse;font-size:11px;color:var(--text-mid);max-width:620px;">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #444;">
+        <th style="padding:6px 12px;color:var(--text);">Aspect</th>
+        <th style="padding:6px 12px;color:var(--teal);">A: Circle</th>
+        <th style="padding:6px 12px;color:var(--teal);">B: Ghost</th>
+        <th style="padding:6px 12px;color:var(--teal);">C: Embedded</th>
+        <th style="padding:6px 12px;color:var(--teal);">D: None</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 12px;">Visual weight</td><td style="padding:6px 12px;">Low</td><td style="padding:6px 12px;">Lightest</td><td style="padding:6px 12px;">Low</td><td style="padding:6px 12px;">Zero</td></tr>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 12px;">Touch target</td><td style="padding:6px 12px;">22px</td><td style="padding:6px 12px;">14px</td><td style="padding:6px 12px;">~16px</td><td style="padding:6px 12px;">n/a</td></tr>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 12px;">Works on dark bg?</td><td style="padding:6px 12px;">Yes</td><td style="padding:6px 12px;">Risky</td><td style="padding:6px 12px;">Yes</td><td style="padding:6px 12px;">Yes</td></tr>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 12px;">Discoverable?</td><td style="padding:6px 12px;">Yes</td><td style="padding:6px 12px;">Somewhat</td><td style="padding:6px 12px;">Yes</td><td style="padding:6px 12px;">No</td></tr>
+      <tr><td style="padding:6px 12px;">Implementation</td><td style="padding:6px 12px;">Simple</td><td style="padding:6px 12px;">Simplest</td><td style="padding:6px 12px;">Medium</td><td style="padding:6px 12px;">Trivial</td></tr>
+    </tbody>
+  </table>
+
+
+  <hr class="section-divider" />
+  <div class="section-title">Interactions Summary</div>
+
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:460px;">
+    <div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--surface);border-radius:4px;">
+      <span style="color:var(--text-mid);font-size:11px;">Enter text edit</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Click T button or press T</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--surface);border-radius:4px;">
+      <span style="color:var(--text-mid);font-size:11px;">Delete selected element</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">⌫ / Del</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--surface);border-radius:4px;">
+      <span style="color:var(--text-mid);font-size:11px;">Drag / move element</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Drag from outline edge</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--surface);border-radius:4px;">
+      <span style="color:var(--text-mid);font-size:11px;">Resize element</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Drag R / B / BR handles</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--surface);border-radius:4px;">
+      <span style="color:var(--text-mid);font-size:11px;">Exit text edit / deselect</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">Esc</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:4px 8px;background:var(--surface);border-radius:4px;">
+      <span style="color:var(--text-mid);font-size:11px;">Queue text change</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted);">⌘ + Enter</span>
+    </div>
+  </div>
+
+</body>
+</html>

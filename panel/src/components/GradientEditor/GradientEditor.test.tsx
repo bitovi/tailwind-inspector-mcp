@@ -56,7 +56,7 @@ describe('GradientEditor', () => {
     expect(svgs).toHaveLength(0);
     // Center ● should be active (orange)
     const centerBtn = screen.getByText('●');
-    expect(centerBtn.className).toContain('bg-bv-teal');
+    expect(centerBtn.className).toContain('bg-bit-teal');
   });
 
   it('shows hint text for gradient mode', () => {

@@ -62,7 +62,7 @@ function ArgField({
 
   return (
     <label className="flex items-center gap-2 text-[10px]">
-      <span className="text-bv-text-mid font-mono min-w-[60px] shrink-0">{name}</span>
+      <span className="text-bit-text-mid font-mono min-w-[60px] shrink-0">{name}</span>
       {isReactNode ? (
         <SlotField
           name={name}
@@ -73,7 +73,7 @@ function ArgField({
         />
       ) : control === 'select' && argType.options ? (
         <select
-          className="flex-1 bg-bv-surface border border-bv-border rounded px-1.5 py-0.5 text-[10px] text-bv-text"
+          className="flex-1 bg-bit-surface border border-bit-border rounded px-1.5 py-0.5 text-[10px] text-bit-text"
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -86,19 +86,19 @@ function ArgField({
           type="checkbox"
           checked={Boolean(value)}
           onChange={(e) => onChange(e.target.checked)}
-          className="accent-bv-teal"
+          className="accent-bit-teal"
         />
       ) : control === 'number' ? (
         <input
           type="number"
-          className="flex-1 bg-bv-surface border border-bv-border rounded px-1.5 py-0.5 text-[10px] text-bv-text"
+          className="flex-1 bg-bit-surface border border-bit-border rounded px-1.5 py-0.5 text-[10px] text-bit-text"
           value={value != null ? String(value) : ''}
           onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
         />
       ) : (
         <input
           type="text"
-          className="flex-1 bg-bv-surface border border-bv-border rounded px-1.5 py-0.5 text-[10px] text-bv-text"
+          className="flex-1 bg-bit-surface border border-bit-border rounded px-1.5 py-0.5 text-[10px] text-bit-text"
           value={String(value ?? '')}
           onChange={(e) => onChange(e.target.value)}
         />

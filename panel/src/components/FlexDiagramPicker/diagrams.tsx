@@ -2,8 +2,8 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { FlexDiagramOption } from './types';
 
 // ─── Shared class strings ─────────────────────────────────────────────────────
-const ITEM = 'bg-bv-teal/50 rounded-[2px] shrink-0 group-hover:bg-bv-teal/70 transition-colors duration-150';
-const GAP  = 'bg-bv-orange/10 rounded-[2px]';
+const ITEM = 'bg-bit-teal/50 rounded-[2px] shrink-0 group-hover:bg-bit-teal/70 transition-colors duration-150';
+const GAP  = 'bg-bit-orange/10 rounded-[2px]';
 
 // ─── Item helpers ─────────────────────────────────────────────────────────────
 

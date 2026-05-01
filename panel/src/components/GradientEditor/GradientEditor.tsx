@@ -156,7 +156,7 @@ export function GradientEditor(props: GradientEditorProps) {
 						{state.selectedStopIsRemovable && (
 							<button
 								type="button"
-								className="mt-1.5 w-full text-[10px] text-bv-orange border border-bv-orange/40 rounded px-2 py-0.5 cursor-pointer hover:bg-bv-orange hover:text-white transition-colors"
+								className="mt-1.5 w-full text-[10px] text-bit-orange border border-bit-orange/40 rounded px-2 py-0.5 cursor-pointer hover:bg-bit-orange hover:text-white transition-colors"
 								onClick={() => {
 									if (state.selectedStopId)
 										state.handleStopRemove(state.selectedStopId);
@@ -170,7 +170,7 @@ export function GradientEditor(props: GradientEditorProps) {
 			)}
 
 			{/* Hint text */}
-			<div className="min-h-[1rem] text-[10px] text-bv-muted italic opacity-0 invisible transition-opacity duration-150 group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
+			<div className="min-h-[1rem] text-[10px] text-bit-muted italic opacity-0 invisible transition-opacity duration-150 group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
 				{isSolid
 					? "Click the swatch to change color · Click a direction arrow for gradient"
 					: "Click handles to change color · Drag to reposition · Click bar to add stop"}

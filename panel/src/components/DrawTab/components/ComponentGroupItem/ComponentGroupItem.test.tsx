@@ -70,15 +70,15 @@ describe('button color states', () => {
   test('gray: not armed, no page selection → default border style', () => {
     renderItem(group, false);
     const btn = getActionButton('Place');
-    expect(btn.className).toContain('border-bv-border');
-    expect(btn.className).toContain('text-bv-text-mid');
+    expect(btn.className).toContain('border-bit-border');
+    expect(btn.className).toContain('text-bit-text-mid');
   });
 
   test('orange: isArmed=true → orange border + bg', () => {
     renderItem(group, true);
     const btn = getActionButton('Placing');
-    expect(btn.className).toContain('border-bv-orange');
-    expect(btn.className).toContain('bg-bv-orange');
+    expect(btn.className).toContain('border-bit-orange');
+    expect(btn.className).toContain('bg-bit-orange');
     expect(btn.className).toContain('text-white');
   });
 
@@ -89,8 +89,8 @@ describe('button color states', () => {
       <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} hasPageSelection={true} />
     );
     const btn = getActionButton('Place');
-    expect(btn.className).toContain('border-bv-teal');
-    expect(btn.className).toContain('text-bv-teal');
+    expect(btn.className).toContain('border-bit-teal');
+    expect(btn.className).toContain('text-bit-teal');
   });
 });
 

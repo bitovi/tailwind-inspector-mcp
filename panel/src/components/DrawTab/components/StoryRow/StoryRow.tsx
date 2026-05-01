@@ -60,13 +60,13 @@ export function StoryRow({ story, iframeSrc, storybookUrl }: StoryRowProps) {
 
   return (
     <li>
-      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] text-bv-text-mid hover:bg-bv-surface-hi transition-colors">
-        <span className="text-bv-muted">•</span>
+      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] text-bit-text-mid hover:bg-bit-surface-hi transition-colors">
+        <span className="text-bit-muted">•</span>
         <a
           href={`${storybookUrl}/?path=/story/${story.id}`}
           target="_blank"
           rel="noreferrer"
-          className="flex-1 hover:text-bv-text hover:underline transition-colors"
+          className="flex-1 hover:text-bit-text hover:underline transition-colors"
         >
           {story.name}
         </a>
@@ -78,14 +78,14 @@ export function StoryRow({ story, iframeSrc, storybookUrl }: StoryRowProps) {
           />
         )}
         <button
-          className="px-1.5 py-0.5 text-[9px] rounded border border-bv-border text-bv-muted hover:text-bv-text hover:border-bv-text-mid transition-colors"
+          className="px-1.5 py-0.5 text-[9px] rounded border border-bit-border text-bit-muted hover:text-bit-text hover:border-bit-text-mid transition-colors"
           onClick={() => setIsOpen(prev => !prev)}
         >
           {isOpen ? 'Close' : 'Open'}
         </button>
       </div>
       {isOpen && (
-        <div className="mt-1 mx-1 rounded border border-bv-border overflow-hidden">
+        <div className="mt-1 mx-1 rounded border border-bit-border overflow-hidden">
           <iframe
             src={iframeSrc}
             className="w-full block"

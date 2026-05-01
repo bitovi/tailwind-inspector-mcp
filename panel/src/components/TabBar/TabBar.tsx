@@ -5,7 +5,7 @@ export function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
   const [hoveredDisabled, setHoveredDisabled] = useState<string | null>(null);
 
   return (
-    <div className="relative flex border-b border-bv-border px-3">
+    <div className="relative flex border-b border-bit-border px-3">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         const isDisabled = tab.disabled === true;
@@ -21,10 +21,10 @@ export function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
               type="button"
               className={`relative px-3 py-2 text-[11px] font-medium font-[family-name:var(--font-ui)] border-none bg-transparent cursor-pointer transition-colors ${
                 isDisabled
-                  ? 'text-bv-muted cursor-not-allowed'
+                  ? 'text-bit-muted cursor-not-allowed'
                   : isActive
-                    ? 'text-bv-text'
-                    : 'text-bv-text-mid hover:text-bv-text'
+                    ? 'text-bit-text'
+                    : 'text-bit-text-mid hover:text-bit-text'
               }`}
               disabled={isDisabled}
               onClick={() => !isDisabled && onTabChange(tab.id)}
@@ -33,11 +33,11 @@ export function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
             >
               {tab.label}
               {isActive && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-bv-teal" />
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-bit-teal" />
               )}
             </button>
             {hoveredDisabled === tab.id && tab.tooltip && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 text-[10px] text-white bg-bv-text rounded whitespace-nowrap z-[9999]">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 text-[10px] text-white bg-bit-text rounded whitespace-nowrap z-[9999]">
                 {tab.tooltip}
               </div>
             )}

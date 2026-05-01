@@ -17,6 +17,7 @@ import { getStitchedGhost } from '../../utils/getStitchedGhost';
 import { buildGhostCacheEntry } from '../../utils/buildGhostCacheEntry';
 import type { GhostCacheEntry } from '../../utils/buildGhostCacheEntry';
 import { createStoryExtractor, type StoryExtractor } from '../../../../../../overlay/src/story-extractor';
+import { useDragToPlace } from '../../hooks/useDragToPlace';
 
 export interface CachedGhostData {
   ghostHtml?: string;
@@ -63,6 +64,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
     storyBackground: cachedStoryBackground,
   });
   const cardRef = useRef<HTMLLIElement>(null);
+  const didDragRef = useRef(false);
   const extractorRef = useRef<StoryExtractor | null>(null);
   const initialLoadDone = useRef(false);
   const [expanded, setExpanded] = useState(false);
@@ -389,6 +391,11 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
 
   const handleCustomizeClick = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
+    // Suppress if this click followed a drag (mousedown→drag→mouseup→click)
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
     setExpanded(prev => !prev);
     // Trigger live load if not yet loaded
     if (!state.liveReady && !state.loadLiveRequested) {
@@ -431,6 +438,27 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
     onScrollIntoView: () => cardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }),
   });
 
+  // ── Drag-to-place ─────────────────────────────────────────────────────
+  const [isDragActive, setIsDragActive] = useState(false);
+  const getGhostData = useCallback(() => {
+    const { ghostHtml: gh, ghostCss: gc } = getStitchedGhost(
+      state.liveGhostHtml, state.liveGhostCss,
+      cachedGhostHtml, cachedGhostCss,
+      state.args,
+    );
+    return { ghostHtml: gh || null, ghostCss: gc || null };
+  }, [state.liveGhostHtml, state.liveGhostCss, cachedGhostHtml, cachedGhostCss, state.args]);
+
+  const { onMouseDown: onDragMouseDown } = useDragToPlace({
+    componentName: group.name,
+    storyId: group.stories[0]?.id ?? '',
+    getGhostData,
+    componentPath: group.componentPath,
+    args: state.args,
+    onDragStart: () => { setIsDragActive(true); didDragRef.current = true; },
+    onDragEnd: () => setIsDragActive(false),
+  });
+
   // Button label matches the tab context — or "Set Prop" when a field is receptive
   const isSetPropMode = !!receptiveField;
   const insertLabel = isSetPropMode ? 'Set Prop' : (insertMode === 'replace' ? 'Replace' : 'Place');
@@ -448,36 +476,41 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
 
   // Button state classes
   const selectBtnClass = isArmed
-    ? 'border-bv-orange text-white bg-bv-orange hover:bg-[#d94425]'
+    ? 'border-bit-orange text-white bg-bit-orange hover:bg-[#d94425]'
     : isSetPropMode
-      ? 'border-bv-orange text-bv-orange bg-bv-orange/10 hover:bg-bv-orange/20 hover:text-white'
+      ? 'border-bit-orange text-bit-orange bg-bit-orange/10 hover:bg-bit-orange/20 hover:text-white'
       : hasPageSelection
-        ? 'border-bv-teal text-bv-teal bg-bv-teal/10 hover:bg-bv-teal/20 hover:text-white'
-        : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi';
+        ? 'border-bit-teal text-bit-teal bg-bit-teal/10 hover:bg-bit-teal/20 hover:text-white'
+        : 'border-bit-border text-bit-text-mid bg-bit-surface hover:border-[#555] hover:text-bit-text hover:bg-bit-surface-hi';
 
   return (
-    <li ref={cardRef} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bv-teal rounded-md' : ''}`}>
+    <li ref={cardRef} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bit-teal rounded-md' : ''}`}>
       {/* ── Compact row ── */}
       <div
         className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md cursor-pointer transition-all ${
           isArmed
-            ? 'bg-bv-orange/10 border border-bv-orange'
+            ? 'bg-bit-orange/10 border border-bit-orange'
             : expanded
-              ? 'bg-bv-surface border border-bv-border rounded-b-none'
-              : 'border border-transparent hover:bg-bv-surface hover:border-bv-border'
+              ? 'bg-bit-surface border border-bit-border rounded-b-none'
+              : 'border border-transparent hover:bg-bit-surface hover:border-bit-border'
         }`}
         onClick={handleCustomizeClick}
       >
-        {/* Thumbnail */}
-        <ComponentRowThumb
-          phase={state.phase}
-          ghostHtml={ghostHtml}
-          ghostCss={ghostCss}
-          naturalWidth={state.naturalWidth}
-          naturalHeight={state.naturalHeight}
-          storyBackground={state.storyBackground}
-          onClick={handleCustomizeClick}
-        />
+        {/* Thumbnail (drag handle) */}
+        <div
+          onMouseDown={onDragMouseDown}
+          className={`shrink-0 cursor-grab active:cursor-grabbing select-none ${isDragActive ? 'opacity-40' : ''}`}
+        >
+          <ComponentRowThumb
+            phase={state.phase}
+            ghostHtml={ghostHtml}
+            ghostCss={ghostCss}
+            naturalWidth={state.naturalWidth}
+            naturalHeight={state.naturalHeight}
+            storyBackground={state.storyBackground}
+            onClick={handleCustomizeClick}
+          />
+        </div>
 
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
@@ -486,19 +519,19 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
               href={`${STORYBOOK_BASE}/?path=/story/${group.stories[0].id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[12px] text-bv-text hover:text-bv-orange hover:underline transition-colors leading-tight inline"
+              className="text-[12px] text-bit-text hover:text-bit-orange hover:underline transition-colors leading-tight inline"
               onClick={(e) => e.stopPropagation()}
             >
               <ComponentTitle fullTitle={group.fullTitle} />
             </a>
           ) : (
-            <div className="text-[12px] text-bv-text leading-tight truncate">
+            <div className="text-[12px] text-bit-text leading-tight truncate">
               <ComponentTitle fullTitle={group.fullTitle} />
             </div>
           )}
-          <div className="text-[10px] text-bv-muted mt-0.5">
+          <div className="text-[10px] text-bit-muted mt-0.5">
             {state.phase === 'loading' && !ghostHtml ? (
-              <span className="text-bv-teal">Loading preview…</span>
+              <span className="text-bit-teal">Loading preview…</span>
             ) : argCount > 0 ? (
               `${argCount} props`
             ) : null}
@@ -511,8 +544,8 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
             type="button"
             className={`h-5.5 rounded px-2 text-[10px] font-medium border transition-all cursor-pointer ${
               expanded
-                ? 'border-[#555] text-bv-text bg-bv-surface-hi'
-                : 'border-bv-border text-bv-text-mid bg-bv-surface hover:border-[#555] hover:text-bv-text hover:bg-bv-surface-hi'
+                ? 'border-[#555] text-bit-text bg-bit-surface-hi'
+                : 'border-bit-border text-bit-text-mid bg-bit-surface hover:border-[#555] hover:text-bit-text hover:bg-bit-surface-hi'
             }`}
             onClick={handleCustomizeClick}
           >
@@ -530,10 +563,10 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
 
       {/* ── Expand drawer: full-size preview + props ── */}
       {expanded && (
-        <div className="border border-t-0 border-bv-border rounded-b-md bg-bv-surface overflow-hidden">
+        <div className="border border-t-0 border-bit-border rounded-b-md bg-bit-surface overflow-hidden">
           {/* Full-size ghost preview */}
           <div
-            className="flex items-center justify-center min-h-20 p-4 border-b border-bv-border overflow-hidden"
+            className="flex items-center justify-center min-h-20 p-4 border-b border-bit-border overflow-hidden"
             style={{
               contain: 'paint',
               backgroundColor: state.storyBackground && state.storyBackground !== 'rgba(0, 0, 0, 0)'
@@ -546,7 +579,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
             ) : ghostHtml ? (
               <div className="pointer-events-none" dangerouslySetInnerHTML={{ __html: ghostHtml }} />
             ) : (
-              <span className="text-[10px] text-bv-muted">Loading preview…</span>
+              <span className="text-[10px] text-bit-muted">Loading preview…</span>
             )}
           </div>
 
@@ -554,8 +587,8 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
           {hasArgs && (
             <div className="px-2.5 py-2" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[9px] font-semibold uppercase tracking-wider text-bv-muted">Props</span>
-                <span className="text-[9px] text-bv-muted">Changes re-render live</span>
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-bit-muted">Props</span>
+                <span className="text-[9px] text-bit-muted">Changes re-render live</span>
               </div>
               <ArgsForm
                 argTypes={effectiveArgTypes}
@@ -599,8 +632,8 @@ function ComponentTitle({ fullTitle }: { fullTitle: string }) {
   const name = segments.at(-1);
   return (
     <>
-      <span className="text-bv-muted font-normal">{path.join(' / ')}</span>
-      <span className="text-bv-muted font-normal"> / </span>
+      <span className="text-bit-muted font-normal">{path.join(' / ')}</span>
+      <span className="text-bit-muted font-normal"> / </span>
       <span className="font-semibold">{name}</span>
     </>
   );

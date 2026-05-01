@@ -464,6 +464,79 @@ async function clickComponentPlace(frame: Frame, componentName: string): Promise
 }
 
 /**
+ * Drag a component from the panel thumbnail to a target element on the page.
+ * Uses the drag-drop flow: mousedown on thumbnail → drag past threshold →
+ * overlay captures pointermove → mouseup on target to drop.
+ */
+async function dragComponentToTarget(
+  frame: Frame,
+  componentName: string,
+  dropTarget: { x: number; y: number },
+): Promise<void> {
+  const page = frame.page();
+
+  // Wait for the component's drag-handle thumbnail to be present
+  await frame.waitForFunction((name) => {
+    const items = document.querySelectorAll('li');
+    for (const item of items) {
+      const nameEl = Array.from(item.querySelectorAll('a, div')).find(el => el.textContent?.includes(name));
+      if (nameEl) {
+        const dragHandle = item.querySelector('.cursor-grab');
+        if (dragHandle) return true;
+      }
+    }
+    return false;
+  }, componentName, { timeout: 15000 });
+
+  // Scroll the thumbnail into view and get its bounding box in iframe-local coords
+  const thumbRect = await frame.evaluate((name) => {
+    const items = document.querySelectorAll('li');
+    for (const item of items) {
+      const nameEl = Array.from(item.querySelectorAll('a, div')).find(el => el.textContent?.includes(name));
+      if (nameEl) {
+        const dragHandle = item.querySelector('.cursor-grab') as HTMLElement | null;
+        if (dragHandle) {
+          dragHandle.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+          const rect = dragHandle.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        }
+      }
+    }
+    throw new Error(`Drag handle for "${name}" not found`);
+  }, componentName);
+
+  // Get the iframe's position in the parent page to convert coords
+  const iframeOffset = await page.evaluate(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const iframe = host?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement;
+    if (!iframe) throw new Error('Panel iframe not found');
+    const rect = iframe.getBoundingClientRect();
+    return { x: rect.x, y: rect.y };
+  });
+
+  // Calculate parent-page coordinates of the thumbnail center
+  const startX = iframeOffset.x + thumbRect.x;
+  const startY = iframeOffset.y + thumbRect.y;
+
+  // Perform drag: mousedown → move past threshold → move to target → mouseup
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.waitForTimeout(50);
+
+  // Move past the 5px drag threshold to trigger DRAG_START
+  await page.mouse.move(startX, startY - 10, { steps: 3 });
+  await page.waitForTimeout(100);
+
+  // Move to the drop target (overlay's pointermove now handles indicators)
+  await page.mouse.move(dropTarget.x, dropTarget.y, { steps: 5 });
+  await page.waitForTimeout(200);
+
+  // Drop the component
+  await page.mouse.up();
+  await page.waitForTimeout(1500);
+}
+
+/**
  * Returns true if Storybook components loaded, false if unavailable (e.g. demo).
  */
 async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
@@ -537,15 +610,17 @@ async function doStep8(page: Page): Promise<void> {
   const hasStorybook = await ensureStorybookConnected(frame);
 
   if (hasStorybook) {
-    // Click Place on the Badge component
-    await clickComponentPlace(frame, 'Badge');
-
-    // Drop next to the existing status badges in section 8's content area
+    // Drag the Badge component from the panel thumbnail to the page
     const dropTarget = page.locator('text=Priority: High').first();
     await dropTarget.scrollIntoViewIfNeeded();
     await page.waitForTimeout(500);
-    await dropTarget.click();
-    await page.waitForTimeout(1500);
+    const dropBox = await dropTarget.boundingBox();
+    if (!dropBox) throw new Error('Drop target "Priority: High" not found');
+
+    await dragComponentToTarget(frame, 'Badge', {
+      x: dropBox.x + dropBox.width / 2,
+      y: dropBox.y + dropBox.height / 2,
+    });
   } else {
     // No Storybook (e.g. demo project) — use fallback "Mark complete" button
     console.log('[tutorial] step 8: no Storybook, clicking Mark complete');
@@ -631,15 +706,17 @@ async function doStep9(page: Page): Promise<void> {
   await page.waitForTimeout(800);
 
   // Now the Button should show "Place" with the nested Icon in leftIcon.
-  // Click Place on Button to arm it.
-  await clickComponentPlace(frame, 'Button');
-
-  // Drop on the "Close Issue" button in section 9's content area
+  // Drag the Button component from the panel to the page
   const dropTarget = page.locator('button:has-text("Close Issue")').first();
   await dropTarget.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  await dropTarget.click();
-  await page.waitForTimeout(2000);
+  const dropBox = await dropTarget.boundingBox();
+  if (!dropBox) throw new Error('Drop target "Close Issue" not found');
+
+  await dragComponentToTarget(frame, 'Button', {
+    x: dropBox.x + dropBox.width / 2,
+    y: dropBox.y + dropBox.height / 2,
+  });
 }
 
 async function doStep10(page: Page): Promise<void> {

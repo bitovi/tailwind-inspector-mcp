@@ -193,31 +193,31 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
         }}
         className={`flex items-center gap-2.5 px-3 py-2 rounded-md border transition-all cursor-pointer text-left ${
           armedCanvas
-            ? 'border-bv-teal bg-bv-teal/10 ring-1 ring-bv-teal'
-            : 'border-bv-border bg-bv-surface hover:border-bv-teal hover:bg-bv-teal/5'
+            ? 'border-bit-teal bg-bit-teal/10 ring-1 ring-bit-teal'
+            : 'border-bit-border bg-bit-surface hover:border-bit-teal hover:bg-bit-teal/5'
         }`}
       >
-        <div className="w-8 h-8 rounded bg-bv-teal/10 text-bv-teal flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded bg-bit-teal/10 text-bit-teal flex items-center justify-center shrink-0">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M15 1H1v14h14V1ZM0 0h16v16H0V0Z" />
             <path d="M4 8h8M8 4v8" stroke="currentColor" strokeWidth="1.5" fill="none" />
           </svg>
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-[11px] font-medium text-bv-text">Draw / Screenshot Canvas</span>
-          <span className="text-[10px] text-bv-muted">Freehand drawing or annotate a screenshot</span>
+          <span className="text-[11px] font-medium text-bit-text">Draw / Screenshot Canvas</span>
+          <span className="text-[10px] text-bit-muted">Freehand drawing or annotate a screenshot</span>
         </div>
       </button>
 
       <div className="flex flex-col gap-1.5">
         {loading && (
-          <div className="text-[11px] text-bv-muted">Loading components…</div>
+          <div className="text-[11px] text-bit-muted">Loading components…</div>
         )}
         {!loading && error && (
           <StorybookConnect onConnected={refetch} />
         )}
         {!loading && !error && groups.length === 0 && (
-          <div className="text-[11px] text-bv-muted">No stories found.</div>
+          <div className="text-[11px] text-bit-muted">No stories found.</div>
         )}
         {!loading && !error && groups.length > 0 && (
           <ul className="flex flex-col gap-2">
@@ -289,17 +289,17 @@ function StorybookConnect({ onConnected }: { onConnected: () => void }) {
   };
 
   return (
-    <div className="text-[11px] text-bv-text-mid leading-relaxed flex flex-col gap-2">
+    <div className="text-[11px] text-bit-text-mid leading-relaxed flex flex-col gap-2">
       <span>Storybook not detected.</span>
       <button
         onClick={() => reconnect()}
         disabled={scanning}
-        className="self-start px-2.5 py-1 rounded bg-bv-surface-hi text-bv-text text-[11px] border border-bv-border hover:border-bv-teal disabled:opacity-50 transition-colors"
+        className="self-start px-2.5 py-1 rounded bg-bit-surface-hi text-bit-text text-[11px] border border-bit-border hover:border-bit-teal disabled:opacity-50 transition-colors"
       >
         {scanning ? 'Scanning…' : 'Scan for Storybook'}
       </button>
       <div className="flex items-center gap-1.5">
-        <span className="text-bv-muted">or port:</span>
+        <span className="text-bit-muted">or port:</span>
         <input
           type="text"
           inputMode="numeric"
@@ -310,18 +310,18 @@ function StorybookConnect({ onConnected }: { onConnected: () => void }) {
           onKeyDown={e => {
             if (e.key === 'Enter' && port) reconnect(Number(port));
           }}
-          className="w-16 px-1.5 py-0.5 rounded bg-bv-surface text-bv-text text-[11px] border border-bv-border focus:border-bv-teal outline-none"
+          className="w-16 px-1.5 py-0.5 rounded bg-bit-surface text-bit-text text-[11px] border border-bit-border focus:border-bit-teal outline-none"
         />
         <button
           onClick={() => port && reconnect(Number(port))}
           disabled={!port || scanning}
-          className="px-2 py-0.5 rounded bg-bv-surface-hi text-bv-text text-[11px] border border-bv-border hover:border-bv-teal disabled:opacity-50 transition-colors"
+          className="px-2 py-0.5 rounded bg-bit-surface-hi text-bit-text text-[11px] border border-bit-border hover:border-bit-teal disabled:opacity-50 transition-colors"
         >
           Connect
         </button>
       </div>
       {failed && (
-        <span className="text-bv-orange text-[10px]">
+        <span className="text-bit-orange text-[10px]">
           No Storybook found{port ? ` on port ${port}` : ''}. Is it running?
         </span>
       )}
