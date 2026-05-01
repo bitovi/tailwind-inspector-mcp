@@ -247,8 +247,21 @@ export function showBottomToolbar(): void {
 	sep.className = "bt-sep";
 	toolbar.appendChild(sep);
 
-	// Insert button
-	toolbar.appendChild(createButton("Insert", INSERT_SVG, "insert"));
+	// Insert button (custom handler for three-way toggle, like Select)
+	const insertBtn = document.createElement("button");
+	insertBtn.className = "bt-combo";
+	insertBtn.dataset.tool = "insert";
+	insertBtn.innerHTML = `${INSERT_SVG} Insert`;
+	insertBtn.title = "Insert";
+	insertBtn.addEventListener("click", () => {
+		if (currentTool === "insert") {
+			// Re-click Insert — let onToolChange handle the toggle
+			onToolChange?.("insert");
+		} else {
+			setTool("insert");
+		}
+	});
+	toolbar.appendChild(insertBtn);
 
 	// Setup drag
 	setupDrag(grip, toolbar);

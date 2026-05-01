@@ -46,8 +46,8 @@ function onBrowseLocked(target: HTMLElement): void {
 		: { componentName: target.tagName.toLowerCase() };
 	state.cachedNearGroups = null;
 	showDrawButton(target);
-	// Insert point locked → teal (engaged)
-	updateToolState('insert', false, true);
+	// Persistent browse: stay orange (picking) — browse continues
+	updateToolState('insert', true, false);
 	updateInstanceCount(state.currentEquivalentNodes.length);
 }
 
@@ -420,7 +420,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 
 	showDrawButton(targetEl);
 	updateInstanceCount(state.currentEquivalentNodes.length);
-	updateToolState('select', true, true);
+	updateToolState('select', state.selectModeOn, true);
 
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
@@ -670,13 +670,15 @@ function init(): void {
 				setSelectMode(false);
 				updateToolState('select', false, true);
 			}
+			if (isDropZoneActive()) {
+				cancelInsert();
+				updateToolState('insert', false, true);
+			}
 		},
 	});
 	initBottomToolbar({
 		onToolChange: (tool) => {
 			// ── Select re-click toggle ──
-			// When Select is re-clicked (tool === 'select' and already in select mode),
-			// handle the three-way toggle instead of clearing everything.
 			if (tool === 'select' && state.selectModeOn && state.currentTargetEl) {
 				// Orange + element → Teal: stop selecting, keep element
 				setSelectMode(false);
@@ -685,10 +687,34 @@ function init(): void {
 				return;
 			}
 			if (tool === 'select' && !state.selectModeOn && state.currentTargetEl) {
-				// Teal → Orange: re-enable selecting, keep element
+				// Teal → Orange: clear element, fresh selecting
+				revertPreview();
+				clearHighlights();
+				cancelInsert();
+				clearLockedInsert();
+				clearSelectionState();
 				setSelectMode(true);
 				updateToolState('select', true, false);
 				sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
+				return;
+			}
+
+			// ── Insert re-click toggle ──
+			if (tool === 'insert' && isDropZoneActive() && getLockedInsert()) {
+				// Orange + point (browsing active) → Teal: stop browsing, keep point
+				cancelInsert();
+				updateToolState('insert', false, true);
+				sendTo("panel", { type: "EDIT_TOOL_CHANGED", tool: "insert" });
+				return;
+			}
+			if (tool === 'insert' && !isDropZoneActive() && getLockedInsert()) {
+				// Teal → Orange: clear point, fresh browsing
+				clearLockedInsert();
+				clearHighlights();
+				clearSelectionState();
+				startBrowse(state.shadowHost, onBrowseLocked);
+				updateToolState('insert', true, false);
+				sendTo("panel", { type: "MODE_CHANGED", mode: "insert" });
 				return;
 			}
 
@@ -1116,6 +1142,21 @@ function init(): void {
 				// Update toolbar to show engaged (teal) state — element still selected
 				if (state.currentTargetEl) {
 					updateToolState('select', false, true);
+				}
+			}
+		} else if (msg.type === "TOGGLE_INSERT_BROWSE") {
+			if (msg.active) {
+				// Teal → Orange: re-enable browsing (clear point, restart browse)
+				clearLockedInsert();
+				clearSelectionState();
+				startBrowse(state.shadowHost, onBrowseLocked);
+				showBottomToolbar();
+				updateToolState('insert', true, false);
+			} else {
+				// Orange → Teal: stop browsing, keep locked insert point
+				cancelInsert();
+				if (getLockedInsert()) {
+					updateToolState('insert', false, true);
 				}
 			}
 		} else if (msg.type === "MODE_CHANGED") {

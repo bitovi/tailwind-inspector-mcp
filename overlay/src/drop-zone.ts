@@ -278,7 +278,7 @@ export function startBrowse(
   onLocked?: (target: HTMLElement, position: DropPosition) => void,
 ): void {
   clearLockedInsert();
-  arm({ kind: 'browse', onLocked: onLocked ?? null }, shadowHost, 'Pick insertion point');
+  arm({ kind: 'browse', onLocked: onLocked ?? null }, shadowHost);
 }
 
 export function getLockedInsert(): { target: HTMLElement; position: DropPosition } | null {
@@ -316,17 +316,19 @@ export function repositionOnScroll(): void {
 
 // ── Shared arming logic ──────────────────────────────────────────────────
 
-function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label: string): void {
+function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label?: string): void {
   if (mode.kind !== 'idle') cleanup();
   mode = newMode;
   dom.overlayHost = shadowHost;
 
   document.documentElement.style.cursor = 'crosshair';
 
-  dom.cursorLabel = document.createElement('div');
-  dom.cursorLabel.style.cssText = css(CURSOR_LABEL);
-  dom.cursorLabel.textContent = label;
-  document.body.appendChild(dom.cursorLabel);
+  if (label) {
+    dom.cursorLabel = document.createElement('div');
+    dom.cursorLabel.style.cssText = css(CURSOR_LABEL);
+    dom.cursorLabel.textContent = label;
+    document.body.appendChild(dom.cursorLabel);
+  }
 
   if (newMode.kind === 'element-select') {
     dom.outlineEl = document.createElement('div');
@@ -654,6 +656,12 @@ function onClick(e: MouseEvent): void {
 
 function onKeyDown(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
+    if (mode.kind === 'browse' && locked.target) {
+      // Persistent browse with a locked point — just stop browsing, keep point
+      // Panel Escape handler will send TOGGLE_INSERT_BROWSE or CANCEL_MODE
+      cleanup();
+      return;
+    }
     sendTo('panel', { type: 'COMPONENT_DISARMED' });
     cleanup();
   }
@@ -698,11 +706,9 @@ function handleBrowseClick(e: MouseEvent): void {
     targetTag: dom.currentTarget.tagName.toLowerCase(),
   });
 
-  const lockedEl = dom.currentTarget;
-  const lockedPos = dom.currentPosition;
+  // Persistent browse: keep mode active, just notify via callback
   const cb = mode.kind === 'browse' ? mode.onLocked : null;
-  cleanup();
-  if (cb) cb(lockedEl, lockedPos);
+  if (cb) cb(dom.currentTarget, dom.currentPosition);
 }
 
 function handleGenericInsertClick(e: MouseEvent): void {

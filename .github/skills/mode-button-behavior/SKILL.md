@@ -56,6 +56,17 @@ The Select button has **persistent selection mode** — selecting stays active a
 | **Selecting (element selected)** | Orange | `true` | set | Crosshair cursor; hover outlines only **outside** the selected element; clicks outside re-select; clicks inside pass through |
 | **Locked (selecting off)** | Teal | `false` | set | No cursor change, no hover outlines |
 
+#### Insert button specifics
+
+The Insert button has **persistent browse mode** — browsing stays active after an insertion point is chosen:
+
+| State | Color | `insertBrowseActive` | `insertPoint` | Page behavior |
+|---|---|---|---|---|
+| **Idle** | Gray | `false` | `null` | No interaction |
+| **Browsing (no point)** | Orange | `true` | `null` | Crosshair cursor, drop-zone hover indicators on all elements |
+| **Browsing (point locked)** | Orange | `true` | set | Crosshair cursor; drop-zone indicators on all elements; locked point indicator visible; Describe change / Insert text buttons shown |
+| **Locked (browsing off)** | Teal | `false` | set | No cursor change, no hover indicators; locked point indicator visible |
+
 ### Overlay toolbar buttons (floating bar on page)
 
 | Color | Meaning |
@@ -106,7 +117,8 @@ When either side receives a sync message, it updates its own state to match. The
 |---|---|---|---|---|---|---|
 | 1 | Before clicking anything | No tab | Gray | No toolbar | — | None |
 | 2 | Click Insert (panel) | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) |
-| 3 | Click a placement site | Place tab | Teal | Toolbar appears: Insert: Teal, Place: Teal | Teal | Insert point locked |
+| 3 | Click a placement site | Place tab | Orange | Toolbar appears: Insert: Orange | Teal | Browse persists; locked point indicator visible; Describe change / Insert text shown |
+| 3a | Click a different spot | Place tab | Orange | Insert: Orange | Teal | Locked point moves; browse continues |
 | 4 | Click a component | Place tab | Gray | No toolbar | Gray | Component placed immediately, done |
 
 ## Flow C: Replace — pick element first, then pick component
@@ -167,8 +179,9 @@ When the user copies an element (Cmd+C) and pastes (Cmd+V), the toolbar enters a
 - **Select button is orange, element selected** (selecting + locked): Escape stops selecting but keeps the element → teal (locked). Escape again from teal deselects the element → gray.
 - **Select button is orange, no element** (selecting): Escape turns off select mode entirely → gray.
 - **Select button is teal** (element locked, not selecting): Escape deselects the element → gray.
-- **Insert button is orange** (browse/crosshair): Escape turns off the mode entirely, returns to landing page.
-- **Insert button is teal** (insert point locked): Escape unlocks the target, returns to orange (browse mode).
+- **Insert button is orange, point locked** (browsing + locked): Escape stops browsing but keeps the point → teal (locked). Escape again from teal clears the point → gray.
+- **Insert button is orange, no point** (browsing): Escape turns off insert mode entirely → gray.
+- **Insert button is teal** (insert point locked, not browsing): Escape clears the point → gray.
 - **ReactNode field is teal** (receptive): Escape clears the receptive field, returns all buttons to normal Place/Replace labels.
 
 ## Flow E: Set ReactNode Prop — pick target field, then pick component
@@ -211,7 +224,7 @@ ORANGE  → click outside   → ORANGE (new element, selecting persists)
 ORANGE  → click inside    → pass-through (no selection behavior)
 ORANGE  → click Select    → TEAL (if element) or GRAY (if no element)
 ORANGE  → Escape          → TEAL (if element) or GRAY (if no element)
-TEAL    → click Select    → ORANGE (re-enable selecting, keep element)
+TEAL    → click Select    → ORANGE (clear element, fresh selecting)
 TEAL    → Escape          → GRAY (deselect everything)
 ORANGE  → Describe change → TEAL (stop selecting, open describe textarea)
 ORANGE  → Edit text       → TEAL (stop selecting, enter text editing)
@@ -227,9 +240,10 @@ ORANGE  → Edit text       → TEAL (stop selecting, enter text editing)
 | 4a | Click a different element | Orange | New element highlighted; previous deselected; hover outlines continue outside |
 | 4b | Click inside selected element | Orange (unchanged) | Click passes through to the element (no selection change) |
 | 5 | Click Select (stop selecting) | Teal | Element highlighted; no crosshair; no hover outlines |
-| 6 | Click Select (re-enable selecting) | Orange | Crosshair reactivated; hover outlines outside selected element |
-| 7 | Click Select (stop selecting again) | Teal | Element highlighted; no crosshair; no hover outlines |
-| 8 | Escape (deselect) | Gray | None |
+| 6 | Click Select (re-enable selecting) | Orange | Element cleared; crosshair reactivated; hover outlines on all elements |
+| 7 | Click an element | Orange | Element highlighted; crosshair persists; hover outlines outside selected element |
+| 8 | Click Select (stop selecting) | Teal | Element highlighted; no crosshair; no hover outlines |
+| 9 | Escape (deselect) | Gray | None |
 | alt-5a | Click "Describe change" (from orange) | Teal | Element highlighted; describe textarea shown; no crosshair |
 | alt-5b | Click "Edit text" (from orange) | Teal | Element highlighted; inline text editing; no crosshair |
 
@@ -242,6 +256,36 @@ ORANGE  → Edit text       → TEAL (stop selecting, enter text editing)
 | Orange (element selected) | Inside selected element (or the element itself) | No — hover preview cleared |
 | Teal | Any element | No |
 | Gray | Any element | No |
+
+## Flow H: Insert — persistent browse mode
+
+The Insert button supports a cycling state machine: **gray → orange → teal → orange → teal → …**. Browse mode persists after an insertion point is chosen, allowing the user to quickly move the insertion point. From teal, clicking Insert re-enables browsing (orange). Escape from teal clears the point and goes to gray.
+
+### State machine
+
+```
+GRAY    → click Insert    → ORANGE (no point)
+ORANGE  → click spot      → ORANGE (point locked, browsing persists)
+ORANGE  → click new spot  → ORANGE (point moves, browsing persists)
+ORANGE  → click Insert    → TEAL (if point) or GRAY (if no point)
+ORANGE  → Escape          → TEAL (if point) or GRAY (if no point)
+TEAL    → click Insert    → ORANGE (clear point, fresh browsing)
+TEAL    → Escape          → GRAY (cancel insert entirely)
+```
+
+### Flow table
+
+| Step | What the user does | Insert button | Page interaction |
+|---|---|---|---|
+| 1 | Before clicking anything | Gray | None |
+| 2 | Click Insert | Orange | Crosshair, drop-zone hover indicators on all elements |
+| 3 | Click a spot | Orange | Point locked; locked indicator visible; browse persists; Describe change / Insert text shown |
+| 4a | Click a different spot | Orange | Point moves; locked indicator updates; browse continues |
+| 5 | Click Insert (stop browsing) | Teal | Point locked; no crosshair; no hover indicators |
+| 6 | Click Insert (re-enable browsing) | Orange | Point cleared; crosshair reactivated; hover indicators on all elements |
+| 7 | Click a spot | Orange | Point locked; locked indicator visible; browse persists |
+| 8 | Click Insert (stop browsing) | Teal | Point locked; no crosshair; no hover indicators |
+| 9 | Escape (clear point) | Gray | None |
 
 ## Modifying These Flows
 

@@ -90,8 +90,12 @@ describe('computeIsPicking', () => {
     expect(computeIsPicking('insert', false, null, false)).toBe(false);
   });
 
-  it('returns false when insert mode with insert point locked', () => {
-    expect(computeIsPicking('insert', false, MOCK_INSERT_POINT, true)).toBe(false);
+  it('returns true when insert mode with insert point locked and browse active (persistent browse)', () => {
+    expect(computeIsPicking('insert', false, MOCK_INSERT_POINT, true)).toBe(true);
+  });
+
+  it('returns false when insert mode with insert point locked and browse inactive', () => {
+    expect(computeIsPicking('insert', false, MOCK_INSERT_POINT, false)).toBe(false);
   });
 
   it('returns false when select mode with selectModeActive false', () => {
@@ -186,7 +190,7 @@ describe('Flow B: Place (location-first)', () => {
     expect(getModeButtonColor(result.state.mode, result.state.selectModeActive, result.state.elementData, result.state.insertPoint, result.state.insertBrowseActive)).toBe('orange');
   });
 
-  it('Step 3: INSERT_POINT_LOCKED → teal', () => {
+  it('Step 3: INSERT_POINT_LOCKED → orange (persistent browse continues)', () => {
     const afterInsert = dispatch(INITIAL_STATE, { type: 'MODE_CHANGE', mode: 'insert' });
     const result = dispatch(afterInsert.state, {
       type: 'WS_INSERT_POINT_LOCKED',
@@ -197,9 +201,9 @@ describe('Flow B: Place (location-first)', () => {
 
     expect(state.mode).toBe('insert');
     expect(state.insertPoint).toEqual({ position: 'after', targetName: 'Button' });
-    expect(state.insertBrowseActive).toBe(false);
-    expect(computeIsPicking(state.mode, state.selectModeActive, state.insertPoint, state.insertBrowseActive)).toBe(false);
-    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('teal');
+    expect(state.insertBrowseActive).toBe(true); // persistent browse preserved
+    expect(computeIsPicking(state.mode, state.selectModeActive, state.insertPoint, state.insertBrowseActive)).toBe(true);
+    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('orange');
     expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
   });
 
@@ -343,10 +347,11 @@ describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     // fromOverlay=true, so no outbound messages
     expect(overlayMessages(s3)).toEqual([]);
 
-    // Step 4: Insert point locked
+    // Step 4: Insert point locked (persistent browse keeps orange)
     const s4 = dispatch(s3.state, { type: 'WS_INSERT_POINT_LOCKED', position: 'before', targetName: 'Hero' });
     expect(s4.state.insertPoint).toEqual({ position: 'before', targetName: 'Hero' });
-    expect(getModeButtonColor(s4.state.mode, s4.state.selectModeActive, s4.state.elementData, s4.state.insertPoint, s4.state.insertBrowseActive)).toBe('teal');
+    expect(s4.state.insertBrowseActive).toBe(true); // persistent browse preserved
+    expect(getModeButtonColor(s4.state.mode, s4.state.selectModeActive, s4.state.elementData, s4.state.insertPoint, s4.state.insertBrowseActive)).toBe('orange');
 
     // Step 5: Click Select on overlay toolbar
     const s5 = dispatch(s4.state, { type: 'WS_MODE_CHANGED', mode: 'select' });
@@ -408,20 +413,44 @@ describe('Escape key', () => {
     expect(overlayMessages(result)).toContainEqual({ type: 'CANCEL_MODE' });
   });
 
-  it('with insert point locked → clear point, stay in insert mode', () => {
+  it('with insert point locked + browsing → stop browsing, keep point (teal)', () => {
     const withPoint = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'insert' },
       { type: 'WS_INSERT_POINT_LOCKED', position: 'after', targetName: 'Card' },
     ]);
+    // After lock, insertBrowseActive is still true (persistent browse)
+    expect(withPoint.state.insertBrowseActive).toBe(true);
+
     const result = dispatch(withPoint.state, { type: 'ESCAPE' });
     const { state } = result;
 
+    // Orange + point → Teal: stop browsing, keep point
     expect(state.mode).toBe('insert');
-    expect(state.insertPoint).toBeNull();
-    // Should send CLEAR_HIGHLIGHTS + MODE_CHANGED(insert) to restart browse
+    expect(state.insertPoint).toEqual({ position: 'after', targetName: 'Card' });
+    expect(state.insertBrowseActive).toBe(false);
+    expect(getModeButtonColor(state.mode, state.selectModeActive, state.elementData, state.insertPoint, state.insertBrowseActive)).toBe('teal');
     const msgs = overlayMessages(result);
-    expect(msgs).toContainEqual({ type: 'CLEAR_HIGHLIGHTS', deselect: true });
-    expect(msgs).toContainEqual({ type: 'MODE_CHANGED', mode: 'insert' });
+    expect(msgs).toContainEqual({ type: 'TOGGLE_INSERT_BROWSE', active: false });
+  });
+
+  it('with insert point locked + not browsing (teal) → clear point, cancel mode (gray)', () => {
+    // Get to teal: insert → lock → escape (stops browsing)
+    const withPoint = dispatchAll(INITIAL_STATE, [
+      { type: 'MODE_CHANGE', mode: 'insert' },
+      { type: 'WS_INSERT_POINT_LOCKED', position: 'after', targetName: 'Card' },
+    ]);
+    const afterFirstEscape = dispatch(withPoint.state, { type: 'ESCAPE' });
+    expect(afterFirstEscape.state.insertBrowseActive).toBe(false);
+    expect(afterFirstEscape.state.insertPoint).toEqual({ position: 'after', targetName: 'Card' });
+
+    // Second escape: teal → gray
+    const result = dispatch(afterFirstEscape.state, { type: 'ESCAPE' });
+    const { state } = result;
+
+    expect(state.mode).toBeNull();
+    expect(state.insertPoint).toBeNull();
+    expect(state.insertBrowseActive).toBe(false);
+    expect(overlayMessages(result)).toContainEqual({ type: 'CANCEL_MODE' });
   });
 
   it('no selection, mode active → cancel mode → idle', () => {
@@ -460,7 +489,7 @@ describe('Mode toggle', () => {
     expect(getModeButtonColor(result.state.mode, result.state.selectModeActive, result.state.elementData, result.state.insertPoint, result.state.insertBrowseActive)).toBe('teal');
   });
 
-  it('re-click select when teal (element, not selecting) → re-enable selecting (orange)', () => {
+  it('re-click select when teal (element, not selecting) → clear element, fresh selecting (orange)', () => {
     // Get to teal: select → element → click Select (stop selecting)
     const withElement = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'select' },
@@ -470,12 +499,12 @@ describe('Mode toggle', () => {
     expect(teal.state.selectModeActive).toBe(false);
     expect(teal.state.elementData).toBe(MOCK_ELEMENT);
 
-    // Click Select again: teal → orange (re-enable selecting)
+    // Click Select again: teal → orange (clear element, fresh selecting)
     const result = dispatch(teal.state, { type: 'MODE_CHANGE', mode: 'select' });
     expect(result.state.mode).toBe('select');
     expect(result.state.selectModeActive).toBe(true);
-    expect(result.state.elementData).toBe(MOCK_ELEMENT);
-    expect(overlayMessages(result)).toContainEqual({ type: 'TOGGLE_SELECT_MODE', active: true });
+    expect(result.state.elementData).toBeNull();
+    expect(overlayMessages(result)).toContainEqual({ type: 'MODE_CHANGED', mode: 'select' });
   });
 
   it('re-click select with no element → toggle off', () => {
@@ -486,15 +515,39 @@ describe('Mode toggle', () => {
     expect(overlayMessages(result)).toContainEqual({ type: 'CANCEL_MODE' });
   });
 
-  it('re-click insert with insert point → deselect, stay in insert', () => {
+  it('re-click insert with point + browsing → stop browsing, keep point (teal)', () => {
     const withPoint = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'insert' },
       { type: 'WS_INSERT_POINT_LOCKED', position: 'before', targetName: 'Nav' },
     ]);
+    // After lock, insertBrowseActive is still true (persistent browse)
+    expect(withPoint.state.insertBrowseActive).toBe(true);
+
     const result = dispatch(withPoint.state, { type: 'MODE_CHANGE', mode: 'insert' });
 
+    // Orange + point → Teal: stop browsing, keep point
     expect(result.state.mode).toBe('insert');
+    expect(result.state.insertPoint).toEqual({ position: 'before', targetName: 'Nav' });
+    expect(result.state.insertBrowseActive).toBe(false);
+    expect(getModeButtonColor(result.state.mode, result.state.selectModeActive, result.state.elementData, result.state.insertPoint, result.state.insertBrowseActive)).toBe('teal');
+  });
+
+  it('re-click insert when teal (point, not browsing) → clear point, fresh browsing (orange)', () => {
+    // Get to teal: insert → lock → click Insert (stop browsing)
+    const withPoint = dispatchAll(INITIAL_STATE, [
+      { type: 'MODE_CHANGE', mode: 'insert' },
+      { type: 'WS_INSERT_POINT_LOCKED', position: 'before', targetName: 'Nav' },
+    ]);
+    const teal = dispatch(withPoint.state, { type: 'MODE_CHANGE', mode: 'insert' });
+    expect(teal.state.insertBrowseActive).toBe(false);
+    expect(teal.state.insertPoint).toEqual({ position: 'before', targetName: 'Nav' });
+
+    // Click Insert again: teal → orange (clear point, fresh browsing)
+    const result = dispatch(teal.state, { type: 'MODE_CHANGE', mode: 'insert' });
+    expect(result.state.mode).toBe('insert');
+    expect(result.state.insertBrowseActive).toBe(true);
     expect(result.state.insertPoint).toBeNull();
+    expect(overlayMessages(result)).toContainEqual({ type: 'MODE_CHANGED', mode: 'insert' });
   });
 
   it('re-click insert when idle (after place) → re-activate browse, not toggle off', () => {
@@ -633,12 +686,18 @@ describe('Invariants', () => {
     const tealState = dispatch(withElPicking.state, { type: 'MODE_CHANGE', mode: 'select' });
     expect(getModeButtonColor(tealState.state.mode, tealState.state.selectModeActive, tealState.state.elementData, tealState.state.insertPoint, tealState.state.insertBrowseActive)).toBe('teal');
 
-    // With insert point → teal
+    // With insert point + browsing active → orange (persistent browse)
     const withIP = dispatchAll(INITIAL_STATE, [
       { type: 'MODE_CHANGE', mode: 'insert' },
       { type: 'WS_INSERT_POINT_LOCKED', position: 'before', targetName: 'Nav' },
     ]);
-    expect(getModeButtonColor(withIP.state.mode, withIP.state.selectModeActive, withIP.state.elementData, withIP.state.insertPoint, withIP.state.insertBrowseActive)).toBe('teal');
+    expect(withIP.state.insertBrowseActive).toBe(true);
+    expect(getModeButtonColor(withIP.state.mode, withIP.state.selectModeActive, withIP.state.elementData, withIP.state.insertPoint, withIP.state.insertBrowseActive)).toBe('orange');
+
+    // With insert point + browsing stopped → teal (locked)
+    const tealIP = dispatch(withIP.state, { type: 'MODE_CHANGE', mode: 'insert' });
+    expect(tealIP.state.insertBrowseActive).toBe(false);
+    expect(getModeButtonColor(tealIP.state.mode, tealIP.state.selectModeActive, tealIP.state.elementData, tealIP.state.insertPoint, tealIP.state.insertBrowseActive)).toBe('teal');
   });
 });
 

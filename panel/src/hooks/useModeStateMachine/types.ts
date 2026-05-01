@@ -143,7 +143,7 @@ export function getModeButtonColor(
   if (mode === null) return 'gray';
   // Orange = waiting for user to pick on the page
   if (mode === 'select' && selectModeActive) return 'orange';
-  if (mode === 'insert' && !insertPoint && insertBrowseActive) return 'orange';
+  if (mode === 'insert' && insertBrowseActive) return 'orange';
   // Teal = target locked
   if (mode === 'select' && (elementData !== null)) return 'teal';
   if (mode === 'insert' && insertPoint !== null) return 'teal';
@@ -166,5 +166,5 @@ export function computeIsPicking(
   insertPoint: InsertPoint | null,
   insertBrowseActive: boolean,
 ): boolean {
-  return selectModeActive || (mode === 'insert' && !insertPoint && insertBrowseActive);
+  return selectModeActive || (mode === 'insert' && insertBrowseActive);
 }

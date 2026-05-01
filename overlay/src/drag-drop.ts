@@ -23,6 +23,7 @@ import {
 import { isDragMessage, type DragStartMessage } from '../../shared/drag-types';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, ARROW_BASE, DASHED_BORDER, LINE_BASE, FIXED_OVERLAY } from './styles';
+import { GHOST_STYLE_RESET } from '../../shared/css-utils';
 
 // ── Session state ────────────────────────────────────────────────────────
 
@@ -126,6 +127,11 @@ function onPostMessage(event: MessageEvent): void {
       if (session) {
         session.ghostHtml = msg.ghostHtml;
         session.ghostCss = msg.ghostCss;
+        // Upgrade the drag preview from text label to visual ghost thumbnail
+        if (dom.preview) {
+          dom.preview.innerHTML = '';
+          renderGhostPreview(dom.preview, msg.ghostHtml, msg.ghostCss, session.componentName);
+        }
         // If we had a pending drop, execute it now
         if (pendingDrop) {
           const { x, y } = pendingDrop;
@@ -174,16 +180,25 @@ function handleDragStart(msg: DragStartMessage): void {
   const initClientY = msg.screenY - window.screenY - (window.outerHeight - window.innerHeight);
   dom.preview = document.createElement('div');
   dom.preview.style.cssText = css({
-    ...CURSOR_LABEL,
+    ...FIXED_OVERLAY,
+    zIndex: '2147483647',
     opacity: '0.9',
-    display: 'block',
-    fontSize: '12px',
-    padding: '6px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px',
     pointerEvents: 'none',
     left: `${initClientX + 14}px`,
     top: `${initClientY - 28}px`,
   });
-  dom.preview.textContent = msg.componentName;
+
+  // If ghost HTML is already available, render a visual thumbnail
+  if (session.ghostHtml) {
+    renderGhostPreview(dom.preview, session.ghostHtml, session.ghostCss, msg.componentName);
+  } else {
+    // Fallback: text-only label until DRAG_GHOST_READY arrives
+    renderTextPreview(dom.preview, msg.componentName);
+  }
   document.body.appendChild(dom.preview);
 
   // Create indicator element (reuse same rendering as drop-zone)
@@ -239,7 +254,7 @@ function updateDragPosition(clientX: number, clientY: number): void {
   if (dom.preview) dom.preview.style.display = 'none';
   if (dom.indicator) dom.indicator.style.display = 'none';
   const target = findTarget(clientX, clientY);
-  if (dom.preview) dom.preview.style.display = 'block';
+  if (dom.preview) dom.preview.style.display = 'flex';
   if (dom.indicator) dom.indicator.style.display = '';
 
   if (!target) {
@@ -286,7 +301,8 @@ function executeDrop(clientX: number, clientY: number): void {
   if (!session.ghostHtml) {
     pendingDrop = { x: clientX, y: clientY };
     if (dom.preview) {
-      dom.preview.textContent = `${session.componentName} (loading…)`;
+      dom.preview.innerHTML = '';
+      renderTextPreview(dom.preview, `${session.componentName} (loading…)`);
     }
     return;
   }
@@ -295,7 +311,7 @@ function executeDrop(clientX: number, clientY: number): void {
   if (dom.preview) dom.preview.style.display = 'none';
   if (dom.indicator) dom.indicator.style.display = 'none';
   const target = findTarget(clientX, clientY);
-  if (dom.preview) dom.preview.style.display = 'block';
+  if (dom.preview) dom.preview.style.display = 'flex';
 
   if (!target) {
     endSession(true);
@@ -412,6 +428,85 @@ function endSession(cancelled: boolean): void {
   stopAutoScroll();
 
   session = null;
+}
+
+// ── Drag preview rendering ───────────────────────────────────────────────
+
+const PREVIEW_MAX_W = 80;
+const PREVIEW_MAX_H = 56;
+
+/** Render a text-only label into the preview container. */
+function renderTextPreview(container: HTMLElement, text: string): void {
+  const label = document.createElement('div');
+  label.style.cssText = css({
+    ...CURSOR_LABEL,
+    position: 'relative',
+    opacity: '1',
+    display: 'block',
+    fontSize: '12px',
+    padding: '6px 12px',
+  });
+  label.textContent = text;
+  container.appendChild(label);
+}
+
+/** Render ghost HTML as a scaled thumbnail inside a shadow DOM, with a name label. */
+function renderGhostPreview(container: HTMLElement, ghostHtml: string, ghostCss: string | null, componentName: string): void {
+  // Thumbnail container — use max-width so it shrinks to content
+  const thumb = document.createElement('div');
+  thumb.style.cssText = css({
+    maxWidth: `${PREVIEW_MAX_W}px`,
+    maxHeight: `${PREVIEW_MAX_H}px`,
+    overflow: 'hidden',
+    borderRadius: '6px',
+    background: '#ffffff',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+    border: `2px solid ${TEAL}`,
+    position: 'relative',
+    visibility: 'hidden',
+  });
+
+  // Shadow DOM host for CSS isolation
+  const ghostHost = document.createElement('div');
+  ghostHost.style.cssText = 'overflow:hidden;width:max-content;';
+  const shadow = ghostHost.attachShadow({ mode: 'open' });
+  const hostReset = `:host{${GHOST_STYLE_RESET}}`;
+  const cssBlock = ghostCss ? `${hostReset}${ghostCss}` : hostReset;
+  shadow.innerHTML = `<style>${cssBlock}</style><div style="pointer-events:none;transform-origin:top left;width:max-content" id="ghost-content">${ghostHtml}</div>`;
+  thumb.appendChild(ghostHost);
+  container.appendChild(thumb);
+
+  // Measure and scale to fit after the browser lays it out
+  requestAnimationFrame(() => {
+    const content = shadow.getElementById('ghost-content');
+    if (!content) return;
+    const w = content.scrollWidth;
+    const h = content.scrollHeight;
+    if (w > 0 && h > 0) {
+      const scale = Math.min(PREVIEW_MAX_W / w, PREVIEW_MAX_H / h, 1.0);
+      content.style.transform = `scale(${scale})`;
+      const scaledW = Math.ceil(w * scale);
+      const scaledH = Math.ceil(h * scale);
+      ghostHost.style.width = `${scaledW}px`;
+      ghostHost.style.height = `${scaledH}px`;
+      thumb.style.width = `${scaledW}px`;
+      thumb.style.height = `${scaledH}px`;
+    }
+    thumb.style.visibility = 'visible';
+  });
+
+  // Name label below thumbnail
+  const label = document.createElement('div');
+  label.style.cssText = css({
+    ...CURSOR_LABEL,
+    position: 'relative',
+    opacity: '1',
+    display: 'block',
+    fontSize: '10px',
+    padding: '2px 8px',
+  });
+  label.textContent = componentName;
+  container.appendChild(label);
 }
 
 // ── Indicator rendering (mirrors drop-zone.ts logic) ─────────────────────

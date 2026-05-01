@@ -83,26 +83,54 @@ export function modeReducer(
             // Orange with no element → Gray: cancel
             newMode = null;
           } else if (!prev.selectModeActive && prev.elementData) {
-            // Teal → Orange: re-enable selecting, keep element
+            // Teal → Orange: clear element and re-enter fresh selecting
             return {
               state: {
                 ...prev,
                 selectModeActive: true,
+                elementData: null,
+                selectionId: prev.selectionId + 1,
               },
               effects: fromOverlay ? [] : [
-                { kind: 'sendToOverlay', message: { type: 'TOGGLE_SELECT_MODE', active: true } },
+                { kind: 'sendToOverlay', message: { type: 'MODE_CHANGED', mode: 'select' } },
               ],
             };
           }
           // else: gray select (idle) → fall through to re-activate
         } else if (prev.mode === 'insert') {
-          if (prev.elementData || prev.insertPoint) {
-            return deselectAndReenter(prev, fromOverlay);
+          // ── Insert mode three-way toggle (mirrors Select) ──
+          // Orange + point → Teal (stop browsing, keep point)
+          // Orange + no point → Gray (cancel browsing)
+          // Teal (point, not browsing) → Orange (clear point, fresh browsing)
+          if (prev.insertBrowseActive && prev.insertPoint) {
+            // Orange with point → Teal: stop browsing, keep point
+            return {
+              state: {
+                ...prev,
+                insertBrowseActive: false,
+              },
+              effects: fromOverlay ? [] : [
+                { kind: 'sendToOverlay', message: { type: 'TOGGLE_INSERT_BROWSE', active: false } },
+              ],
+            };
           }
-          const isActive = prev.insertBrowseActive;
-          if (isActive) {
+          if (prev.insertBrowseActive && !prev.insertPoint) {
+            // Orange with no point → Gray: cancel
             newMode = null;
+          } else if (!prev.insertBrowseActive && prev.insertPoint) {
+            // Teal → Orange: clear point and re-enter fresh browsing
+            return {
+              state: {
+                ...prev,
+                insertBrowseActive: true,
+                insertPoint: null,
+              },
+              effects: fromOverlay ? [] : [
+                { kind: 'sendToOverlay', message: { type: 'MODE_CHANGED', mode: 'insert' } },
+              ],
+            };
           }
+          // else: gray insert (idle) → fall through to re-activate
         } else {
           if (prev.elementData || prev.insertPoint) {
             return deselectAndReenter(prev, fromOverlay);
@@ -270,7 +298,51 @@ export function modeReducer(
         };
       }
 
-      // ── Insert/other modes: existing behavior ──
+      // ── Insert mode layered escape (mirrors Select) ──
+      // Orange + point → Teal (stop browsing, keep point)
+      // Orange + no point → Gray
+      // Teal + point → Gray (clear point)
+      if (prev.mode === 'insert') {
+        if (prev.insertBrowseActive && prev.insertPoint) {
+          // Orange with point → Teal: stop browsing, keep point
+          return {
+            state: {
+              ...prev,
+              insertBrowseActive: false,
+            },
+            effects: [
+              { kind: 'sendToOverlay', message: { type: 'TOGGLE_INSERT_BROWSE', active: false } },
+            ],
+          };
+        }
+        if (!prev.insertBrowseActive && prev.insertPoint) {
+          // Teal → Gray: clear point
+          return {
+            state: {
+              ...prev,
+              mode: null,
+              editTool: null,
+              insertPoint: null,
+              insertBrowseActive: false,
+            },
+            effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+          };
+        }
+        // Orange with no point or gray → cancel mode
+        return {
+          state: {
+            ...prev,
+            mode: null,
+            editTool: null,
+            selectModeActive: false,
+            insertBrowseActive: false,
+            insertPoint: null,
+          },
+          effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+        };
+      }
+
+      // ── Other modes: existing behavior ──
       if (prev.elementData || prev.insertPoint) {
         return deselectAndReenter(prev, false);
       }
@@ -380,7 +452,7 @@ export function modeReducer(
         state: {
           ...prev,
           insertPoint: { position: action.position, targetName: action.targetName },
-          insertBrowseActive: false,
+          // Keep insertBrowseActive as-is (persistent browse mode)
         },
         effects: [],
       };
