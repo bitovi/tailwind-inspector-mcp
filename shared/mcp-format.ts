@@ -104,6 +104,7 @@ export function buildCommitInstructions(commit: Commit, remainingCount: number):
   const componentDrops = commit.patches.filter((p: Patch) => p.kind === 'component-drop');
   const bugReports = commit.patches.filter((p: Patch) => p.kind === 'bug-report');
   const deleteElements = commit.patches.filter((p: Patch) => p.kind === 'delete-element');
+  const moveElements = commit.patches.filter((p: Patch) => p.kind === 'move-element');
   const moreText = remainingCount > 0
     ? `${remainingCount} more commit${remainingCount === 1 ? '' : 's'} waiting in the queue after this one.`
     : 'This is the last commit in the queue. After implementing it, call `implement_next_change` again to wait for future changes.';
@@ -242,6 +243,18 @@ ${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 - **Action:** Remove this element entirely from the source code.
 ${patch.ghostHtml ? `- **Element HTML:**\n\`\`\`html\n${patch.ghostHtml}\n\`\`\`\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
 `;
+    } else if (patch.kind === 'move-element') {
+      const comp = patch.component?.name ?? 'unknown component';
+      const tag = patch.target?.tag ?? 'element';
+      const context = patch.context ?? '';
+      const insertMode = patch.insertMode ?? 'after';
+      const innerText = patch.target?.innerText?.replace(/\s+/g, ' ').trim().slice(0, 60) || '';
+      const targetDesc = innerText ? `\`<${tag}>\` containing "${innerText}"` : `\`<${tag}>\``;
+      patchList += `### ${stepNum}. Move element \`${patch.id}\`
+- **Component:** \`${comp}\`
+- **Action:** Move this element to **${insertMode}** ${targetDesc}
+${patch.ghostHtml ? `- **Element HTML:**\n\`\`\`html\n${patch.ghostHtml}\n\`\`\`\n` : ''}${context ? `- **Context HTML:**\n\`\`\`html\n${context}\n\`\`\`\n` : ''}
+`;
     } else if (patch.kind === 'bug-report') {
       patchList += `### ${stepNum}. Bug report \`${patch.id}\`
 - **Description:** ${patch.bugDescription ?? '(no description)'}
@@ -323,6 +336,7 @@ ${patch.bugTimeline && patch.bugTimeline.length > 0 ? (() => {
   if (componentDrops.length) summaryParts.push(`${componentDrops.length} component drop${componentDrops.length === 1 ? '' : 's'}`);
   if (bugReports.length) summaryParts.push(`${bugReports.length} bug report${bugReports.length === 1 ? '' : 's'}`);
   if (deleteElements.length) summaryParts.push(`${deleteElements.length} element deletion${deleteElements.length === 1 ? '' : 's'}`);
+  if (moveElements.length) summaryParts.push(`${moveElements.length} element move${moveElements.length === 1 ? '' : 's'}`);
 
   const resultsPart = classChanges.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const textResultsPart = textChanges.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
@@ -330,14 +344,18 @@ ${patch.bugTimeline && patch.bugTimeline.length > 0 ? (() => {
   const dropResultsPart = componentDrops.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const bugResultsPart = bugReports.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
   const deleteResultsPart = deleteElements.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
-  const allResultsPart = [resultsPart, textResultsPart, designResultsPart, dropResultsPart, bugResultsPart, deleteResultsPart].filter(Boolean).join(',\n');
+  const moveResultsPart = moveElements.map(p => `     { "patchId": "${p.id}", "success": true }`).join(',\n');
+  const allResultsPart = [resultsPart, textResultsPart, designResultsPart, dropResultsPart, bugResultsPart, deleteResultsPart, moveResultsPart].filter(Boolean).join(',\n');
 
   // Build step instructions
   const stepInstructions: string[] = [];
-  if (classChanges.length || componentDrops.length || textChanges.length || deleteElements.length) {
+  if (classChanges.length || componentDrops.length || textChanges.length || deleteElements.length || moveElements.length) {
     let step1 = '1. For each change above, find the source file and apply it.';
     if (deleteElements.length) {
       step1 += '\n   For element deletions: remove the specified element from the source JSX/TSX.';
+    }
+    if (moveElements.length) {
+      step1 += '\n   For element moves: move the specified element to the indicated position in the source JSX/TSX.';
     }
     if (componentDrops.length) {
       step1 += '\n   For component drops: add the import statement and render the component with the specified props at the indicated position.';

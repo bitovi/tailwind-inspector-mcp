@@ -176,6 +176,10 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
         if (discarded?.kind === 'delete-element') {
           broadcastTo("overlay", { type: "REVERT_DELETE", patchId: id });
         }
+        // If a move-element patch was discarded, tell the overlay to move the element back
+        if (discarded?.kind === 'move-element') {
+          broadcastTo("overlay", { type: "REVERT_MOVE", patchId: id });
+        }
       }
       console.error(`[msg] Discarded ${ids.length} draft patch(es)`);
       broadcastPatchUpdate();

@@ -403,13 +403,13 @@ function ensurePulseStyle(): void {
 
 // ── Shared indicator rendering ───────────────────────────────────────────
 
-interface RenderIndicatorOpts {
+export interface RenderIndicatorOpts {
   zIndex: number;
   bgTint?: string;
   animate?: boolean;
 }
 
-function renderIndicator(
+export function renderIndicator(
   container: HTMLElement,
   position: DropPosition,
   axis: 'vertical' | 'horizontal',

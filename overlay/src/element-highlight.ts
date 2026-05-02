@@ -2,7 +2,6 @@
 // Extracted from index.ts — operates on shared overlay state.
 
 import { detectComponent } from "./framework-detect";
-import { isDragActive } from "./drag-drop";
 import { removeElementDrawer } from "./element-drawer";
 import { state } from "./overlay-state";
 
@@ -40,6 +39,12 @@ export function repositionHighlights(): void {
 	// new ones.  This keeps insert mode from spawning selection outlines.
 	const existing = state.shadowRoot.querySelectorAll(".highlight-overlay");
 	if (existing.length === 0) return;
+	// Don't re-create highlights during any exclusive interaction
+	// (they were intentionally cleared on entry)
+	if (state.exclusiveInteraction) {
+		existing.forEach((el) => el.remove());
+		return;
+	}
 	existing.forEach((el) => el.remove());
 	state.currentEquivalentNodes.forEach((n) => highlightElement(n));
 }
@@ -84,8 +89,11 @@ export function showHoverPreview(el: HTMLElement, componentName: string): void {
 }
 
 export function mouseMoveHandler(e: MouseEvent): void {
-	// Suppress hover previews during drag-drop to avoid visual conflicts
-	if (isDragActive()) return;
+	// Suppress hover previews during any exclusive interaction
+	if (state.exclusiveInteraction) return;
+
+	// Only show hover previews when actively picking (select mode or add mode)
+	if (!state.selectModeOn && !state.addMode) return;
 
 	const now = Date.now();
 	if (now - state.lastMoveTime < 16) return;

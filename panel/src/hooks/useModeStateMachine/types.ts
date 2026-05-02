@@ -54,6 +54,7 @@ export type ModeAction =
   | { type: 'WS_DESELECT_ELEMENT' }
   | { type: 'WS_ELEMENT_SELECTED'; elementData: ElementData }
   | { type: 'WS_SELECT_MODE_CHANGED'; active: boolean }
+  | { type: 'WS_INSERT_BROWSE_CHANGED'; active: boolean }
   | { type: 'WS_MODE_CHANGED'; mode: AppMode }
   | { type: 'WS_EDIT_TOOL_CHANGED'; tool: EditTool }
   | { type: 'WS_TAB_CHANGED'; tab: string }

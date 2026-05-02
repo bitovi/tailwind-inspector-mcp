@@ -4,7 +4,7 @@
  */
 import { computePosition, flip, offset, autoUpdate } from "@floating-ui/dom";
 import { setTextEditingLock } from "./bottom-toolbar";
-
+import { clearGrabCursor, setGrabCursor, state } from './overlay-state';
 interface TextEditDeps {
   sendTo: (role: string, msg: any) => void;
   send: (msg: any) => void;
@@ -114,6 +114,12 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
   // Notify panel
   deps.sendTo('panel', { type: 'TEXT_EDIT_ACTIVE' });
 
+  // Remove grab cursor during text editing
+  clearGrabCursor();
+
+  // Mark exclusive interaction
+  state.exclusiveInteraction = 'text-editing';
+
   // Disable toolbar buttons while editing
   setTextEditingLock(true);
 }
@@ -156,6 +162,12 @@ export function endTextEdit(confirm: boolean): void {
   editTarget.removeAttribute('contentEditable');
   editTarget.style.outline = '';
   editTarget.style.outlineOffset = '';
+
+  // Restore grab cursor
+  setGrabCursor();
+
+  // Clear exclusive interaction
+  state.exclusiveInteraction = null;
 
   // Re-enable toolbar buttons
   setTextEditingLock(false);

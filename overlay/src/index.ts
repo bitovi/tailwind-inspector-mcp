@@ -13,7 +13,8 @@ import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { saveScrollRatio } from './preserve-scroll';
 import { findExactMatches } from "./grouping";
-import { initDragDrop, isDragActive } from "./drag-drop";
+import { initDragDrop } from "./drag-drop";
+import { initDragMove, revertMove } from "./drag-move";
 import { getFiber, findOwningComponent, extractComponentProps } from "./react/fiber";
 import { isAngularElement, findOwningComponent as findAngularOwningComponent, extractAngularComponentProps } from "./angular/detect";
 import type { InsertMode } from "./messages";
@@ -25,14 +26,14 @@ import {
 	revertPreview,
 } from "./patcher";
 import { connect, onMessage, send, sendTo } from "./ws";
-import { state, resolveTab, clearSelectionState } from "./overlay-state";
+import { state, resolveTab, clearSelectionState, setGrabCursor, clearGrabCursor } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
 import { showDrawButton, initToolbar, repositionToolbar, showGroupPicker } from "./element-toolbar";
 import { initElementDrawer } from "./element-drawer";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
 import { getSameRectCandidates, showDepthPicker, dismissDepthPicker } from "./depth-picker";
-import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides } from "./bottom-toolbar";
+import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides, resetToolbar } from "./bottom-toolbar";
 import type { BugReportElement } from "../../shared/types";
 import { setClipboard, getClipboard, extractGhostCssForElement } from "./clipboard";
 
@@ -251,8 +252,8 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	// While text editing, suppress page click handlers (buttons, links, etc.)
 	if (handleTextEditingClick(e)) return;
 
-	// Ignore clicks while a drag-drop session is active
-	if (isDragActive()) return;
+	// Ignore clicks during any exclusive interaction (drag-move, component-drag, text-editing)
+	if (state.exclusiveInteraction) return;
 
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
@@ -421,6 +422,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	showDrawButton(targetEl);
 	updateInstanceCount(state.currentEquivalentNodes.length);
 	updateToolState('select', state.selectModeOn, true);
+	setGrabCursor();
 
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
@@ -788,6 +790,9 @@ function init(): void {
 		},
 	);
 
+	// Initialize drag-to-move (mousedown on selected element to reorder/reparent)
+	initDragMove(state.shadowHost);
+
 	const btn = document.createElement("button");
 	btn.className = "toggle-btn";
 	btn.setAttribute("aria-label", "Open VyBit inspector");
@@ -807,7 +812,7 @@ function init(): void {
 		}
 	});
 
-	// Escape key — layered escape for persistent select mode
+	// Escape key — layered escape for select and insert modes
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
 			// Exit add-mode first if active
@@ -815,14 +820,31 @@ function init(): void {
 				setAddMode(false);
 				return;
 			}
-			// Cancel active drop zone first (e.g. paste placement crosshair)
-			if (isDropZoneActive()) {
+
+			// ── Insert mode escape (mirrors Select pattern) ──
+			if (isDropZoneActive() && getLockedInsert()) {
+				// Orange + locked point → Teal: stop browsing, keep the locked point
 				cancelInsert();
+				updateToolState('insert', false, true);
+				sendTo("panel", { type: "INSERT_BROWSE_CHANGED", active: false });
+				return;
+			}
+			if (!isDropZoneActive() && getLockedInsert()) {
+				// Teal → Gray: clear the locked point entirely
 				clearLockedInsert();
-				clearToolOverrides();
+				resetToolbar();
 				sendTo("panel", { type: "MODE_CHANGED", mode: null });
 				return;
 			}
+			if (isDropZoneActive()) {
+				// Orange + no point → Gray: cancel insert mode entirely
+				cancelInsert();
+				resetToolbar();
+				sendTo("panel", { type: "MODE_CHANGED", mode: null });
+				return;
+			}
+
+			// ── Select mode escape ──
 			if (state.currentTargetEl && state.currentMode === 'select') {
 				if (state.selectModeOn) {
 					// Orange + element → Teal: stop selecting, keep element
@@ -835,7 +857,7 @@ function init(): void {
 					revertPreview();
 					clearHighlights();
 					clearSelectionState();
-					clearToolOverrides();
+					resetToolbar();
 					sendTo("panel", { type: "MODE_CHANGED", mode: null });
 					return;
 				}
@@ -845,7 +867,7 @@ function init(): void {
 				revertPreview();
 				clearHighlights();
 				clearSelectionState();
-				clearToolOverrides();
+				resetToolbar();
 				if (state.currentMode === 'insert') {
 					sendTo("panel", { type: "DESELECT_ELEMENT" });
 					startBrowse(state.shadowHost, onBrowseLocked);
@@ -855,13 +877,7 @@ function init(): void {
 			} else if (state.selectModeOn) {
 				// Orange + no element → Gray: cancel select mode
 				setSelectMode(false);
-				clearToolOverrides();
-				sendTo("panel", { type: "MODE_CHANGED", mode: null });
-			} else if (isDropZoneActive()) {
-				// No element, cancel insert mode → go to landing
-				cancelInsert();
-				clearLockedInsert();
-				clearToolOverrides();
+				resetToolbar();
 				sendTo("panel", { type: "MODE_CHANGED", mode: null });
 			}
 		}
@@ -1283,6 +1299,9 @@ function init(): void {
 				deletedEl.style.display = "";
 				delete deletedEl.dataset.twDeleted;
 			}
+		} else if (msg.type === "REVERT_MOVE" && msg.patchId) {
+			// Move an element back to its original position when its patch is discarded
+			revertMove(msg.patchId);
 		} else if (
 			msg.type === "PATCH_STAGE" &&
 			state.currentTargetEl &&

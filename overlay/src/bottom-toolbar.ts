@@ -91,6 +91,15 @@ export function clearToolOverrides(): void {
 	updateButtonStates();
 }
 
+/** Reset toolbar to fully idle (gray) — clears overrides, tool, and picking/engaged flags. */
+export function resetToolbar(): void {
+	toolOverrides.clear();
+	currentTool = null;
+	isPicking = false;
+	isEngaged = false;
+	updateButtonStates();
+}
+
 /** Clear transient overrides (picking/engaged/dim) but preserve completed. */
 export function clearTransientOverrides(): void {
 	for (const [key, state] of toolOverrides) {

@@ -23,6 +23,7 @@ import {
 import { isDragMessage, type DragStartMessage } from '../../shared/drag-types';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, ARROW_BASE, DASHED_BORDER, LINE_BASE, FIXED_OVERLAY } from './styles';
+import { state } from './overlay-state';
 import { GHOST_STYLE_RESET } from '../../shared/css-utils';
 
 // ── Session state ────────────────────────────────────────────────────────
@@ -174,6 +175,7 @@ function handleDragStart(msg: DragStartMessage): void {
 
   // Notify overlay to cancel any active selection/insertion before drag
   if (onDragStartCallback) onDragStartCallback();
+  state.exclusiveInteraction = 'component-drag';
 
   // Create drag preview
   const initClientX = msg.screenX - window.screenX - (window.outerWidth - window.innerWidth);
@@ -427,6 +429,7 @@ function endSession(cancelled: boolean): void {
 
   stopAutoScroll();
 
+  state.exclusiveInteraction = null;
   session = null;
 }
 

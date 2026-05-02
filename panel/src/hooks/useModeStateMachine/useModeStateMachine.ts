@@ -429,6 +429,12 @@ export function modeReducer(
         effects: [],
       };
 
+    case 'WS_INSERT_BROWSE_CHANGED':
+      return {
+        state: { ...prev, insertBrowseActive: action.active },
+        effects: [],
+      };
+
     case 'WS_MODE_CHANGED': {
       console.log(`[theme-trace] WS_MODE_CHANGED: ${action.mode} (current=${prev.mode})`);
       // Delegate to MODE_CHANGE with fromOverlay=true
@@ -631,6 +637,9 @@ export function useModeStateMachine(): ModeStateMachine {
           return true;
         case 'SELECT_MODE_CHANGED':
           dispatch({ type: 'WS_SELECT_MODE_CHANGED', active: !!msg.active });
+          return true;
+        case 'INSERT_BROWSE_CHANGED':
+          dispatch({ type: 'WS_INSERT_BROWSE_CHANGED', active: !!msg.active });
           return true;
         case 'MODE_CHANGED':
           dispatch({ type: 'WS_MODE_CHANGED', mode: msg.mode });

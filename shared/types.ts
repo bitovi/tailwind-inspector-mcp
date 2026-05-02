@@ -37,7 +37,7 @@ export interface CanvasComponent {
   height: number;
 }
 
-export type PatchKind = 'class-change' | 'message' | 'design' | 'component-drop' | 'text-change' | 'bug-report' | 'delete-element';
+export type PatchKind = 'class-change' | 'message' | 'design' | 'component-drop' | 'text-change' | 'bug-report' | 'delete-element' | 'move-element';
 
 export type PatchStatus = 'staged' | 'committed' | 'implementing' | 'implemented' | 'error';
 

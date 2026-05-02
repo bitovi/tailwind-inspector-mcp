@@ -4,6 +4,22 @@
 import type { ContainerName, IContainer } from "./containers/IContainer";
 import type { ElementGroup } from "./grouping";
 
+// ── Exclusive interaction lock ───────────────────────────────────────────
+// At most ONE transient interaction can be active at a time.  Every visual
+// system (hover preview, selection highlights, drop indicators, element
+// toolbar, cursor) checks this field to decide what to render.  Modules
+// that start an exclusive interaction set it; modules that produce visuals
+// gate on it.
+//
+// `null` means no transient interaction is active — the normal
+// selecting / insert-browsing flow is in effect.
+
+export type ExclusiveInteraction =
+	| null              // idle — normal mode logic applies
+	| 'drag-moving'     // dragging a selected element to a new position
+	| 'component-drag'  // dragging a component from the panel onto the page
+	| 'text-editing';   // inline contentEditable editing
+
 export interface DesignCanvasEntry {
 	wrapper: HTMLElement;
 	replacedNodes: HTMLElement[] | null;
@@ -40,6 +56,9 @@ export const state = {
 	lastHoveredEl: null as Element | null,
 	lastMoveTime: 0,
 
+	// Exclusive interaction lock (see ExclusiveInteraction type above)
+	exclusiveInteraction: null as ExclusiveInteraction,
+
 	// Mode
 	currentMode: 'select' as 'select' | 'insert',
 	currentTab: 'design' as string,
@@ -73,6 +92,7 @@ export function resolveTab(): string {
 
 /** Clear all element-selection state. Call before re-entering a mode or resetting. */
 export function clearSelectionState(): void {
+	clearGrabCursor();
 	state.currentEquivalentNodes = [];
 	state.currentTargetEl = null;
 	state.currentBoundary = null;
@@ -80,4 +100,18 @@ export function clearSelectionState(): void {
 	state.cachedExactMatches = null;
 	state.manuallyAddedNodes = new Set<HTMLElement>();
 	state.addMode = false;
+}
+
+/** Apply grab cursor to the currently selected element. */
+export function setGrabCursor(): void {
+	if (state.currentTargetEl) {
+		state.currentTargetEl.style.cursor = 'grab';
+	}
+}
+
+/** Remove grab cursor from the currently selected element. */
+export function clearGrabCursor(): void {
+	if (state.currentTargetEl) {
+		state.currentTargetEl.style.cursor = '';
+	}
 }
