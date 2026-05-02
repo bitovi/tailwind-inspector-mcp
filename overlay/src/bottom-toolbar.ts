@@ -216,9 +216,14 @@ export function showBottomToolbar(): void {
 	selectBtn.title = "Select";
 	selectBtn.addEventListener("click", () => {
 		if (currentTool === "select") {
-			// Re-click Select — let onToolChange handle the toggle
-			// (engaged/teal → re-enable picking, picking → disengage)
-			onToolChange?.("select");
+			if (isPicking && !isEngaged) {
+				// Orange + no element → Gray: cancel selecting entirely
+				setTool(null);
+			} else {
+				// Re-click Select — let onToolChange handle the toggle
+				// (engaged/teal → re-enable picking, picking → disengage)
+				onToolChange?.("select");
+			}
 		} else {
 			setTool("select");
 		}
@@ -264,8 +269,13 @@ export function showBottomToolbar(): void {
 	insertBtn.title = "Insert";
 	insertBtn.addEventListener("click", () => {
 		if (currentTool === "insert") {
-			// Re-click Insert — let onToolChange handle the toggle
-			onToolChange?.("insert");
+			if (isPicking && !isEngaged) {
+				// Orange + no point → Gray: cancel browsing entirely
+				setTool(null);
+			} else {
+				// Re-click Insert — let onToolChange handle the toggle
+				onToolChange?.("insert");
+			}
 		} else {
 			setTool("insert");
 		}

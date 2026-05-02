@@ -360,14 +360,14 @@ describe('Flow E: Cross-mode switching via overlay toolbar', () => {
     expect(s5.state.elementData).toBeNull(); // cleared
     expect(s5.state.selectModeActive).toBe(true);
     expect(getModeButtonColor(s5.state.mode, s5.state.selectModeActive, s5.state.elementData, s5.state.insertPoint, s5.state.insertBrowseActive)).toBe('orange');
-    expect(computeActiveTab(s5.state.mode, s5.state.tabPreference)).toBe('design');
+    expect(computeActiveTab(s5.state.mode, s5.state.tabPreference)).toBe('components');
 
     // Step 6: Element selected again (stays orange — persistent select)
     const s6 = dispatch(s5.state, { type: 'WS_ELEMENT_SELECTED', elementData: MOCK_ELEMENT });
     expect(s6.state.mode).toBe('select');
     expect(s6.state.elementData).toBe(MOCK_ELEMENT);
     expect(getModeButtonColor(s6.state.mode, s6.state.selectModeActive, s6.state.elementData, s6.state.insertPoint, s6.state.insertBrowseActive)).toBe('orange');
-    expect(computeActiveTab(s6.state.mode, s6.state.tabPreference)).toBe('design');
+    expect(computeActiveTab(s6.state.mode, s6.state.tabPreference)).toBe('components');
   });
 });
 
@@ -611,12 +611,10 @@ describe('Mode toggle', () => {
     expect(state.mode).toBe('select');
     expect(state.insertPoint).toBeNull();
     expect(state.selectModeActive).toBe(true);
-    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('design');
+    expect(computeActiveTab(state.mode, state.tabPreference)).toBe('components');
   });
 });
 
-// ============================================================================
-// Reducer: Invariants
 // ============================================================================
 
 describe('Invariants', () => {
@@ -838,23 +836,23 @@ describe('Tab preference', () => {
     expect(result.state.tabPreference).toBe('component');
   });
 
-  it('switching to select from null resets preference to design', () => {
+  it('switching to select from null preserves tab preference', () => {
     const withComponent = dispatch(INITIAL_STATE, { type: 'TAB_CHANGE', tab: 'components' });
     const result = dispatch(withComponent.state, { type: 'MODE_CHANGE', mode: 'select' });
-    expect(result.state.tabPreference).toBe('design');
-    expect(computeActiveTab(result.state.mode, result.state.tabPreference)).toBe('design');
+    expect(result.state.tabPreference).toBe('component');
+    expect(computeActiveTab(result.state.mode, result.state.tabPreference)).toBe('components');
   });
 
-  it('insert → escape → select resets preference to design', () => {
+  it('insert → escape → select preserves tab preference', () => {
     const afterInsert = dispatch(INITIAL_STATE, { type: 'MODE_CHANGE', mode: 'insert' });
     expect(afterInsert.state.tabPreference).toBe('component');
     // Escape cancels mode (mode→null), preference stays 'component'
     const afterEscape = dispatch(afterInsert.state, { type: 'ESCAPE' });
     expect(afterEscape.state.mode).toBeNull();
     expect(afterEscape.state.tabPreference).toBe('component');
-    // Entering select from null should reset preference
+    // Entering select preserves the current preference
     const afterSelect = dispatch(afterEscape.state, { type: 'MODE_CHANGE', mode: 'select' });
-    expect(afterSelect.state.tabPreference).toBe('design');
-    expect(computeActiveTab(afterSelect.state.mode, afterSelect.state.tabPreference)).toBe('design');
+    expect(afterSelect.state.tabPreference).toBe('component');
+    expect(computeActiveTab(afterSelect.state.mode, afterSelect.state.tabPreference)).toBe('components');
   });
 });

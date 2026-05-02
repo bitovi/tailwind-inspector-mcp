@@ -15,18 +15,23 @@ export interface DragStartMessage {
   ghostCss?: string;
   componentPath?: string;
   args?: Record<string, unknown>;
-  /** Initial cursor position in screen coordinates (for popup path). */
+  /** Cursor position in screen coordinates (used by popup path). */
   screenX: number;
   screenY: number;
+  /** Cursor position in iframe-local client coordinates (used by iframe path). */
+  clientX?: number;
+  clientY?: number;
 }
 
-/** Sent on every mousemove during drag (popup path only — iframe path uses
- *  parent document pointermove directly). */
+/** Sent on every mousemove during drag. */
 export interface DragMoveMessage {
   __vybitDrag: true;
   type: 'DRAG_MOVE';
   screenX: number;
   screenY: number;
+  /** Cursor position in iframe-local client coordinates (used by iframe path). */
+  clientX?: number;
+  clientY?: number;
 }
 
 /** Sent when the panel ghost extraction completes after drag-start. */
@@ -43,6 +48,9 @@ export interface DragEndMessage {
   type: 'DRAG_END';
   screenX: number;
   screenY: number;
+  /** Cursor position in iframe-local client coordinates (used by iframe path). */
+  clientX?: number;
+  clientY?: number;
   cancelled: boolean;
 }
 

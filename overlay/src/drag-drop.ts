@@ -111,6 +111,27 @@ export function destroyDragDrop(): void {
   if (session) endSession(true);
 }
 
+// ── Coordinate conversion ────────────────────────────────────────────────
+
+/** Convert drag message coords to parent-page clientX/clientY.
+ *  For iframe source: uses iframe bounding rect + iframe-local clientX/clientY (accurate).
+ *  For popup source: falls back to screenX→clientX conversion (less reliable). */
+function toParentClient(msg: { screenX: number; screenY: number; clientX?: number; clientY?: number }): { clientX: number; clientY: number } {
+  // Prefer iframe-local coords when available — avoids unreliable screen→client math
+  if (msg.clientX != null && msg.clientY != null) {
+    const iframe = findPanelIframe();
+    if (iframe) {
+      const rect = iframe.getBoundingClientRect();
+      return { clientX: rect.x + msg.clientX, clientY: rect.y + msg.clientY };
+    }
+  }
+  // Fallback: screen→client (popup path or missing iframe)
+  return {
+    clientX: msg.screenX - window.screenX - (window.outerWidth - window.innerWidth),
+    clientY: msg.screenY - window.screenY - (window.outerHeight - window.innerHeight),
+  };
+}
+
 // ── postMessage handler ──────────────────────────────────────────────────
 
 function onPostMessage(event: MessageEvent): void {
@@ -123,8 +144,7 @@ function onPostMessage(event: MessageEvent): void {
       break;
     case 'DRAG_MOVE':
       if (session) {
-        const clientX = msg.screenX - window.screenX - (window.outerWidth - window.innerWidth);
-        const clientY = msg.screenY - window.screenY - (window.outerHeight - window.innerHeight);
+        const { clientX, clientY } = toParentClient(msg);
         updateDragPosition(clientX, clientY);
       }
       break;
@@ -150,8 +170,7 @@ function onPostMessage(event: MessageEvent): void {
         if (msg.cancelled) {
           endSession(true);
         } else {
-          const clientX = msg.screenX - window.screenX - (window.outerWidth - window.innerWidth);
-          const clientY = msg.screenY - window.screenY - (window.outerHeight - window.innerHeight);
+          const { clientX, clientY } = toParentClient(msg);
           executeDrop(clientX, clientY);
         }
       }
@@ -182,8 +201,7 @@ function handleDragStart(msg: DragStartMessage): void {
   state.exclusiveInteraction = 'component-drag';
 
   // Create drag preview
-  const initClientX = msg.screenX - window.screenX - (window.outerWidth - window.innerWidth);
-  const initClientY = msg.screenY - window.screenY - (window.outerHeight - window.innerHeight);
+  const { clientX: initClientX, clientY: initClientY } = toParentClient(msg);
   dom.preview = document.createElement('div');
   dom.preview.style.cssText = css({
     ...FIXED_OVERLAY,

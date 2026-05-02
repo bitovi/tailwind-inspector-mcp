@@ -56,6 +56,15 @@ The Select button has **persistent selection mode** — selecting stays active a
 | **Selecting (element selected)** | Orange | `true` | set | Crosshair cursor; hover outlines only **outside** the selected element; clicks outside re-select; clicks inside pass through |
 | **Locked (selecting off)** | Teal | `false` | set | No cursor change, no hover outlines |
 
+**Re-click behavior (three-way toggle):**
+
+| Current state | Re-click result | New state |
+|---|---|---|
+| **Orange + element** | Stop selecting, keep element | **Teal** (locked) |
+| **Orange + no element** | Cancel selecting entirely | **Gray** (idle) |
+| **Teal** (element locked) | Clear element, re-enter selecting | **Orange** (selecting) |
+| **Gray** (idle) | Enter selecting | **Orange** (selecting) |
+
 #### Insert button specifics
 
 The Insert button has **persistent browse mode** — browsing stays active after an insertion point is chosen:
@@ -66,6 +75,15 @@ The Insert button has **persistent browse mode** — browsing stays active after
 | **Browsing (no point)** | Orange | `true` | `null` | Crosshair cursor, drop-zone hover indicators on all elements |
 | **Browsing (point locked)** | Orange | `true` | set | Crosshair cursor; drop-zone indicators on all elements; locked point indicator visible; Describe change / Insert text buttons shown |
 | **Locked (browsing off)** | Teal | `false` | set | No cursor change, no hover indicators; locked point indicator visible |
+
+**Re-click behavior (three-way toggle):**
+
+| Current state | Re-click result | New state |
+|---|---|---|
+| **Orange + point locked** | Stop browsing, keep point | **Teal** (locked) |
+| **Orange + no point** | Cancel browsing entirely | **Gray** (idle) |
+| **Teal** (point locked) | Clear point, re-enter browsing | **Orange** (browsing) |
+| **Gray** (idle) | Enter browsing | **Orange** (browsing) |
 
 ### Overlay toolbar buttons (floating bar on page)
 

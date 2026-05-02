@@ -30,7 +30,7 @@ export interface InsertPoint {
 export interface ModeStateMachineState {
   mode: AppMode;
   editTool: EditTool;
-  tabPreference: 'design' | 'component';
+  tabPreference: 'design' | 'elements' | 'component';
   selectModeActive: boolean;
   insertBrowseActive: boolean;
   textEditing: boolean;
@@ -90,8 +90,8 @@ export interface ModeStateMachine {
   selectModeActive: boolean;
   /** True when text is being edited in the page */
   textEditing: boolean;
-  /** Tab preference: 'design' | 'component' */
-  tabPreference: 'design' | 'component';
+  /** Tab preference: 'design' | 'elements' | 'component' */
+  tabPreference: 'design' | 'elements' | 'component';
   /** Tabs to show based on current mode */
   currentTabs: Tab[];
   /** Active tab ID */
@@ -126,6 +126,7 @@ export const INSERT_TABS: Tab[] = [
 
 export const EDIT_TABS: Tab[] = [
   { id: 'design', label: 'Design' },
+  { id: 'elements', label: 'Elements' },
   { id: 'components', label: 'Components' },
 ];
 
@@ -152,8 +153,9 @@ export function getModeButtonColor(
   return 'gray';
 }
 
-export function computeActiveTab(mode: AppMode, tabPreference: 'design' | 'component'): string {
+export function computeActiveTab(mode: AppMode, tabPreference: 'design' | 'elements' | 'component'): string {
   if (tabPreference === 'component') return 'components';
+  if (tabPreference === 'elements') return 'elements';
   return 'design';
 }
 

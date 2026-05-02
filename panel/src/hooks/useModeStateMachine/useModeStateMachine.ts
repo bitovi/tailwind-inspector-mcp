@@ -170,12 +170,9 @@ export function modeReducer(
       } else {
         next.insertBrowseActive = false;
       }
-      // When entering select from any non-select state, reset preference.
-      // Insert mode forces 'component' (no Design tab), and that preference
-      // persists through mode=null (Escape). Always start select on Design.
-      if (newMode === 'select' && prev.mode !== 'select') {
-        next.tabPreference = 'design';
-      }
+      // When entering select, keep the user's current tab preference.
+      // Insert mode forces off 'design' (no Design tab in insert), but
+      // switching to select should not override what the user chose.
 
       if (!fromOverlay) {
         effects.push({ kind: 'sendToOverlay', message: { type: 'MODE_CHANGED', mode: newMode } });
@@ -194,6 +191,8 @@ export function modeReducer(
       const next = { ...prev };
       if (action.tab === 'components' || action.tab === 'replace' || action.tab === 'place') {
         next.tabPreference = 'component';
+      } else if (action.tab === 'elements') {
+        next.tabPreference = 'elements';
       } else if (action.tab === 'design') {
         next.tabPreference = 'design';
       }

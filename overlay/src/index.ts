@@ -1470,8 +1470,8 @@ function init(): void {
 					});
 				};
 
-				if (state.replaceDirection === 'element-first' && state.currentTargetEl) {
-					// Element-first mode — replace the current target immediately
+				if (state.currentTargetEl) {
+					// Element already selected — replace it immediately
 					doReplace(state.currentTargetEl);
 				} else {
 					// Component-first mode — arm crosshair to pick the target

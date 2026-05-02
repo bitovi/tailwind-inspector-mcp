@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ContainerSwitcher } from "./components/ContainerSwitcher";
 import { DrawTab } from "./components/DrawTab";
+import { ElementsTab } from "./components/ElementsTab";
 import { ModeToggle } from "./components/ModeToggle";
 import { PatchPopover } from "./components/PatchPopover";
 import { BugReportMode } from "./components/BugReportMode";
@@ -562,6 +563,8 @@ function InspectorApp() {
 					<div className="flex-1 overflow-auto">
 						{activeTab === 'components' ? (
 							<DrawTab insertMode="place" hasPageSelection={false} onArmedChange={handleArmedChange} expandedComponents={expandedComponents} onToggleExpanded={toggleComponentExpanded} onExpandComponent={expandComponent} />
+						) : activeTab === 'elements' ? (
+							<ElementsTab insertMode="place" onArmedChange={handleArmedChange} />
 						) : (
 							<div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
 								<div className="w-10 h-10 rounded-full bg-bit-teal/10 text-bit-teal flex items-center justify-center">
@@ -646,6 +649,8 @@ function InspectorApp() {
 				<div className="flex-1 overflow-auto">
 				{activeTab === "components" ? (
 					<DrawTab insertMode={mode === 'insert' ? 'place' : 'replace'} hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} expandedComponents={expandedComponents} onToggleExpanded={toggleComponentExpanded} onExpandComponent={expandComponent} />
+				) : activeTab === "elements" ? (
+					<ElementsTab insertMode={mode === 'insert' ? 'place' : 'replace'} onArmedChange={handleArmedChange} />
 				) : (
 					<div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
 						<div className="w-10 h-10 rounded-full bg-bit-teal/10 text-bit-teal flex items-center justify-center">
@@ -725,6 +730,9 @@ function InspectorApp() {
 				)}
 				{activeTab === "components" && (
 					<DrawTab insertMode={mode === 'insert' ? 'place' : 'replace'} hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} expandedComponents={expandedComponents} onToggleExpanded={toggleComponentExpanded} onExpandComponent={expandComponent} />
+				)}
+				{activeTab === "elements" && (
+					<ElementsTab insertMode={mode === 'insert' ? 'place' : 'replace'} onArmedChange={handleArmedChange} />
 				)}
 			</div>
 			{queueFooter}
