@@ -10,4 +10,6 @@ export interface ArgsFormProps {
   onArmField?: (propName: string) => void;
   /** Call to clear the receptive state */
   onClearReceptive?: () => void;
+  /** Group name for drag-drop self-drop prevention */
+  groupName?: string;
 }

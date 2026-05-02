@@ -18,6 +18,7 @@ import { buildGhostCacheEntry } from '../../utils/buildGhostCacheEntry';
 import type { GhostCacheEntry } from '../../utils/buildGhostCacheEntry';
 import { createStoryExtractor, type StoryExtractor } from '../../../../../../overlay/src/story-extractor';
 import { useDragToPlace } from '../../hooks/useDragToPlace';
+import { useHoverExpand } from '../../hooks/useHoverExpand';
 
 export interface CachedGhostData {
   ghostHtml?: string;
@@ -54,9 +55,15 @@ export interface ComponentGroupItemProps {
   onSetProp?: (data: ArmedComponentData) => void;
   /** Clear the receptive field */
   onClearReceptive?: () => void;
+  /** Whether this component's customize panel is expanded (lifted state) */
+  expanded?: boolean;
+  /** Toggle this component's expanded state */
+  onToggleExpanded?: (groupName: string) => void;
+  /** Expand this component (without toggling) */
+  onExpandComponent?: (groupName: string) => void;
 }
 
-export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, onGhostExtracted, insertMode, hasPageSelection, selection, receptiveField, onArmField, onSetProp, onClearReceptive }: ComponentGroupItemProps) {
+export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, onGhostExtracted, insertMode, hasPageSelection, selection, receptiveField, onArmField, onSetProp, onClearReceptive, expanded: expandedProp, onToggleExpanded, onExpandComponent }: ComponentGroupItemProps) {
   const { ghostHtml: cachedGhostHtml, ghostCss: cachedGhostCss, storyBackground: cachedStoryBackground, argCount: cachedArgCount } = cached ?? {};
   const { matched: matchedBySelection, props: selectionProps, ghostPatchId: selectionGhostPatchId, resolveComponentGhost } = selection ?? {};
   const [state, dispatch] = useReducer(cardReducer, {
@@ -67,7 +74,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
   const didDragRef = useRef(false);
   const extractorRef = useRef<StoryExtractor | null>(null);
   const initialLoadDone = useRef(false);
-  const [expanded, setExpanded] = useState(false);
+  const expanded = expandedProp ?? false;
   // When the user clicks Replace/Place but the ghost is stale (component slots
   // haven't been re-extracted yet), we defer arming and set this flag. Once
   // the ghost catches up (ghostArgsVersion === argsVersion), we auto-arm.
@@ -396,12 +403,12 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
       didDragRef.current = false;
       return;
     }
-    setExpanded(prev => !prev);
+    onToggleExpanded?.(group.name);
     // Trigger live load if not yet loaded
     if (!state.liveReady && !state.loadLiveRequested) {
       dispatch({ type: 'REQUEST_LIVE_REFRESH' });
     }
-  }, [state.liveReady, state.loadLiveRequested]);
+  }, [state.liveReady, state.loadLiveRequested, onToggleExpanded, group.name]);
 
   // ── Derived values ─────────────────────────────────────────────────────
 
@@ -432,7 +439,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
     args: state.args,
     resolveComponentGhost: resolveComponentGhost ?? undefined,
     propsAreStoryArgs: !!selectionGhostPatchId,
-    onExpand: () => setExpanded(true),
+    onExpand: () => onExpandComponent?.(group.name),
     onRequestLiveRefresh: () => dispatch({ type: 'REQUEST_LIVE_REFRESH' }),
     onArgsChange: handleArgsChange,
     onScrollIntoView: () => cardRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' }),
@@ -449,14 +456,27 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
     return { ghostHtml: gh || null, ghostCss: gc || null };
   }, [state.liveGhostHtml, state.liveGhostCss, cachedGhostHtml, cachedGhostCss, state.args]);
 
-  const { onMouseDown: onDragMouseDown } = useDragToPlace({
+  const { onPointerDown: onDragPointerDown, onPointerMove: onDragPointerMove, onPointerUp: onDragPointerUp, onLostPointerCapture } = useDragToPlace({
     componentName: group.name,
     storyId: group.stories[0]?.id ?? '',
+    groupName: group.name,
     getGhostData,
     componentPath: group.componentPath,
     args: state.args,
     onDragStart: () => { setIsDragActive(true); didDragRef.current = true; },
     onDragEnd: () => setIsDragActive(false),
+  });
+
+  // Hover-to-expand: when dragging over this collapsed row for 500ms, auto-expand
+  const handleHoverExpand = useCallback(() => {
+    onExpandComponent?.(group.name);
+  }, [onExpandComponent, group.name]);
+
+  const { isHoverDwelling } = useHoverExpand({
+    rowRef: cardRef,
+    isExpanded: expanded,
+    groupName: group.name,
+    onExpand: handleHoverExpand,
   });
 
   // Button label matches the tab context — or "Set Prop" when a field is receptive
@@ -484,7 +504,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
         : 'border-bit-border text-bit-text-mid bg-bit-surface hover:border-[#555] hover:text-bit-text hover:bg-bit-surface-hi';
 
   return (
-    <li ref={cardRef} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bit-teal rounded-md' : ''}`}>
+    <li ref={cardRef} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bit-teal rounded-md' : ''} ${isHoverDwelling ? 'ring-1 ring-bit-teal/30 rounded-md' : ''}`}>
       {/* ── Compact row ── */}
       <div
         className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md cursor-pointer transition-all ${
@@ -498,8 +518,11 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
       >
         {/* Thumbnail (drag handle) */}
         <div
-          onMouseDown={onDragMouseDown}
-          className={`shrink-0 cursor-grab active:cursor-grabbing select-none ${isDragActive ? 'opacity-40' : ''}`}
+          onPointerDown={onDragPointerDown}
+          onPointerMove={onDragPointerMove}
+          onPointerUp={onDragPointerUp}
+          onLostPointerCapture={onLostPointerCapture}
+          className={`shrink-0 cursor-grab active:cursor-grabbing select-none touch-none ${isDragActive ? 'opacity-40' : ''}`}
         >
           <ComponentRowThumb
             phase={state.phase}
@@ -614,6 +637,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
                   });
                 } : undefined}
                 onClearReceptive={onClearReceptive}
+                groupName={group.name}
               />
             </div>
           )}

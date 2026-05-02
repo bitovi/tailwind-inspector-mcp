@@ -1,5 +1,8 @@
 import type { SlotFieldProps } from './types';
 import type { SlotArgValue } from '../../types';
+import { useDropTarget } from '../../hooks/useDropTarget';
+import { useCallback } from 'react';
+import type { ArmedComponentData } from '../../types';
 
 function getTextValue(value: SlotArgValue | undefined): string {
   if (!value) return '';
@@ -9,8 +12,27 @@ function getTextValue(value: SlotArgValue | undefined): string {
   return '';
 }
 
-export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: SlotFieldProps) {
+export function SlotField({ name, value, onChange, isReceptive, onArmSelf, groupName }: SlotFieldProps) {
   const isFilled = value?.type === 'component';
+
+  const handleDrop = useCallback((data: ArmedComponentData) => {
+    onChange({
+      type: 'component',
+      componentName: data.componentName,
+      storyId: data.storyId,
+      componentPath: data.componentPath,
+      args: data.args,
+      ghostHtml: data.ghostHtml,
+      ghostCss: data.ghostCss,
+    });
+  }, [onChange]);
+
+  const { ref, isDropHovered, isDragActive } = useDropTarget({
+    groupName: groupName ?? '',
+    propName: name,
+    onDrop: handleDrop,
+    enabled: !isFilled && !!groupName,
+  });
 
   function handleTextChange(raw: string) {
     onChange({ type: 'text', value: raw });
@@ -57,20 +79,24 @@ export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: Slo
     );
   }
 
-  // Text input with arm button
+  // Text input with arm button — also a drop target during drag
   return (
-    <div className="flex-1 flex items-center gap-1">
+    <div ref={ref} className={`flex-1 flex items-center gap-1 transition-all rounded ${
+      isDropHovered ? 'ring-2 ring-bit-teal bg-bit-teal/10' : ''
+    }`}>
       <input
         type="text"
         className={`flex-1 bg-bit-surface border rounded px-1.5 py-0.5 text-[10px] text-bit-text outline-none transition-all ${
-          isReceptive
+          isDropHovered
             ? 'border-bit-teal bg-bit-teal/10'
-            : 'border-bit-border focus:border-bit-teal'
+            : isReceptive
+              ? 'border-bit-teal bg-bit-teal/10'
+              : 'border-bit-border focus:border-bit-teal'
         }`}
         value={getTextValue(value)}
-        placeholder={isReceptive ? 'Pick a component →' : '(empty)'}
-        readOnly={isReceptive}
-        onChange={isReceptive ? undefined : (e) => handleTextChange(e.target.value)}
+        placeholder={isDropHovered ? 'Drop here' : isReceptive ? 'Pick a component →' : '(empty)'}
+        readOnly={isReceptive || isDragActive}
+        onChange={isReceptive || isDragActive ? undefined : (e) => handleTextChange(e.target.value)}
       />
       <button
         type="button"

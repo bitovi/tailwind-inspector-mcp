@@ -10,4 +10,6 @@ export interface SlotFieldProps {
   isReceptive?: boolean;
   /** Call to arm this field as the receptive target */
   onArmSelf?: () => void;
+  /** Group name this slot belongs to (for self-drop prevention during drag) */
+  groupName?: string;
 }

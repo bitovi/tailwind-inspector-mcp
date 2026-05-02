@@ -1,9 +1,9 @@
-import type { SlotArgValue } from '../../types';
+import type { SlotArgValue, ArgType } from '../../types';
 import { SlotField } from '../SlotField';
 import { isSlotProp } from '../../utils/isSlotProp';
 import type { ArgsFormProps } from './types';
 
-export function ArgsForm({ argTypes, args, onArgsChange, receptivePropName, onArmField, onClearReceptive }: ArgsFormProps) {
+export function ArgsForm({ argTypes, args, onArgsChange, receptivePropName, onArmField, onClearReceptive, groupName }: ArgsFormProps) {
   const entries = Object.entries(argTypes);
   if (entries.length === 0) return null;
 
@@ -30,6 +30,7 @@ export function ArgsForm({ argTypes, args, onArgsChange, receptivePropName, onAr
               onArmField(name);
             }
           } : undefined}
+          groupName={groupName}
         />
       ))}
     </div>
@@ -44,6 +45,7 @@ function ArgField({
   isReactNode,
   isReceptive,
   onArmSelf,
+  groupName,
 }: {
   name: string;
   argType: ArgType;
@@ -52,6 +54,7 @@ function ArgField({
   isReactNode: boolean;
   isReceptive: boolean;
   onArmSelf?: () => void;
+  groupName?: string;
 }) {
   // Handle both string and object control formats
   const control = typeof argType.control === 'string'
@@ -70,6 +73,7 @@ function ArgField({
           onChange={(v) => onChange(v)}
           isReceptive={isReceptive}
           onArmSelf={onArmSelf}
+          groupName={groupName}
         />
       ) : control === 'select' && argType.options ? (
         <select

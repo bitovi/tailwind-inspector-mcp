@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ArgType, ComponentGroup, StoryEntry, ArmedComponentData } from './types';
 import type { InsertMode } from '../../../../shared/types';
 import { ComponentGroupItem } from './components/ComponentGroupItem';
+import { DragProvider } from './context/DragContext';
+import { DragPreview } from './components/DragPreview';
 import { sendTo, send, onMessage } from '../../ws';
 import { useGhostCache } from '../../hooks/useGhostCache';
 
@@ -23,9 +25,15 @@ interface DrawTabProps {
   ghostPatchId?: string;
   /** Called when a component is armed or disarmed */
   onArmedChange?: (armed: boolean) => void;
+  /** Which components are currently expanded (keyed by group name) */
+  expandedComponents?: Set<string>;
+  /** Toggle a component's expanded state */
+  onToggleExpanded?: (groupName: string) => void;
+  /** Expand a component (without toggling) */
+  onExpandComponent?: (groupName: string) => void;
 }
 
-export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, selectedComponentProps, ghostPatchId, onArmedChange }: DrawTabProps) {
+export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, selectedComponentProps, ghostPatchId, onArmedChange, expandedComponents, onToggleExpanded, onExpandComponent }: DrawTabProps) {
   const { groups, loading, error, refetch } = useComponentGroups();
   const [armedGroup, setArmedGroup] = useState<string | null>(null);
   const [armedCanvas, setArmedCanvas] = useState(false);
@@ -175,6 +183,7 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
   }, [armedGroup, armedCanvas, onArmedChange]);
 
   return (
+    <DragProvider>
     <div className="p-3 flex flex-col gap-3">
       {/* Canvas button — triggers design canvas on the overlay */}
       <button
@@ -250,6 +259,9 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
                   onArmField={armField}
                   onSetProp={handleSetProp}
                   onClearReceptive={clearReceptive}
+                  expanded={expandedComponents?.has(group.name) ?? false}
+                  onToggleExpanded={onToggleExpanded}
+                  onExpandComponent={onExpandComponent}
                 />
               );
             })}
@@ -257,6 +269,8 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
         )}
       </div>
     </div>
+    <DragPreview />
+    </DragProvider>
   );
 }
 

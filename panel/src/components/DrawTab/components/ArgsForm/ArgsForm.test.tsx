@@ -1,6 +1,11 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ArgsForm } from './ArgsForm';
+import { DragProvider } from '../../context/DragContext';
+
+function renderForm(props: Parameters<typeof ArgsForm>[0]) {
+  return render(<DragProvider><ArgsForm {...props} /></DragProvider>);
+}
 
 describe('ArgsForm', () => {
   test('renders nothing when argTypes is empty', () => {

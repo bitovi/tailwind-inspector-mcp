@@ -103,6 +103,25 @@ function InspectorApp() {
 		return undefined;
 	}, [elementData?.componentProps, elementData?.ghostPatchId, patchManager.queueState.draft]);
 
+	// Lifted expanded state — survives DrawTab unmount/remount across conditional branches
+	const [expandedComponents, setExpandedComponents] = useState<Set<string>>(new Set());
+	const toggleComponentExpanded = useCallback((groupName: string) => {
+		setExpandedComponents(prev => {
+			const next = new Set(prev);
+			if (next.has(groupName)) next.delete(groupName);
+			else next.add(groupName);
+			return next;
+		});
+	}, []);
+	const expandComponent = useCallback((groupName: string) => {
+		setExpandedComponents(prev => {
+			if (prev.has(groupName)) return prev;
+			const next = new Set(prev);
+			next.add(groupName);
+			return next;
+		});
+	}, []);
+
 	const handleArmedChange = useCallback((armed: boolean) => {
 		setIsComponentArmed(armed);
 	}, []);
@@ -542,7 +561,7 @@ function InspectorApp() {
 					<TabBar tabs={currentTabs} activeTab={activeTab} onTabChange={handleTabChange} />
 					<div className="flex-1 overflow-auto">
 						{activeTab === 'components' ? (
-							<DrawTab insertMode="place" hasPageSelection={false} onArmedChange={handleArmedChange} />
+							<DrawTab insertMode="place" hasPageSelection={false} onArmedChange={handleArmedChange} expandedComponents={expandedComponents} onToggleExpanded={toggleComponentExpanded} onExpandComponent={expandComponent} />
 						) : (
 							<div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
 								<div className="w-10 h-10 rounded-full bg-bit-teal/10 text-bit-teal flex items-center justify-center">
@@ -626,7 +645,7 @@ function InspectorApp() {
 				<TabBar tabs={currentTabs} activeTab={activeTab} onTabChange={handleTabChange} />
 				<div className="flex-1 overflow-auto">
 				{activeTab === "components" ? (
-					<DrawTab insertMode={mode === 'insert' ? 'place' : 'replace'} hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} />
+					<DrawTab insertMode={mode === 'insert' ? 'place' : 'replace'} hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} expandedComponents={expandedComponents} onToggleExpanded={toggleComponentExpanded} onExpandComponent={expandComponent} />
 				) : (
 					<div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
 						<div className="w-10 h-10 rounded-full bg-bit-teal/10 text-bit-teal flex items-center justify-center">
@@ -705,7 +724,7 @@ function InspectorApp() {
 					/>
 				)}
 				{activeTab === "components" && (
-					<DrawTab insertMode={mode === 'insert' ? 'place' : 'replace'} hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} />
+					<DrawTab insertMode={mode === 'insert' ? 'place' : 'replace'} hasPageSelection={!!elementData || !!insertPoint} selectedComponentName={elementData?.componentName} selectedComponentProps={resolvedComponentProps} ghostPatchId={elementData?.ghostPatchId} onArmedChange={handleArmedChange} expandedComponents={expandedComponents} onToggleExpanded={toggleComponentExpanded} onExpandComponent={expandComponent} />
 				)}
 			</div>
 			{queueFooter}

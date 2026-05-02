@@ -25,6 +25,7 @@ import type { Patch } from '../../shared/types';
 import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, ARROW_BASE, DASHED_BORDER, LINE_BASE, FIXED_OVERLAY } from './styles';
 import { state } from './overlay-state';
 import { GHOST_STYLE_RESET } from '../../shared/css-utils';
+import { createAutoScroller } from '../../shared/auto-scroll';
 
 // ── Session state ────────────────────────────────────────────────────────
 
@@ -63,13 +64,16 @@ const dom: DragDOM = {
   overlayHost: null,
 };
 
-// ── Auto-scroll state ────────────────────────────────────────────────────
+// ── Auto-scroll ─────────────────────────────────────────────────────────
 
-let autoScrollRaf: number | null = null;
-let autoScrollTarget: { container: Element; dx: number; dy: number } | null = null;
-
-const EDGE_ZONE = 40;     // px from container edge to trigger scroll
-const MAX_SCROLL_SPEED = 15; // px per frame at edge
+const autoScroller = createAutoScroller({
+  edgeZone: 40,
+  maxSpeed: 15,
+  extraContainers: () => {
+    const pw = document.getElementById('tw-page-wrapper');
+    return pw ? [pw] : [];
+  },
+});
 
 // ── Callbacks ────────────────────────────────────────────────────────────
 
@@ -261,7 +265,7 @@ function updateDragPosition(clientX: number, clientY: number): void {
 
   if (!target) {
     hideDropIndicator();
-    stopAutoScroll();
+    autoScroller.stop();
     return;
   }
 
@@ -274,7 +278,7 @@ function updateDragPosition(clientX: number, clientY: number): void {
   showDropIndicator(target, position, parentAxis);
 
   // Auto-scroll
-  handleAutoScroll(clientX, clientY, target);
+  autoScroller.update(clientX, clientY, target);
 }
 
 // ── Event handlers (iframe path) ─────────────────────────────────────────
@@ -427,7 +431,7 @@ function endSession(cancelled: boolean): void {
   dom.currentPosition = null;
   pendingDrop = null;
 
-  stopAutoScroll();
+  autoScroller.stop();
 
   state.exclusiveInteraction = null;
   session = null;
@@ -648,109 +652,4 @@ function hideDropIndicator(): void {
   dom.currentPosition = null;
 }
 
-// ── Auto-scroll ──────────────────────────────────────────────────────────
-
-function handleAutoScroll(clientX: number, clientY: number, target: HTMLElement): void {
-  // Walk up from the target to find scrollable ancestors
-  const scrollables = findScrollableAncestors(target);
-
-  // Also check #tw-page-wrapper (the sidebar wraps the page in this)
-  const pageWrapper = document.getElementById('tw-page-wrapper');
-  if (pageWrapper && !scrollables.includes(pageWrapper)) {
-    scrollables.push(pageWrapper);
-  }
-
-  // Find the outermost scrollable container where cursor is near the edge
-  let bestMatch: { container: Element; dx: number; dy: number } | null = null;
-
-  for (let i = scrollables.length - 1; i >= 0; i--) {
-    const container = scrollables[i];
-    const edge = computeEdgeProximity(clientX, clientY, container);
-    if (edge.dx !== 0 || edge.dy !== 0) {
-      bestMatch = { container, ...edge };
-      break; // outermost first
-    }
-  }
-
-  if (bestMatch) {
-    autoScrollTarget = bestMatch;
-    if (autoScrollRaf === null) {
-      autoScrollRaf = requestAnimationFrame(autoScrollLoop);
-    }
-  } else {
-    stopAutoScroll();
-  }
-}
-
-function autoScrollLoop(): void {
-  if (!autoScrollTarget || !session) {
-    stopAutoScroll();
-    return;
-  }
-
-  const { container, dx, dy } = autoScrollTarget;
-  container.scrollBy(dx, dy);
-
-  autoScrollRaf = requestAnimationFrame(autoScrollLoop);
-}
-
-function stopAutoScroll(): void {
-  if (autoScrollRaf !== null) {
-    cancelAnimationFrame(autoScrollRaf);
-    autoScrollRaf = null;
-  }
-  autoScrollTarget = null;
-}
-
-function findScrollableAncestors(el: HTMLElement): Element[] {
-  const result: Element[] = [];
-  let current: Element | null = el.parentElement;
-  while (current && current !== document.documentElement) {
-    if (isScrollable(current)) {
-      result.push(current);
-    }
-    current = current.parentElement;
-  }
-  return result;
-}
-
-function isScrollable(el: Element): boolean {
-  const style = getComputedStyle(el);
-  const overflowY = style.overflowY;
-  const overflowX = style.overflowX;
-  const scrollableOverflow = (v: string) => v === 'auto' || v === 'scroll';
-  if (!scrollableOverflow(overflowY) && !scrollableOverflow(overflowX)) return false;
-  return el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth;
-}
-
-function computeEdgeProximity(clientX: number, clientY: number, container: Element): { dx: number; dy: number } {
-  const rect = container.getBoundingClientRect();
-  let dx = 0;
-  let dy = 0;
-
-  // Top edge
-  if (clientY >= rect.top && clientY < rect.top + EDGE_ZONE && container.scrollTop > 0) {
-    const proximity = 1 - (clientY - rect.top) / EDGE_ZONE;
-    dy = -Math.round(proximity * MAX_SCROLL_SPEED);
-  }
-  // Bottom edge
-  else if (clientY > rect.bottom - EDGE_ZONE && clientY <= rect.bottom &&
-           container.scrollTop < container.scrollHeight - container.clientHeight) {
-    const proximity = 1 - (rect.bottom - clientY) / EDGE_ZONE;
-    dy = Math.round(proximity * MAX_SCROLL_SPEED);
-  }
-
-  // Left edge
-  if (clientX >= rect.left && clientX < rect.left + EDGE_ZONE && container.scrollLeft > 0) {
-    const proximity = 1 - (clientX - rect.left) / EDGE_ZONE;
-    dx = -Math.round(proximity * MAX_SCROLL_SPEED);
-  }
-  // Right edge
-  else if (clientX > rect.right - EDGE_ZONE && clientX <= rect.right &&
-           container.scrollLeft < container.scrollWidth - container.clientWidth) {
-    const proximity = 1 - (rect.right - clientX) / EDGE_ZONE;
-    dx = Math.round(proximity * MAX_SCROLL_SPEED);
-  }
-
-  return { dx, dy };
-}
+// ── Auto-scroll (delegated to shared/auto-scroll.ts) ─────────────────────

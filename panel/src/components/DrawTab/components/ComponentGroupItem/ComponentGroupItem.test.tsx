@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ComponentGroupItem } from './ComponentGroupItem';
+import { DragProvider } from '../../context/DragContext';
 import type { ComponentGroup } from '../../types';
 
 const group: ComponentGroup = {
@@ -18,7 +19,9 @@ function renderItem(g: ComponentGroup = group, isArmed = false) {
   const onArm = vi.fn();
   const onDisarm = vi.fn();
   const result = render(
-    <ComponentGroupItem group={g} isArmed={isArmed} onArm={onArm} onDisarm={onDisarm} />
+    <DragProvider>
+      <ComponentGroupItem group={g} isArmed={isArmed} onArm={onArm} onDisarm={onDisarm} />
+    </DragProvider>
   );
   return { ...result, onArm, onDisarm };
 }
@@ -53,7 +56,9 @@ test('shows "Replace" when insertMode is replace', () => {
   const onArm = vi.fn();
   const onDisarm = vi.fn();
   render(
-    <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} insertMode="replace" />
+    <DragProvider>
+      <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} insertMode="replace" />
+    </DragProvider>
   );
   expect(screen.getByText('Replace')).toBeInTheDocument();
 });
@@ -86,7 +91,9 @@ describe('button color states', () => {
     const onArm = vi.fn();
     const onDisarm = vi.fn();
     render(
-      <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} hasPageSelection={true} />
+      <DragProvider>
+        <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} hasPageSelection={true} />
+      </DragProvider>
     );
     const btn = getActionButton('Place');
     expect(btn.className).toContain('border-bit-teal');
@@ -121,7 +128,9 @@ describe('replace mode labels', () => {
     const onArm = vi.fn();
     const onDisarm = vi.fn();
     render(
-      <ComponentGroupItem group={group} isArmed={true} onArm={onArm} onDisarm={onDisarm} insertMode="replace" />
+      <DragProvider>
+        <ComponentGroupItem group={group} isArmed={true} onArm={onArm} onDisarm={onDisarm} insertMode="replace" />
+      </DragProvider>
     );
     expect(screen.getByText('Replacing')).toBeInTheDocument();
   });
@@ -130,7 +139,9 @@ describe('replace mode labels', () => {
     const onArm = vi.fn();
     const onDisarm = vi.fn();
     render(
-      <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} insertMode="replace" />
+      <DragProvider>
+        <ComponentGroupItem group={group} isArmed={false} onArm={onArm} onDisarm={onDisarm} insertMode="replace" />
+      </DragProvider>
     );
     expect(screen.getByText('Replace')).toBeInTheDocument();
   });
