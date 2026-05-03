@@ -198,30 +198,32 @@ function onMouseUp(e: MouseEvent): void {
   // Suppress the click event that follows mouseup after a drag
   suppressNextClick();
 
-  if (!dom.currentTarget || !dom.currentPosition) {
-    cancelMove();
-    return;
-  }
-
-  const target = dom.currentTarget;
-  const position = dom.currentPosition;
   const sourceEl = session.sourceEl;
+  let target: HTMLElement;
+  let position: DropPosition;
 
-  // Check: is this a same-position drop (no-op)?
-  if (isSamePosition(sourceEl, target, position)) {
-    cancelMove();
-    return;
-  }
-
-  // Check: is the source a ghost element?
-  const isGhost = !!sourceEl.dataset.twDroppedComponent;
-  const ghostPatchId = sourceEl.dataset.twDroppedPatchId;
-
-  // If hover-to-preview moved the element already, finalize it.
-  // Otherwise, move the element in the DOM now.
+  // If hover-to-preview is active, finalize it — the element is already in the DOM
+  // and we get target/position from the preview state (dom.currentTarget may be null).
   if (movePreview?.isActive()) {
-    movePreview.finalize();
-  } else {
+    const result = movePreview.finalize();
+    if (!result) {
+      // finalize failed — revert
+      cancelMove();
+      return;
+    }
+    target = result.target;
+    position = result.position as DropPosition;
+    movePreview = null;
+  } else if (dom.currentTarget && dom.currentPosition) {
+    target = dom.currentTarget;
+    position = dom.currentPosition;
+
+    // Check: is this a same-position drop (no-op)?
+    if (isSamePosition(sourceEl, target, position)) {
+      cancelMove();
+      return;
+    }
+
     movePreview?.clear();
     switch (position) {
       case 'before':      target.insertAdjacentElement('beforebegin', sourceEl); break;
@@ -229,8 +231,15 @@ function onMouseUp(e: MouseEvent): void {
       case 'first-child': target.insertAdjacentElement('afterbegin', sourceEl); break;
       case 'last-child':  target.appendChild(sourceEl); break;
     }
+    movePreview = null;
+  } else {
+    cancelMove();
+    return;
   }
-  movePreview = null;
+
+  // Check: is the source a ghost element?
+  const isGhost = !!sourceEl.dataset.twDroppedComponent;
+  const ghostPatchId = sourceEl.dataset.twDroppedPatchId;
 
   // Restore opacity
   sourceEl.style.opacity = '';
@@ -358,6 +367,7 @@ function onKeyDown(e: KeyboardEvent): void {
 // ── Cancel / revert ──────────────────────────────────────────────────────
 
 function cancelMove(): void {
+
   if (!session) return;
   const wasDragging = session.dragging;
   if (wasDragging) suppressNextClick();

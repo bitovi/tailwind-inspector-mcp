@@ -11,6 +11,7 @@ import { clearTransientOverrides } from './bottom-toolbar';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
 import { createDropPreview, type DropPreviewHandle } from './drop-preview';
+import { state as overlayState } from './overlay-state';
 
 export type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
 
@@ -411,7 +412,12 @@ export function findTarget(x: number, y: number): HTMLElement | null {
   const el = document.elementFromPoint(x, y);
   if (dom.indicator) dom.indicator.style.display = '';
   if (!el || el === document.documentElement || el === document.body) return null;
-  if (dom.overlayHost && (el === dom.overlayHost || dom.overlayHost.contains(el))) return null;
+  // Filter out the overlay host (and anything it contains in the light DOM).
+  // Use the shared overlayState.shadowHost as fallback — dom.overlayHost is only
+  // set when arm() has been called (click-to-place), but drag-drop/drag-move
+  // also use findTarget without arming.
+  const host = dom.overlayHost ?? overlayState.shadowHost;
+  if (host && (el === host || host.contains(el))) return null;
   if (dom.indicator && (el === dom.indicator || dom.indicator.contains(el))) return null;
   return el as HTMLElement;
 }
