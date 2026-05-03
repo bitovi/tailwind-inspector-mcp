@@ -419,6 +419,7 @@ export function modeReducer(
       };
 
     case 'WS_SELECT_MODE_CHANGED':
+      console.log(`[paste-debug] panel WS_SELECT_MODE_CHANGED: active=${action.active}, mode=${prev.mode}, elementData=${!!prev.elementData}, selectModeActive=${prev.selectModeActive}`);
       // Ignore stale select-mode updates while theme or bug-report mode is active
       if (prev.mode === 'theme' || prev.mode === 'bug-report') {
         return { state: prev, effects: [] };
@@ -463,6 +464,7 @@ export function modeReducer(
       };
 
     case 'WS_COMPONENT_DISARMED':
+      console.log(`[paste-debug] panel WS_COMPONENT_DISARMED: mode=${prev.mode}, elementData=${!!prev.elementData}, selectModeActive=${prev.selectModeActive}`);
       // Component was placed or replaced — keep mode & tab, clear selection
       return {
         state: {

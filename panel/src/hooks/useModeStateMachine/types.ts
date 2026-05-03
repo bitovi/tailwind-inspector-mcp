@@ -142,15 +142,18 @@ export function getModeButtonColor(
   insertPoint: InsertPoint | null,
   insertBrowseActive: boolean,
 ): 'gray' | 'orange' | 'teal' {
-  if (mode === null) return 'gray';
+  let result: 'gray' | 'orange' | 'teal';
+  if (mode === null) result = 'gray';
   // Orange = waiting for user to pick on the page
-  if (mode === 'select' && selectModeActive) return 'orange';
-  if (mode === 'insert' && insertBrowseActive) return 'orange';
+  else if (mode === 'select' && selectModeActive) result = 'orange';
+  else if (mode === 'insert' && insertBrowseActive) result = 'orange';
   // Teal = target locked
-  if (mode === 'select' && (elementData !== null)) return 'teal';
-  if (mode === 'insert' && insertPoint !== null) return 'teal';
+  else if (mode === 'select' && (elementData !== null)) result = 'teal';
+  else if (mode === 'insert' && insertPoint !== null) result = 'teal';
   // Fallback: mode active but nothing happening = gray
-  return 'gray';
+  else result = 'gray';
+  console.log(`[paste-debug] getModeButtonColor: mode=${mode}, selectModeActive=${selectModeActive}, elementData=${!!elementData}, insertPoint=${!!insertPoint}, insertBrowseActive=${insertBrowseActive} → ${result}`);
+  return result;
 }
 
 export function computeActiveTab(mode: AppMode, tabPreference: 'design' | 'elements' | 'component'): string {

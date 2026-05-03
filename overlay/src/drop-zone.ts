@@ -7,11 +7,14 @@
 import { send, sendTo } from './ws';
 import { buildContext } from './context';
 import { getFiber, findOwningComponent } from './react/fiber';
-import { clearTransientOverrides } from './bottom-toolbar';
+import { resetToolbar } from './bottom-toolbar';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
 import { createDropPreview, type DropPreviewHandle } from './drop-preview';
 import { state as overlayState } from './overlay-state';
+import { clearSelectionState } from './overlay-state';
+import { clearHighlights } from './element-highlight';
+import { revertPreview } from './patcher';
 
 export type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
 
@@ -923,8 +926,16 @@ function handleComponentInsertClick(e: MouseEvent): void {
   send({ type: 'COMPONENT_DROPPED', patch });
   sendTo('panel', { type: 'COMPONENT_DISARMED' });
 
+  console.log(`[paste-debug] drop-zone: placed component, sending COMPONENT_DISARMED`);
+
+  // Clear stale selection state from the element that was selected before paste
+  revertPreview();
+  clearHighlights();
+  clearSelectionState();
+
   cleanup();
-  clearTransientOverrides();
+  resetToolbar();
+  console.log(`[paste-debug] drop-zone: after cleanup+resetToolbar`);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────

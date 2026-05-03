@@ -513,6 +513,7 @@ function rebuildSelectionFromSources(): void {
 export { rebuildSelectionFromSources };
 
 function setSelectMode(on: boolean): void {
+	console.log(`[paste-debug] setSelectMode(${on}) — currentTargetEl=${!!state.currentTargetEl}`);
 	state.selectModeOn = on;
 	if (on) {
 		document.documentElement.style.cursor = "crosshair";
@@ -680,9 +681,11 @@ function init(): void {
 	});
 	initBottomToolbar({
 		onToolChange: (tool) => {
+			console.log(`[paste-debug] onToolChange(${tool}): selectModeOn=${state.selectModeOn}, currentTargetEl=${!!state.currentTargetEl}`);
 			// ── Select re-click toggle ──
 			if (tool === 'select' && state.selectModeOn && state.currentTargetEl) {
 				// Orange + element → Teal: stop selecting, keep element
+				console.log(`[paste-debug] → Select toggle: Orange+element → Teal`);
 				setSelectMode(false);
 				updateToolState('select', false, true);
 				sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
@@ -690,6 +693,7 @@ function init(): void {
 			}
 			if (tool === 'select' && !state.selectModeOn && state.currentTargetEl) {
 				// Teal → Orange: clear element, fresh selecting
+				console.log(`[paste-debug] → Select toggle: Teal → Orange (clear element, fresh select)`);
 				revertPreview();
 				clearHighlights();
 				cancelInsert();
@@ -1046,6 +1050,8 @@ function init(): void {
 			const clip = getClipboard();
 			if (!clip) return; // No VyBit clipboard — let native paste through
 			e.preventDefault();
+
+			console.log(`[paste-debug] Cmd+V: selectModeOn=${state.selectModeOn}, currentTargetEl=${!!state.currentTargetEl}, lockedInsert=${!!getLockedInsert()}`);
 
 			// Disable select mode so crosshair doesn't interfere with placement
 			if (state.selectModeOn) {

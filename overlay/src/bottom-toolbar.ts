@@ -61,6 +61,7 @@ function setTool(tool: EditTool): void {
 
 /** Called by the overlay when the mode/state changes */
 export function updateToolState(tool: EditTool, picking: boolean, engaged: boolean): void {
+	console.log(`[paste-debug] updateToolState(${tool}, picking=${picking}, engaged=${engaged}), overrides before:`, Object.fromEntries(toolOverrides));
 	currentTool = tool;
 	isPicking = picking;
 	isEngaged = engaged;
@@ -69,6 +70,12 @@ export function updateToolState(tool: EditTool, picking: boolean, engaged: boole
 	for (const [key, state] of toolOverrides) {
 		if (state !== 'completed') toolOverrides.delete(key);
 	}
+	// Active picking always wins — clear any override on the current tool
+	// so the orange picking state is never masked by a stale override.
+	if (picking && tool) {
+		toolOverrides.delete(tool);
+	}
+	console.log(`[paste-debug] updateToolState overrides after:`, Object.fromEntries(toolOverrides));
 	updateButtonStates();
 }
 
@@ -102,9 +109,11 @@ export function resetToolbar(): void {
 
 /** Clear transient overrides (picking/engaged/dim) but preserve completed. */
 export function clearTransientOverrides(): void {
+	console.log(`[paste-debug] clearTransientOverrides, overrides before:`, Object.fromEntries(toolOverrides));
 	for (const [key, state] of toolOverrides) {
 		if (state !== 'completed') toolOverrides.delete(key);
 	}
+	console.log(`[paste-debug] clearTransientOverrides, overrides after:`, Object.fromEntries(toolOverrides));
 	updateButtonStates();
 }
 
