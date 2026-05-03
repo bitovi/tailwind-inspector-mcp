@@ -764,6 +764,20 @@ function handleBrowseClick(e: MouseEvent): void {
 }
 
 function handleGenericInsertClick(e: MouseEvent): void {
+  // If no target was set by mousemove (e.g. user clicked without moving the
+  // mouse after arming), do a hit-test at the click position.
+  if (!dom.currentTarget || !dom.currentPosition) {
+    const hitTarget = findTarget(e.clientX, e.clientY);
+    if (hitTarget) {
+      const parentAxis = hitTarget.parentElement ? getAxis(hitTarget.parentElement) : 'vertical';
+      const rect = hitTarget.getBoundingClientRect();
+      const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+      const adjusted = adjustForEdgeChild(hitTarget, rawPosition);
+      dom.currentTarget = adjusted.target;
+      dom.currentPosition = adjusted.position;
+    }
+  }
+
   if (!dom.currentTarget || !dom.currentPosition) {
     cleanup();
     sendTo('panel', { type: 'COMPONENT_DISARMED' });
@@ -780,6 +794,20 @@ function handleGenericInsertClick(e: MouseEvent): void {
 }
 
 function handleComponentInsertClick(e: MouseEvent): void {
+  // If no target was set by mousemove (e.g. user clicked without moving the
+  // mouse after arming), do a hit-test at the click position.
+  if (!dom.currentTarget || !dom.currentPosition) {
+    const hitTarget = findTarget(e.clientX, e.clientY);
+    if (hitTarget) {
+      const parentAxis = hitTarget.parentElement ? getAxis(hitTarget.parentElement) : 'vertical';
+      const rect = hitTarget.getBoundingClientRect();
+      const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+      const adjusted = adjustForEdgeChild(hitTarget, rawPosition);
+      dom.currentTarget = adjusted.target;
+      dom.currentPosition = adjusted.position;
+    }
+  }
+
   if (!dom.currentTarget || !dom.currentPosition) {
     cleanup();
     sendTo('panel', { type: 'COMPONENT_DISARMED' });
