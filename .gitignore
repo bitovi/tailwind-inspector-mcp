@@ -27,6 +27,10 @@ test-results/
 playwright-report/
 temp/
 .playwright-mcp/
+test-screenshots/
+
+# Screenshots
+*.png
 
 # Build caches
 .vite/
