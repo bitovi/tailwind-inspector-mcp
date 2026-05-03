@@ -18,46 +18,41 @@ Set up the development environment so the MCP server (port 3333) points at Story
 Kill anything running on the ports these services need:
 
 ```bash
-lsof -ti :3333 | xargs kill -9 2>/dev/null || true
-lsof -ti :6008 | xargs kill -9 2>/dev/null || true
-lsof -ti :5173 | xargs kill -9 2>/dlsof -ti :5173 | xargs kill -9 2>/dlsof -ti :5173 | xargs kill -9 2>/dlsof -ti :5173 | xargs esbuild watcher is already running:
-
-```bash
-pgrep -f "esbuild.*overlay.*--watch" >/dev/null && echo "OVERLAY_WATCHER_RUNNING" || echo "OVERLAY_WATCHER_STOPPED"
+lsof -ti :3333 :6008 :5173 2>/dev/null | xargs kill -9 2>/dev/null || true
 ```
 
-Check if the panel vite watcher is already running:
+Report which ports were cleared, or "none" if all were already free.
 
-```bash
-pgrep -f "vite build --watch" >/dev/null && echo "PANEL_WATCHER_RUNNING" || echo "PANEL_WATCHER_STOPPED"
-```
+### Step 2 — Check if watchers are already running
 
-### Step 3 — Start watchers if not running
-
-If the overlay watcher is **STOPPED**, run the VS Code task:
-- Task ID: `shell: Watch: Overlay`
+Check if the overlay esbuild watcher is already running:Check if the overlay esbuild watrlay.*--watchCheck if the overlay esbuild watcher is already running:Check if the overlay esbuild watrlay.*--watchCheck if the overlay esbuild watcher is already running:Check if the overlay esbuild watrlay.*--watchCheck if the overlay esbuild watcher isR_Check if th`
+Check if the overlayt watchCheck if the overlayt watchCheck if the overlayt watchCheck if the overlayt watchCheck if the overlayt watchChelay`
 
 If the panel watcher is **STOPPED**, run the VS Code task:
 - Task ID: `shell: Watch: Panel`
 
 If a watcher is already running, skip it and report "reused".
 
-### Step 4 — Start the remaining services
+### Step 4 — Start the three background services
 
-Run each of these VS Code tasks:
-- Task ID: `she- Task ID: `she- Task ID: `shask ID: `shell: Storybook 10: Test App (port 6008)`
-- Task ID: `shell: Server for SB10 (port 3333)`
+Run each of these VS Code tasks **one at a time** (not in parallel):
 
-**Background tasks return immediately — empty or minimal output means success.** These tasks run indefinitely in the background; do not wait for further output after launching them.
+1. Task ID: `shell: Storybook 10: Test App (port 6008)`
+2. Task ID: `shell: Server for SB10 (port 3333)`
+3. Task ID: `shell: Test App (port 5173)`
+
+**Background tasks return immediately with **Background tasks return immediately with **Backgrs success.** Do NOT verify ports after launching. Do NOT wait for more output. Do NOT check if the process is running. Proceed immediately after each task returns.
 
 ## Rules
 
-- If any step f- If any step f- If any step f- If any step f- If any step f- If any step f- If any step f- If any stepunning — reuse t- If any step f- If any step f- Illy — never use compound tasks.
-- Background tasks (Test App, Storybook, Server) complete immediately on launch — do not wait for more output.
+- Run tasks individually — never use compound tasks.
+- Do not parallelize the three background service tasks — run them sequentially.
+- After launching a background task, move on immediately regardless of output. Empty output = success.
+- Do NOT run port checks or process checks after launching background services.
+- If a w- If a w- If a w- If a w- If a w- If a w- If a w- If a it.
+- If a w- If a w- If a w- If a ual error (not empty output), stop and report.
 
 ## Output
 
-Report:
-- Which ports had- Which ports had- Which ports had- Which ports each watcher - Which portfresh or reused
-- Confirmation all tasks are running
-- Once all three background ta-ks have been launched, report imm- Once all three background ta-ks have been laun33/panel/, Storybook at http://localhost:6008, test app at http://localhost:5173
+Once alOnce alOnce alOnce alOnce alOnce alOnce alOnce ach pOnce alOnce alOnce alOnce alOnce alOnce alOnce alOnce ach pOnce alOesh or reused
+- Confirmation all three services were launch- Confirmation all three services were launch- panel/, Storybook at http://localhost:6008, test app at http://localhost:5173

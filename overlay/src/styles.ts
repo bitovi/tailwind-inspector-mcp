@@ -446,7 +446,7 @@ export const OVERLAY_CSS = `
   .hover-target-outline {
     position: fixed;
     pointer-events: none;
-    border: 2px dashed var(--ov-teal);
+    border: 1px dashed var(--ov-teal-ring);
     border-radius: 2px;
     box-sizing: border-box;
     z-index: 999999;

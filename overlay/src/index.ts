@@ -774,19 +774,34 @@ function init(): void {
 	// Initialize drag-drop placement (listens for postMessage from panel)
 	initDragDrop(
 		state.shadowHost,
-		// onDragStart: cancel any active selection / insertion mode
+		// onDragStart: determine drag mode from current button state, preserve mode
 		() => {
+			// Clear visual clutter but NOT mode state
 			cancelInsert();
 			clearLockedInsert();
 			clearHighlights();
 			clearSelectionState();
-			setSelectMode(false);
-			setAddMode(false);
-			sendTo("panel", { type: "DESELECT_ELEMENT" });
+
+			if (state.selectModeOn) {
+				// Select is active → drag will replace
+				return 'replace';
+			}
+
+			// Insert active or both gray → drag will insert.
+			// If both are gray, activate insert mode so the button turns orange.
+			if (state.currentMode !== 'insert') {
+				state.currentMode = 'insert';
+				setSelectMode(false);
+				sendTo("panel", { type: "MODE_CHANGED", mode: "insert" });
+			}
+			return 'insert';
 		},
-		// onDrop: select the newly dropped element
-		(el: HTMLElement) => {
-			finalizeSelection(el);
+		// onDrop: in replace mode, select the dropped element; in insert mode, stay in insert
+		(el: HTMLElement, mode) => {
+			if (mode === 'replace') {
+				finalizeSelection(el);
+			}
+			// insert mode: don't select — stay in insert mode for subsequent drags
 		},
 	);
 
@@ -1470,8 +1485,8 @@ function init(): void {
 					});
 				};
 
-				if (state.currentTargetEl) {
-					// Element already selected — replace it immediately
+				if (state.replaceDirection === 'element-first' && state.currentTargetEl) {
+					// Element-first mode — replace the current target immediately
 					doReplace(state.currentTargetEl);
 				} else {
 					// Component-first mode — arm crosshair to pick the target

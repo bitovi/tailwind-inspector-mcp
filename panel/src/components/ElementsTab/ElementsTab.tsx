@@ -73,7 +73,7 @@ function PrimitiveRow({ primitive, isArmed, insertMode, onArm, onDisarm }: Primi
 
   const getGhostData = useCallback(() => ({
     ghostHtml: primitive.ghostHtml,
-    ghostCss: null,
+    ghostCss: primitive.previewCss ?? null,
   }), [primitive]);
 
   const { onPointerDown: onDragPointerDown, onPointerMove: onDragPointerMove, onPointerUp: onDragPointerUp, onLostPointerCapture } = useDragToPlace({

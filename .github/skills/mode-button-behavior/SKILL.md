@@ -305,6 +305,33 @@ TEAL    → Escape          → GRAY (cancel insert entirely)
 | 8 | Click Insert (stop browsing) | Teal | Point locked; no crosshair; no hover indicators |
 | 9 | Escape (clear point) | Gray | None |
 
+## Drag Behavior (Panel → Page)
+
+When a user drags a component or element from the panel onto the page, the drag behavior is determined by the current mode button state at the moment the drag starts. Mode is **preserved** through the drag and **persists** after the drop.
+
+### Mode → Drag Mapping
+
+| Mode at drag start | Button during drag | Drag visual | Drop behavior | `insertMode` on patch | Mode after drop |
+|---|---|---|---|---|---|
+| **Select active** | Select: Orange | Dashed teal outline on hover target | Replaces the element under cursor | `'replace'` | Select: Orange |
+| **Insert active** | Insert: Orange | Positional line indicator | Inserts at cursor position | positional | Insert: Orange |
+| **Both gray** | Insert: turns Orange | Positional line indicator | Inserts at cursor position | positional | Insert: Orange |
+
+### Key rules
+
+1. **Mode is never cleared on drag start.** Unlike button-click flows, drag does not reset mode state.
+2. **When both buttons are gray**, Insert mode is activated at drag-start (overlay sends `MODE_CHANGED` to panel).
+3. **Mode persists after drop.** The user stays in the same mode for subsequent drags. Invariant #2 ("both go gray after place/replace") applies only to button-click flows, not drag flows.
+4. **Replace visual**: dashed teal outline (same as select-hover) around the element under the cursor. No positional line.
+5. **Replace on drop**: the target element is hidden (`display: none`) and the ghost is inserted `beforebegin` — same as the button-click replace flow.
+6. **Escape during drag** cancels the drag but does not change mode state.
+
+### Implementation details
+
+- `overlay/src/drag-drop.ts`: `DragSession.mode` stores `'replace' | 'insert'`, determined at drag-start from `state.selectModeOn`
+- `overlay/src/index.ts`: `initDragDrop` `onStart` callback returns the mode and optionally activates Insert if idle
+- Replace visual uses a separate `replaceOutline` DOM element (dashed teal border + light teal background)
+
 ## Modifying These Flows
 
 If a change is needed:

@@ -38,6 +38,8 @@ interface DragSession {
   componentArgs: Record<string, unknown>;
   /** 'iframe' = escape-the-iframe path, 'popup' = postMessage relay */
   source: 'iframe' | 'popup';
+  /** Drag mode: 'replace' = Select active (outline + replace on drop), 'insert' = positional insert */
+  mode: DragMode;
 }
 
 let session: DragSession | null = null;
@@ -49,6 +51,7 @@ interface DragDOM {
   indicator: HTMLElement | null;
   arrowLeft: HTMLElement | null;
   arrowRight: HTMLElement | null;
+  replaceOutline: HTMLElement | null;
   currentTarget: HTMLElement | null;
   currentPosition: DropPosition | null;
   overlayHost: HTMLElement | null;
@@ -59,6 +62,7 @@ const dom: DragDOM = {
   indicator: null,
   arrowLeft: null,
   arrowRight: null,
+  replaceOutline: null,
   currentTarget: null,
   currentPosition: null,
   overlayHost: null,
@@ -77,8 +81,11 @@ const autoScroller = createAutoScroller({
 
 // ── Callbacks ────────────────────────────────────────────────────────────
 
-let onDragStartCallback: (() => void) | null = null;
-let onDropCallback: ((el: HTMLElement) => void) | null = null;
+let onDragStartCallback: (() => DragMode) | null = null;
+let onDropCallback: ((el: HTMLElement, mode: DragMode) => void) | null = null;
+
+/** Drag mode determined at drag-start from the active mode button state. */
+export type DragMode = 'replace' | 'insert';
 
 // ── Public API ───────────────────────────────────────────────────────────
 
@@ -91,13 +98,16 @@ export function isDragActive(): boolean {
  * Initialize the drag-drop listener. Call once from overlay init.
  * Listens for postMessage events with __vybitDrag marker.
  *
- * @param onStart — called when drag starts; use to cancel active selection/insertion
- * @param onDrop — called after a successful drop with the inserted element; use to select it
+ * @param onStart — called when drag starts; returns 'replace' (Select active) or 'insert'.
+ *                  The callback should prepare mode state (e.g. activate Insert if idle)
+ *                  but NOT clear the mode — it persists through the drag.
+ * @param onDrop — called after a successful drop with the inserted element and the drag mode.
+ *                 Use to select the element (replace mode) or skip selection (insert mode).
  */
 export function initDragDrop(
   shadowHost: HTMLElement,
-  onStart?: () => void,
-  onDrop?: (el: HTMLElement) => void,
+  onStart?: () => DragMode,
+  onDrop?: (el: HTMLElement, mode: DragMode) => void,
 ): void {
   dom.overlayHost = shadowHost;
   onDragStartCallback = onStart ?? null;
@@ -186,6 +196,9 @@ function handleDragStart(msg: DragStartMessage): void {
   // Determine source: if the message came from an iframe child, it's iframe path
   const isPopup = !isFromIframe(msg);
 
+  // Determine drag mode from the callback (which reads + prepares mode state)
+  const dragMode: DragMode = onDragStartCallback ? onDragStartCallback() : 'insert';
+
   session = {
     componentName: msg.componentName,
     storyId: msg.storyId,
@@ -194,10 +207,9 @@ function handleDragStart(msg: DragStartMessage): void {
     componentPath: msg.componentPath ?? '',
     componentArgs: msg.args ?? {},
     source: isPopup ? 'popup' : 'iframe',
+    mode: dragMode,
   };
 
-  // Notify overlay to cancel any active selection/insertion before drag
-  if (onDragStartCallback) onDragStartCallback();
   state.exclusiveInteraction = 'component-drag';
 
   // Create drag preview
@@ -225,10 +237,22 @@ function handleDragStart(msg: DragStartMessage): void {
   }
   document.body.appendChild(dom.preview);
 
-  // Create indicator element (reuse same rendering as drop-zone)
+  // Create indicator element (reuse same rendering as drop-zone) — used for insert mode
   dom.indicator = document.createElement('div');
   dom.indicator.style.cssText = css(INDICATOR_BASE);
   document.body.appendChild(dom.indicator);
+
+  // Create replace-mode outline element — used for replace mode (dashed teal border)
+  dom.replaceOutline = document.createElement('div');
+  dom.replaceOutline.style.cssText = css({
+    ...FIXED_OVERLAY,
+    ...DASHED_BORDER,
+    zIndex: '2147483645',
+    display: 'none',
+    pointerEvents: 'none',
+    background: 'rgba(0,132,139,0.06)',
+  });
+  document.body.appendChild(dom.replaceOutline);
 
   if (session.source === 'iframe') {
     // Escape the iframe: disable pointer events on the panel iframe
@@ -274,26 +298,38 @@ function updateDragPosition(clientX: number, clientY: number): void {
     dom.preview.style.top = `${clientY - 28}px`;
   }
 
-  // Hit-test: hide preview/indicator to avoid self-hits
+  // Hit-test: hide preview/indicator/outline to avoid self-hits
   if (dom.preview) dom.preview.style.display = 'none';
   if (dom.indicator) dom.indicator.style.display = 'none';
+  if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
   const target = findTarget(clientX, clientY);
   if (dom.preview) dom.preview.style.display = 'flex';
   if (dom.indicator) dom.indicator.style.display = '';
 
   if (!target) {
     hideDropIndicator();
+    hideReplaceOutline();
     autoScroller.stop();
     return;
   }
 
-  const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
-  const rect = target.getBoundingClientRect();
-  const position = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+  if (session.mode === 'replace') {
+    // Replace mode: show dashed teal outline around the target element
+    hideDropIndicator();
+    showReplaceOutline(target);
+    dom.currentTarget = target;
+    dom.currentPosition = null;
+  } else {
+    // Insert mode: show positional line indicator
+    hideReplaceOutline();
+    const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
+    const rect = target.getBoundingClientRect();
+    const position = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
 
-  dom.currentTarget = target;
-  dom.currentPosition = position;
-  showDropIndicator(target, position, parentAxis);
+    dom.currentTarget = target;
+    dom.currentPosition = position;
+    showDropIndicator(target, position, parentAxis);
+  }
 
   // Auto-scroll
   autoScroller.update(clientX, clientY, target);
@@ -334,6 +370,7 @@ function executeDrop(clientX: number, clientY: number): void {
   // Find the target at the drop point
   if (dom.preview) dom.preview.style.display = 'none';
   if (dom.indicator) dom.indicator.style.display = 'none';
+  if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
   const target = findTarget(clientX, clientY);
   if (dom.preview) dom.preview.style.display = 'flex';
 
@@ -341,10 +378,6 @@ function executeDrop(clientX: number, clientY: number): void {
     endSession(true);
     return;
   }
-
-  const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
-  const rect = target.getBoundingClientRect();
-  const position = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
 
   // Inject the ghost HTML
   const template = document.createElement('template');
@@ -356,11 +389,27 @@ function executeDrop(clientX: number, clientY: number): void {
   }
   inserted.dataset.twDroppedComponent = session.componentName;
 
-  switch (position) {
-    case 'before':      target.insertAdjacentElement('beforebegin', inserted); break;
-    case 'after':       target.insertAdjacentElement('afterend', inserted); break;
-    case 'first-child': target.insertAdjacentElement('afterbegin', inserted); break;
-    case 'last-child':  target.appendChild(inserted); break;
+  // Determine insert mode and position based on drag mode
+  const isReplace = session.mode === 'replace';
+  let position: DropPosition | 'replace';
+
+  if (isReplace) {
+    // Replace mode: insert before target and hide it
+    target.insertAdjacentElement('beforebegin', inserted);
+    target.style.display = 'none';
+    position = 'replace';
+  } else {
+    // Insert mode: positional placement
+    const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
+    const rect = target.getBoundingClientRect();
+    position = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+
+    switch (position) {
+      case 'before':      target.insertAdjacentElement('beforebegin', inserted); break;
+      case 'after':       target.insertAdjacentElement('afterend', inserted); break;
+      case 'first-child': target.insertAdjacentElement('afterbegin', inserted); break;
+      case 'last-child':  target.appendChild(inserted); break;
+    }
   }
 
   // Inject ghost CSS
@@ -378,7 +427,9 @@ function executeDrop(clientX: number, clientY: number): void {
   const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
 
   const context = effectiveGhostName
-    ? `Place "${session.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
+    ? (isReplace
+        ? `Replace the <${effectiveGhostName} /> component (pending insertion from an earlier drop) with "${session.componentName}"`
+        : `Place "${session.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`)
     : buildContext(target, '', '', new Map());
 
   let parentComponent: { name: string } | undefined;
@@ -420,8 +471,8 @@ function executeDrop(clientX: number, clientY: number): void {
 
   send({ type: 'COMPONENT_DROPPED', patch });
 
-  // Select the newly dropped component
-  if (onDropCallback) onDropCallback(inserted);
+  // Notify caller of successful drop (with mode so caller can decide selection behavior)
+  if (onDropCallback) onDropCallback(inserted, session.mode);
 
   endSession(false);
 }
@@ -445,6 +496,7 @@ function endSession(cancelled: boolean): void {
   if (dom.indicator) { dom.indicator.remove(); dom.indicator = null; }
   if (dom.arrowLeft) { dom.arrowLeft.remove(); dom.arrowLeft = null; }
   if (dom.arrowRight) { dom.arrowRight.remove(); dom.arrowRight = null; }
+  if (dom.replaceOutline) { dom.replaceOutline.remove(); dom.replaceOutline = null; }
   dom.currentTarget = null;
   dom.currentPosition = null;
   pendingDrop = null;
@@ -668,6 +720,22 @@ function hideDropIndicator(): void {
   if (dom.arrowRight) { dom.arrowRight.remove(); dom.arrowRight = null; }
   dom.currentTarget = null;
   dom.currentPosition = null;
+}
+
+// ── Replace-mode outline (dashed teal border around hover target) ────────
+
+function showReplaceOutline(target: HTMLElement): void {
+  if (!dom.replaceOutline) return;
+  const rect = target.getBoundingClientRect();
+  dom.replaceOutline.style.display = 'block';
+  dom.replaceOutline.style.top = `${rect.top}px`;
+  dom.replaceOutline.style.left = `${rect.left}px`;
+  dom.replaceOutline.style.width = `${rect.width}px`;
+  dom.replaceOutline.style.height = `${rect.height}px`;
+}
+
+function hideReplaceOutline(): void {
+  if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
 }
 
 // ── Auto-scroll (delegated to shared/auto-scroll.ts) ─────────────────────
