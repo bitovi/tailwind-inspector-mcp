@@ -10,6 +10,7 @@ import { getFiber, findOwningComponent } from './react/fiber';
 import { clearTransientOverrides } from './bottom-toolbar';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
+import { createDropPreview, type DropPreviewHandle } from './drop-preview';
 
 export type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
 
@@ -58,6 +59,9 @@ const dom: DropZoneDOM = {
   currentTarget: null,
   currentPosition: null,
 };
+
+/** Hover-to-preview handle for the current component-insert mode. */
+let dropPreview: DropPreviewHandle | null = null;
 
 interface LockedState {
   target: HTMLElement | null;
@@ -344,6 +348,11 @@ function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label?: string): vo
   document.documentElement.addEventListener('mouseleave', onMouseLeave);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKeyDown);
+
+  // Initialize hover-to-preview for component-insert mode
+  if (newMode.kind === 'component-insert') {
+    dropPreview = createDropPreview(() => hideDropIndicator());
+  }
 }
 
 // ── Drop position computation ────────────────────────────────────────────
@@ -372,6 +381,27 @@ export function computeDropPosition(
   if (ratio < 0.5) return 'first-child';
   if (ratio < 0.75) return 'last-child';
   return 'after';
+}
+
+/**
+ * When the cursor is in the "before" zone of the first child or the "after"
+ * zone of the last child, there is no sibling to insert between — so convert
+ * the position to "first-child" / "last-child" of the parent instead.
+ *
+ * Returns an adjusted { target, position } that the caller should use for
+ * both rendering the indicator and recording the drop position.
+ */
+export function adjustForEdgeChild(
+  target: HTMLElement,
+  position: DropPosition,
+): { target: HTMLElement; position: DropPosition } {
+  if (position === 'before' && !target.previousElementSibling && target.parentElement) {
+    return { target: target.parentElement as HTMLElement, position: 'first-child' };
+  }
+  if (position === 'after' && !target.nextElementSibling && target.parentElement) {
+    return { target: target.parentElement as HTMLElement, position: 'last-child' };
+  }
+  return { target, position };
 }
 
 // ── Hit-test ─────────────────────────────────────────────────────────────
@@ -605,6 +635,13 @@ function onMouseMove(e: MouseEvent): void {
   if (mode.kind === 'idle') return;
 
   updateCursorLabel(e);
+
+  // If a drop preview is active and cursor is still inside the pre-reflow rect,
+  // skip hit-testing — the live preview holds stable.
+  if (dropPreview?.isInsideLockedRect(e.clientX, e.clientY)) {
+    return;
+  }
+
   const target = findTarget(e.clientX, e.clientY);
 
   if (mode.kind === 'element-select') {
@@ -621,16 +658,24 @@ function onMouseMove(e: MouseEvent): void {
   // component-insert, generic-insert, browse
   if (!target) {
     hideDropIndicator();
+    dropPreview?.clear();
     return;
   }
 
   const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
   const rect = target.getBoundingClientRect();
-  const position = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  const adjusted = adjustForEdgeChild(target, rawPosition);
 
-  dom.currentTarget = target;
-  dom.currentPosition = position;
-  showDropIndicator(target, position, parentAxis);
+  dom.currentTarget = adjusted.target;
+  dom.currentPosition = adjusted.position;
+  const indicatorAxis = adjusted.target.parentElement ? getAxis(adjusted.target.parentElement) : 'vertical';
+  showDropIndicator(adjusted.target, adjusted.position, indicatorAxis);
+
+  // Start/update hover-to-preview timer (component-insert mode only)
+  if (dropPreview && mode.kind === 'component-insert') {
+    dropPreview.update(adjusted.target, adjusted.position, mode.ghostHtml, mode.ghostCss || null, e.clientX, e.clientY);
+  }
 }
 
 function onMouseLeave(): void {
@@ -639,6 +684,7 @@ function onMouseLeave(): void {
     dom.currentTarget = null;
   } else {
     hideDropIndicator();
+    dropPreview?.clear();
   }
   if (dom.cursorLabel) dom.cursorLabel.style.opacity = '0';
 }
@@ -740,33 +786,50 @@ function handleComponentInsertClick(e: MouseEvent): void {
 
   const { componentName: cName, storyId: sId, ghostHtml: gHtml, ghostCss: gCss, componentPath: cPath, componentArgs: cArgs } = mode;
 
-  const template = document.createElement('template');
-  template.innerHTML = gHtml.trim();
-  const inserted = template.content.firstElementChild as HTMLElement | null;
-  if (!inserted) {
-    cleanup();
-    sendTo('panel', { type: 'COMPONENT_DISARMED' });
-    return;
-  }
-  inserted.dataset.twDroppedComponent = cName;
+  // If hover-to-preview is active, finalize it — the element is already in the DOM.
+  const finalizeResult = dropPreview?.isActive() ? dropPreview.finalize() : null;
 
-  const target = dom.currentTarget;
-  const position = dom.currentPosition;
+  let inserted: HTMLElement;
+  let finalizedTarget: HTMLElement | null = null;
+  let finalizedPosition: DropPosition | 'replace' | null = null;
 
-  switch (position) {
-    case 'before':
-      target.insertAdjacentElement('beforebegin', inserted);
-      break;
-    case 'after':
-      target.insertAdjacentElement('afterend', inserted);
-      break;
-    case 'first-child':
-      target.insertAdjacentElement('afterbegin', inserted);
-      break;
-    case 'last-child':
-      target.appendChild(inserted);
-      break;
+  if (finalizeResult) {
+    inserted = finalizeResult.element;
+    finalizedTarget = finalizeResult.target;
+    finalizedPosition = finalizeResult.position;
+    inserted.dataset.twDroppedComponent = cName;
+  } else {
+    dropPreview?.clear();
+
+    const template = document.createElement('template');
+    template.innerHTML = gHtml.trim();
+    const el = template.content.firstElementChild as HTMLElement | null;
+    if (!el) {
+      cleanup();
+      sendTo('panel', { type: 'COMPONENT_DISARMED' });
+      return;
+    }
+    inserted = el;
+    inserted.dataset.twDroppedComponent = cName;
+
+    switch (dom.currentPosition) {
+      case 'before':
+        dom.currentTarget.insertAdjacentElement('beforebegin', inserted);
+        break;
+      case 'after':
+        dom.currentTarget.insertAdjacentElement('afterend', inserted);
+        break;
+      case 'first-child':
+        dom.currentTarget.insertAdjacentElement('afterbegin', inserted);
+        break;
+      case 'last-child':
+        dom.currentTarget.appendChild(inserted);
+        break;
+    }
   }
+
+  const target = finalizedTarget ?? dom.currentTarget;
+  const position = finalizedPosition ?? dom.currentPosition;
 
   // Inject ghost CSS into the page so all classes resolve
   if (gCss) {
@@ -866,6 +929,12 @@ function cleanup(): void {
   dom.arrowRight = null;
   dom.currentTarget = null;
   dom.currentPosition = null;
+
+  // Clean up hover-to-preview
+  if (dropPreview) {
+    dropPreview.destroy();
+    dropPreview = null;
+  }
 }
 
 // ── Ghost CSS injection ──────────────────────────────────────────────────

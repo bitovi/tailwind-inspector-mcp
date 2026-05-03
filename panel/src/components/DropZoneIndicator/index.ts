@@ -1,5 +1,5 @@
 export { DropZoneIndicator } from './DropZoneIndicator';
-export { useDropZone, computeDropPosition } from './useDropZone';
+export { useDropZone, computeDropPosition, adjustForEdgeChild } from './useDropZone';
 export type {
   DropPosition,
   DropZoneIndicatorProps,

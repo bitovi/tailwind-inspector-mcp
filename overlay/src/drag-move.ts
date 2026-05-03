@@ -7,6 +7,7 @@ import { getFiber, findOwningComponent } from './react/fiber';
 import { isActive as isDropZoneActive } from './drop-zone';
 import {
   computeDropPosition,
+  adjustForEdgeChild,
   getAxis,
   findTarget,
   buildSelector,
@@ -20,6 +21,7 @@ import { showDrawButton } from './element-toolbar';
 import { setToolOverrides, clearToolOverrides, updateToolState } from './bottom-toolbar';
 import { revertPreview } from './patcher';
 import type { Patch } from '../../shared/types';
+import { createMovePreview, type MovePreviewHandle } from './drop-preview';
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -40,6 +42,9 @@ interface MoveSession {
 }
 
 let session: MoveSession | null = null;
+
+/** Hover-to-preview handle for the current move session. */
+let movePreview: MovePreviewHandle | null = null;
 
 // ── DOM elements ─────────────────────────────────────────────────────────
 
@@ -139,6 +144,15 @@ function onMouseMove(e: MouseEvent): void {
     document.body.appendChild(dom.indicator);
 
     document.documentElement.style.cursor = 'grabbing';
+
+    // Initialize hover-to-preview
+    movePreview = createMovePreview(session.sourceEl, () => hideDropIndicator());
+  }
+
+  // If a move preview is active and cursor is still inside the pre-reflow rect,
+  // skip hit-testing — the live preview holds stable.
+  if (movePreview?.isInsideLockedRect(e.clientX, e.clientY)) {
+    return;
   }
 
   // Update drop zone indicator
@@ -153,16 +167,22 @@ function onMouseMove(e: MouseEvent): void {
 
   if (!hitTarget || hitTarget === session.sourceEl || session.sourceEl.contains(hitTarget)) {
     hideDropIndicator();
+    movePreview?.clear();
     return;
   }
 
   const parentAxis = hitTarget.parentElement ? getAxis(hitTarget.parentElement) : 'vertical';
   const rect = hitTarget.getBoundingClientRect();
-  const position = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  const adjusted = adjustForEdgeChild(hitTarget, rawPosition);
 
-  dom.currentTarget = hitTarget;
-  dom.currentPosition = position;
-  showDropIndicator(hitTarget, position, parentAxis);
+  dom.currentTarget = adjusted.target;
+  dom.currentPosition = adjusted.position;
+  const indicatorAxis = adjusted.target.parentElement ? getAxis(adjusted.target.parentElement) : 'vertical';
+  showDropIndicator(adjusted.target, adjusted.position, indicatorAxis);
+
+  // Start/update hover-to-preview timer
+  movePreview?.update(adjusted.target, adjusted.position, e.clientX, e.clientY);
 }
 
 function onMouseUp(e: MouseEvent): void {
@@ -197,13 +217,20 @@ function onMouseUp(e: MouseEvent): void {
   const isGhost = !!sourceEl.dataset.twDroppedComponent;
   const ghostPatchId = sourceEl.dataset.twDroppedPatchId;
 
-  // Move the element in the DOM
-  switch (position) {
-    case 'before':      target.insertAdjacentElement('beforebegin', sourceEl); break;
-    case 'after':       target.insertAdjacentElement('afterend', sourceEl); break;
-    case 'first-child': target.insertAdjacentElement('afterbegin', sourceEl); break;
-    case 'last-child':  target.appendChild(sourceEl); break;
+  // If hover-to-preview moved the element already, finalize it.
+  // Otherwise, move the element in the DOM now.
+  if (movePreview?.isActive()) {
+    movePreview.finalize();
+  } else {
+    movePreview?.clear();
+    switch (position) {
+      case 'before':      target.insertAdjacentElement('beforebegin', sourceEl); break;
+      case 'after':       target.insertAdjacentElement('afterend', sourceEl); break;
+      case 'first-child': target.insertAdjacentElement('afterbegin', sourceEl); break;
+      case 'last-child':  target.appendChild(sourceEl); break;
+    }
   }
+  movePreview = null;
 
   // Restore opacity
   sourceEl.style.opacity = '';
@@ -334,6 +361,13 @@ function cancelMove(): void {
   if (!session) return;
   const wasDragging = session.dragging;
   if (wasDragging) suppressNextClick();
+
+  // Revert any active hover-to-preview (moves element back to original position)
+  if (movePreview) {
+    movePreview.destroy();
+    movePreview = null;
+  }
+
   session.sourceEl.style.opacity = '';
   cleanupDragUI();
   cleanupListeners();

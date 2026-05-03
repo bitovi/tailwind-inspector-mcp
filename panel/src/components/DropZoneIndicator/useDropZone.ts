@@ -44,6 +44,24 @@ export function computeDropPosition(
   return 'after';
 }
 
+/**
+ * When the cursor is in the "before" zone of the first child or the "after"
+ * zone of the last child, convert to "first-child" / "last-child" of the
+ * parent so the indicator shows a container insert rather than a sibling line.
+ */
+export function adjustForEdgeChild(
+  target: HTMLElement,
+  position: DropPosition,
+): { target: HTMLElement; position: DropPosition } {
+  if (position === 'before' && !target.previousElementSibling && target.parentElement) {
+    return { target: target.parentElement as HTMLElement, position: 'first-child' };
+  }
+  if (position === 'after' && !target.nextElementSibling && target.parentElement) {
+    return { target: target.parentElement as HTMLElement, position: 'last-child' };
+  }
+  return { target, position };
+}
+
 interface UseDropZoneOptions {
   /** The container element whose descendants are potential drop targets */
   containerRef: React.RefObject<HTMLElement | null>;
@@ -128,13 +146,14 @@ export function useDropZone({ containerRef, targetSelector }: UseDropZoneOptions
 
       const axis = getAxisCached(hit.parentElement);
       const rect = hit.getBoundingClientRect();
-      const position = computeDropPosition(
+      const rawPosition = computeDropPosition(
         { x: e.clientX, y: e.clientY },
         rect,
         axis,
       );
+      const adjusted = adjustForEdgeChild(hit, rawPosition);
 
-      setState({ activeTarget: hit, dropPosition: position, axis });
+      setState({ activeTarget: adjusted.target, dropPosition: adjusted.position, axis: getAxisCached(adjusted.target.parentElement) });
     },
     [containerRef, targetSelector, getAxisCached],
   );

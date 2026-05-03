@@ -13,6 +13,7 @@ import { buildContext } from './context';
 import { getFiber, findOwningComponent } from './react/fiber';
 import {
   computeDropPosition,
+  adjustForEdgeChild,
   getAxis,
   findTarget,
   buildSelector,
@@ -26,6 +27,7 @@ import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, ARROW_BASE, DASHED_BORDER, LIN
 import { state } from './overlay-state';
 import { GHOST_STYLE_RESET } from '../../shared/css-utils';
 import { createAutoScroller } from '../../shared/auto-scroll';
+import { createDropPreview, type DropPreviewHandle } from './drop-preview';
 
 // ── Session state ────────────────────────────────────────────────────────
 
@@ -43,6 +45,9 @@ interface DragSession {
 }
 
 let session: DragSession | null = null;
+
+/** Hover-to-preview handle for the current drag session. */
+let dropPreview: DropPreviewHandle | null = null;
 
 // ── DOM elements owned by the drag session ───────────────────────────────
 
@@ -268,6 +273,12 @@ function handleDragStart(msg: DragStartMessage): void {
 
   // Escape key cancels in both paths
   document.addEventListener('keydown', onKeyDown);
+
+  // Initialize hover-to-preview
+  dropPreview = createDropPreview(() => {
+    hideDropIndicator();
+    hideReplaceOutline();
+  });
 }
 
 // ── Iframe detection ─────────────────────────────────────────────────────
@@ -292,10 +303,16 @@ function findPanelIframe(): HTMLIFrameElement | null {
 function updateDragPosition(clientX: number, clientY: number): void {
   if (!session) return;
 
-  // Move preview
+  // Move floating cursor preview (always, even during locked preview)
   if (dom.preview) {
     dom.preview.style.left = `${clientX + 14}px`;
     dom.preview.style.top = `${clientY - 28}px`;
+  }
+
+  // If a drop preview is active and cursor is still inside the pre-reflow rect,
+  // skip hit-testing entirely — the live preview holds stable.
+  if (dropPreview?.isInsideLockedRect(clientX, clientY)) {
+    return;
   }
 
   // Hit-test: hide preview/indicator/outline to avoid self-hits
@@ -309,6 +326,7 @@ function updateDragPosition(clientX: number, clientY: number): void {
   if (!target) {
     hideDropIndicator();
     hideReplaceOutline();
+    dropPreview?.clear();
     autoScroller.stop();
     return;
   }
@@ -319,16 +337,28 @@ function updateDragPosition(clientX: number, clientY: number): void {
     showReplaceOutline(target);
     dom.currentTarget = target;
     dom.currentPosition = null;
+
+    // Start/update hover-to-preview timer (replace)
+    if (session.ghostHtml && dropPreview) {
+      dropPreview.update(target, 'replace', session.ghostHtml, session.ghostCss, clientX, clientY);
+    }
   } else {
     // Insert mode: show positional line indicator
     hideReplaceOutline();
     const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
     const rect = target.getBoundingClientRect();
-    const position = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+    const rawPosition = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+    const adjusted = adjustForEdgeChild(target, rawPosition);
 
-    dom.currentTarget = target;
-    dom.currentPosition = position;
-    showDropIndicator(target, position, parentAxis);
+    dom.currentTarget = adjusted.target;
+    dom.currentPosition = adjusted.position;
+    const indicatorAxis = adjusted.target.parentElement ? getAxis(adjusted.target.parentElement) : 'vertical';
+    showDropIndicator(adjusted.target, adjusted.position, indicatorAxis);
+
+    // Start/update hover-to-preview timer (insert)
+    if (session.ghostHtml && dropPreview) {
+      dropPreview.update(adjusted.target, adjusted.position, session.ghostHtml, session.ghostCss, clientX, clientY);
+    }
   }
 
   // Auto-scroll
@@ -367,48 +397,70 @@ function executeDrop(clientX: number, clientY: number): void {
     return;
   }
 
-  // Find the target at the drop point
-  if (dom.preview) dom.preview.style.display = 'none';
-  if (dom.indicator) dom.indicator.style.display = 'none';
-  if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
-  const target = findTarget(clientX, clientY);
-  if (dom.preview) dom.preview.style.display = 'flex';
+  // If hover-to-preview is active, finalize it — the element is already in the DOM.
+  const finalizeResult = dropPreview?.isActive() ? dropPreview!.finalize() : null;
 
-  if (!target) {
-    endSession(true);
-    return;
-  }
-
-  // Inject the ghost HTML
-  const template = document.createElement('template');
-  template.innerHTML = session.ghostHtml.trim();
-  const inserted = template.content.firstElementChild as HTMLElement | null;
-  if (!inserted) {
-    endSession(true);
-    return;
-  }
-  inserted.dataset.twDroppedComponent = session.componentName;
-
-  // Determine insert mode and position based on drag mode
-  const isReplace = session.mode === 'replace';
+  let inserted: HTMLElement;
+  let target: HTMLElement;
   let position: DropPosition | 'replace';
 
-  if (isReplace) {
-    // Replace mode: insert before target and hide it
-    target.insertAdjacentElement('beforebegin', inserted);
-    target.style.display = 'none';
-    position = 'replace';
+  if (finalizeResult) {
+    // Preview was showing — use the already-inserted element and its tracked target/position.
+    inserted = finalizeResult.element;
+    target = finalizeResult.target;
+    position = finalizeResult.position;
+    inserted.dataset.twDroppedComponent = session.componentName;
   } else {
-    // Insert mode: positional placement
-    const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
-    const rect = target.getBoundingClientRect();
-    position = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+    // No preview — standard insertion path.
+    dropPreview?.clear();
 
-    switch (position) {
-      case 'before':      target.insertAdjacentElement('beforebegin', inserted); break;
-      case 'after':       target.insertAdjacentElement('afterend', inserted); break;
-      case 'first-child': target.insertAdjacentElement('afterbegin', inserted); break;
-      case 'last-child':  target.appendChild(inserted); break;
+    // Find the target at the drop point
+    if (dom.preview) dom.preview.style.display = 'none';
+    if (dom.indicator) dom.indicator.style.display = 'none';
+    if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
+    const hitTarget = findTarget(clientX, clientY);
+    if (dom.preview) dom.preview.style.display = 'flex';
+
+    if (!hitTarget) {
+      endSession(true);
+      return;
+    }
+    target = hitTarget;
+
+    // Inject the ghost HTML
+    const template = document.createElement('template');
+    template.innerHTML = session.ghostHtml.trim();
+    const el = template.content.firstElementChild as HTMLElement | null;
+    if (!el) {
+      endSession(true);
+      return;
+    }
+    inserted = el;
+    inserted.dataset.twDroppedComponent = session.componentName;
+
+    // Determine insert mode and position based on drag mode
+    const isReplace = session.mode === 'replace';
+
+    if (isReplace) {
+      // Replace mode: insert before target and hide it
+      target.insertAdjacentElement('beforebegin', inserted);
+      target.style.display = 'none';
+      position = 'replace';
+    } else {
+      // Insert mode: positional placement
+      const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
+      const rect = target.getBoundingClientRect();
+      const rawPos = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+      const adj = adjustForEdgeChild(target, rawPos);
+      target = adj.target;
+      position = adj.position;
+
+      switch (position) {
+        case 'before':      target.insertAdjacentElement('beforebegin', inserted); break;
+        case 'after':       target.insertAdjacentElement('afterend', inserted); break;
+        case 'first-child': target.insertAdjacentElement('afterbegin', inserted); break;
+        case 'last-child':  target.appendChild(inserted); break;
+      }
     }
   }
 
@@ -427,7 +479,7 @@ function executeDrop(clientX: number, clientY: number): void {
   const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
 
   const context = effectiveGhostName
-    ? (isReplace
+    ? (position === 'replace'
         ? `Replace the <${effectiveGhostName} /> component (pending insertion from an earlier drop) with "${session.componentName}"`
         : `Place "${session.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`)
     : buildContext(target, '', '', new Map());
@@ -480,6 +532,12 @@ function executeDrop(clientX: number, clientY: number): void {
 // ── Session cleanup ──────────────────────────────────────────────────────
 
 function endSession(cancelled: boolean): void {
+  // Clean up hover-to-preview
+  if (dropPreview) {
+    dropPreview.destroy();
+    dropPreview = null;
+  }
+
   // Remove event listeners
   document.removeEventListener('pointermove', onPointerMove);
   document.removeEventListener('pointerup', onPointerUp);
