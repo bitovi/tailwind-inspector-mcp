@@ -5,18 +5,20 @@
 // independent boolean flags, making invalid state combinations impossible.
 
 import { send, sendTo } from './ws';
-import { buildContext } from './context';
 import { getFiber, findOwningComponent } from './react/fiber';
 import { resetToolbar } from './bottom-toolbar';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
 import { createDropPreview, type DropPreviewHandle } from './drop-preview';
+import { buildComponentDropPatch } from './patch-builder';
 import { state as overlayState } from './overlay-state';
 import { clearSelectionState } from './overlay-state';
 import { clearHighlights } from './element-highlight';
 import { revertPreview } from './patcher';
 
-export type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
+export { type DropPosition, getAxis, computeDropPosition, adjustForEdgeChild } from '../../shared/drop-geometry';
+import type { DropPosition } from '../../shared/drop-geometry';
+import { getAxis, computeDropPosition, adjustForEdgeChild } from '../../shared/drop-geometry';
 
 type InsertCallback = (target: HTMLElement, position: DropPosition) => void;
 type ElementSelectCallback = (target: HTMLElement) => void;
@@ -131,48 +133,16 @@ export function placeAtLockedInsert(
 
   if (msg.ghostCss) injectGhostCss(msg.componentName, msg.ghostCss);
 
-  const targetSelector = buildSelector(target);
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? `Place "${msg.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: msg.componentName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : { tag: target.tagName.toLowerCase(), classes: target.className, innerText: target.innerText.slice(0, 100) },
+  const patch = buildComponentDropPatch({
+    target,
+    position,
+    componentName: msg.componentName,
+    storyId: msg.storyId,
     ghostHtml: msg.ghostHtml,
-    ghostCss: msg.ghostCss || undefined,
-    componentStoryId: msg.storyId,
-    componentPath: msg.componentPath || undefined,
-    componentArgs: Object.keys(msg.args ?? {}).length > 0 ? msg.args : undefined,
-    parentComponent,
-    insertMode: position,
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+    ghostCss: msg.ghostCss,
+    componentPath: msg.componentPath,
+    componentArgs: msg.args,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
@@ -205,53 +175,16 @@ export function replaceElement(
     injectGhostCss(msg.componentName, msg.ghostCss);
   }
 
-  const targetSelector = buildSelector(target);
-
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? `Replace the <${effectiveGhostName} /> component (pending insertion from an earlier drop) with "${msg.componentName}"`
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: msg.componentName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : {
-          tag: target.tagName.toLowerCase(),
-          classes: target.className,
-          innerText: target.innerText.slice(0, 100),
-        },
+  const patch = buildComponentDropPatch({
+    target,
+    position: 'replace',
+    componentName: msg.componentName,
+    storyId: msg.storyId,
     ghostHtml: msg.ghostHtml,
-    ghostCss: msg.ghostCss || undefined,
-    componentStoryId: msg.storyId,
-    componentPath: msg.componentPath || undefined,
-    componentArgs: Object.keys(msg.args ?? {}).length > 0 ? msg.args : undefined,
-    parentComponent,
-    insertMode: 'replace',
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+    ghostCss: msg.ghostCss,
+    componentPath: msg.componentPath,
+    componentArgs: msg.args,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
@@ -359,54 +292,7 @@ function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label?: string): vo
   }
 }
 
-// ── Drop position computation ────────────────────────────────────────────
-
-export function getAxis(el: Element): 'vertical' | 'horizontal' {
-  const style = getComputedStyle(el);
-  if (style.display.includes('flex')) {
-    return style.flexDirection.startsWith('row') ? 'horizontal' : 'vertical';
-  }
-  if (style.display.includes('grid')) {
-    return style.gridAutoFlow.startsWith('column') ? 'horizontal' : 'vertical';
-  }
-  return 'vertical';
-}
-
-export function computeDropPosition(
-  cursor: { x: number; y: number },
-  rect: DOMRect,
-  axis: 'vertical' | 'horizontal',
-): DropPosition {
-  const ratio =
-    axis === 'horizontal'
-      ? (cursor.x - rect.left) / rect.width
-      : (cursor.y - rect.top) / rect.height;
-  if (ratio < 0.25) return 'before';
-  if (ratio < 0.5) return 'first-child';
-  if (ratio < 0.75) return 'last-child';
-  return 'after';
-}
-
-/**
- * When the cursor is in the "before" zone of the first child or the "after"
- * zone of the last child, there is no sibling to insert between — so convert
- * the position to "first-child" / "last-child" of the parent instead.
- *
- * Returns an adjusted { target, position } that the caller should use for
- * both rendering the indicator and recording the drop position.
- */
-export function adjustForEdgeChild(
-  target: HTMLElement,
-  position: DropPosition,
-): { target: HTMLElement; position: DropPosition } {
-  if (position === 'before' && !target.previousElementSibling && target.parentElement) {
-    return { target: target.parentElement as HTMLElement, position: 'first-child' };
-  }
-  if (position === 'after' && !target.nextElementSibling && target.parentElement) {
-    return { target: target.parentElement as HTMLElement, position: 'last-child' };
-  }
-  return { target, position };
-}
+// ── Drop position computation (re-exported from shared/drop-geometry.ts) ──
 
 // ── Hit-test ─────────────────────────────────────────────────────────────
 
@@ -873,60 +759,21 @@ function handleComponentInsertClick(e: MouseEvent): void {
     injectGhostCss(cName, gCss);
   }
 
-  const targetSelector = buildSelector(target);
-
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? `Place "${cName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: cName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : {
-          tag: target.tagName.toLowerCase(),
-          classes: target.className,
-          innerText: target.innerText.slice(0, 100),
-        },
+  const patch = buildComponentDropPatch({
+    target,
+    position: position!,
+    componentName: cName,
+    storyId: sId,
     ghostHtml: gHtml,
-    ghostCss: gCss || undefined,
-    componentStoryId: sId,
-    componentPath: cPath || undefined,
-    componentArgs: Object.keys(cArgs).length > 0 ? cArgs : undefined,
-    parentComponent,
-    insertMode: position,
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+    ghostCss: gCss,
+    componentPath: cPath,
+    componentArgs: cArgs,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
   send({ type: 'COMPONENT_DROPPED', patch });
   sendTo('panel', { type: 'COMPONENT_DISARMED' });
-
-  console.log(`[paste-debug] drop-zone: placed component, sending COMPONENT_DISARMED`);
 
   // Clear stale selection state from the element that was selected before paste
   revertPreview();
@@ -935,7 +782,6 @@ function handleComponentInsertClick(e: MouseEvent): void {
 
   cleanup();
   resetToolbar();
-  console.log(`[paste-debug] drop-zone: after cleanup+resetToolbar`);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────

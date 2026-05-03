@@ -5,25 +5,22 @@
 // - Iframe path: pointer-events:none on iframe, parent document pointermove
 // - Popup path: postMessage with screenX/screenY from popup window
 //
-// Reuses drop-zone geometry (computeDropPosition, getAxis, findTarget) and
-// placement logic (injectGhostCss, buildSelector, findGhostAncestor).
+// Reuses drop-zone geometry (computeDropPosition, getAxis, findTarget),
+// indicator rendering (renderIndicator), and patch building (buildComponentDropPatch).
 
 import { send, sendTo } from './ws';
-import { buildContext } from './context';
-import { getFiber, findOwningComponent } from './react/fiber';
 import {
   computeDropPosition,
   adjustForEdgeChild,
   getAxis,
   findTarget,
-  buildSelector,
-  findGhostAncestor,
   injectGhostCss,
+  renderIndicator,
   type DropPosition,
 } from './drop-zone';
+import { buildComponentDropPatch } from './patch-builder';
 import { isDragMessage, type DragStartMessage } from '../../shared/drag-types';
-import type { Patch } from '../../shared/types';
-import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, ARROW_BASE, DASHED_BORDER, LINE_BASE, FIXED_OVERLAY } from './styles';
+import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, FIXED_OVERLAY } from './styles';
 import { state } from './overlay-state';
 import { GHOST_STYLE_RESET } from '../../shared/css-utils';
 import { createAutoScroller } from '../../shared/auto-scroll';
@@ -470,54 +467,16 @@ function executeDrop(clientX: number, clientY: number): void {
   }
 
   // Build patch
-  const targetSelector = buildSelector(target);
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? (position === 'replace'
-        ? `Replace the <${effectiveGhostName} /> component (pending insertion from an earlier drop) with "${session.componentName}"`
-        : `Place "${session.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`)
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: session.componentName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : {
-          tag: target.tagName.toLowerCase(),
-          classes: target.className,
-          innerText: target.innerText.slice(0, 100),
-        },
-    ghostHtml: session.ghostHtml,
-    ghostCss: session.ghostCss || undefined,
-    componentStoryId: session.storyId,
-    componentPath: session.componentPath || undefined,
-    componentArgs: Object.keys(session.componentArgs).length > 0 ? session.componentArgs : undefined,
-    parentComponent,
-    insertMode: position,
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+  const patch = buildComponentDropPatch({
+    target,
+    position,
+    componentName: session.componentName,
+    storyId: session.storyId,
+    ghostHtml: session.ghostHtml!,
+    ghostCss: session.ghostCss ?? undefined,
+    componentPath: session.componentPath,
+    componentArgs: session.componentArgs,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
@@ -644,132 +603,18 @@ function renderGhostPreview(container: HTMLElement, ghostHtml: string, ghostCss:
   container.appendChild(label);
 }
 
-// ── Indicator rendering (mirrors drop-zone.ts logic) ─────────────────────
+// ── Indicator rendering (delegates to shared renderIndicator) ─────────────
 
 function showDropIndicator(target: HTMLElement, position: DropPosition, axis: 'vertical' | 'horizontal'): void {
   if (!dom.indicator) return;
 
-  // Clear old arrows
-  if (dom.arrowLeft) { dom.arrowLeft.remove(); dom.arrowLeft = null; }
-  if (dom.arrowRight) { dom.arrowRight.remove(); dom.arrowRight = null; }
+  // Clear previous content
+  dom.indicator.innerHTML = '';
 
   const rect = target.getBoundingClientRect();
-  const isInside = position === 'first-child' || position === 'last-child';
-
-  if (isInside) {
-    dom.indicator.style.cssText = css({
-      ...FIXED_OVERLAY,
-      ...DASHED_BORDER,
-      zIndex: '2147483645',
-      display: 'block',
-      top: `${rect.top}px`,
-      left: `${rect.left}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-    });
-
-    const arrow = document.createElement('div');
-    arrow.style.cssText = css(ARROW_BASE);
-    const size = 6;
-    const isVertical = axis === 'vertical';
-
-    if (position === 'first-child') {
-      if (isVertical) {
-        arrow.style.top = '4px';
-        arrow.style.left = '50%';
-        arrow.style.transform = 'translateX(-50%)';
-        arrow.style.borderWidth = `${size}px ${size}px 0 ${size}px`;
-        arrow.style.borderColor = `${TEAL} transparent transparent transparent`;
-      } else {
-        arrow.style.left = '4px';
-        arrow.style.top = '50%';
-        arrow.style.transform = 'translateY(-50%)';
-        arrow.style.borderWidth = `${size}px 0 ${size}px ${size}px`;
-        arrow.style.borderColor = `transparent transparent transparent ${TEAL}`;
-      }
-    } else {
-      if (isVertical) {
-        arrow.style.bottom = '4px';
-        arrow.style.left = '50%';
-        arrow.style.transform = 'translateX(-50%)';
-        arrow.style.borderWidth = `0 ${size}px ${size}px ${size}px`;
-        arrow.style.borderColor = `transparent transparent ${TEAL} transparent`;
-      } else {
-        arrow.style.right = '4px';
-        arrow.style.top = '50%';
-        arrow.style.transform = 'translateY(-50%)';
-        arrow.style.borderWidth = `${size}px ${size}px ${size}px 0`;
-        arrow.style.borderColor = `transparent ${TEAL} transparent transparent`;
-      }
-    }
-    dom.indicator.appendChild(arrow);
-    dom.arrowLeft = arrow;
-  } else {
-    // Line mode (before/after)
-    const lineWidth = 3;
-    const isHorizontalLine = axis === 'vertical';
-
-    if (isHorizontalLine) {
-      const y = position === 'before' ? rect.top : rect.bottom;
-      dom.indicator.style.cssText = css({
-        ...LINE_BASE,
-        zIndex: '2147483645',
-        top: `${y - lineWidth / 2}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        height: `${lineWidth}px`,
-        borderRadius: `${lineWidth}px`,
-      });
-    } else {
-      const x = position === 'before' ? rect.left : rect.right;
-      dom.indicator.style.cssText = css({
-        ...LINE_BASE,
-        zIndex: '2147483645',
-        top: `${rect.top}px`,
-        left: `${x - lineWidth / 2}px`,
-        width: `${lineWidth}px`,
-        height: `${rect.height}px`,
-        borderRadius: `${lineWidth}px`,
-      });
-    }
-
-    // Arrows on line ends
-    const arrowSize = 5;
-    const inset = -2;
-    const arrowLeft = document.createElement('div');
-    arrowLeft.style.cssText = css(ARROW_BASE);
-    const arrowRight = document.createElement('div');
-    arrowRight.style.cssText = css(ARROW_BASE);
-
-    if (isHorizontalLine) {
-      arrowLeft.style.top = '50%';
-      arrowLeft.style.left = `${inset}px`;
-      arrowLeft.style.transform = 'translateY(-50%)';
-      arrowLeft.style.borderWidth = `${arrowSize}px 0 ${arrowSize}px ${arrowSize}px`;
-      arrowLeft.style.borderColor = `transparent transparent transparent ${TEAL}`;
-      arrowRight.style.top = '50%';
-      arrowRight.style.right = `${inset}px`;
-      arrowRight.style.transform = 'translateY(-50%)';
-      arrowRight.style.borderWidth = `${arrowSize}px ${arrowSize}px ${arrowSize}px 0`;
-      arrowRight.style.borderColor = `transparent ${TEAL} transparent transparent`;
-    } else {
-      arrowLeft.style.left = '50%';
-      arrowLeft.style.top = `${inset}px`;
-      arrowLeft.style.transform = 'translateX(-50%)';
-      arrowLeft.style.borderWidth = `${arrowSize}px ${arrowSize}px 0 ${arrowSize}px`;
-      arrowLeft.style.borderColor = `${TEAL} transparent transparent transparent`;
-      arrowRight.style.left = '50%';
-      arrowRight.style.bottom = `${inset}px`;
-      arrowRight.style.transform = 'translateX(-50%)';
-      arrowRight.style.borderWidth = `0 ${arrowSize}px ${arrowSize}px ${arrowSize}px`;
-      arrowRight.style.borderColor = `transparent transparent ${TEAL} transparent`;
-    }
-
-    dom.indicator.appendChild(arrowLeft);
-    dom.indicator.appendChild(arrowRight);
-    dom.arrowLeft = arrowLeft;
-    dom.arrowRight = arrowRight;
-  }
+  const arrows = renderIndicator(dom.indicator, position, axis, rect, { zIndex: 2147483645 });
+  dom.arrowLeft = arrows.arrowLeft;
+  dom.arrowRight = arrows.arrowRight;
 }
 
 function hideDropIndicator(): void {

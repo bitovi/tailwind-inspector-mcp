@@ -1,66 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { DropPosition, DropZoneState } from './types';
-
-/**
- * Returns the layout axis for a container element.
- * flex-direction: row  → 'horizontal'
- * flex-direction: column (or block/grid-auto-flow row) → 'vertical'
- */
-function getAxis(parent: Element | null): 'vertical' | 'horizontal' {
-  if (!parent) return 'vertical';
-  const style = getComputedStyle(parent);
-  if (style.display.includes('flex')) {
-    return style.flexDirection.startsWith('row') ? 'horizontal' : 'vertical';
-  }
-  if (style.display.includes('grid')) {
-    // grid-auto-flow: column → horizontal; otherwise vertical
-    return style.gridAutoFlow.startsWith('column') ? 'horizontal' : 'vertical';
-  }
-  return 'vertical';
-}
-
-/**
- * Given a cursor position, a target element rect, and the layout axis,
- * determine where the drop would land.
- *
- * Four zones along the layout axis:
- *   0–25%  = "before"      (insert as previous sibling)
- *   25–50% = "first-child" (prepend inside target)
- *   50–75% = "last-child"  (append inside target)
- *   75–100%= "after"       (insert as next sibling)
- */
-export function computeDropPosition(
-  cursor: { x: number; y: number },
-  rect: DOMRect,
-  axis: 'vertical' | 'horizontal',
-): DropPosition {
-  const ratio =
-    axis === 'horizontal'
-      ? (cursor.x - rect.left) / rect.width
-      : (cursor.y - rect.top) / rect.height;
-  if (ratio < 0.25) return 'before';
-  if (ratio < 0.5) return 'first-child';
-  if (ratio < 0.75) return 'last-child';
-  return 'after';
-}
-
-/**
- * When the cursor is in the "before" zone of the first child or the "after"
- * zone of the last child, convert to "first-child" / "last-child" of the
- * parent so the indicator shows a container insert rather than a sibling line.
- */
-export function adjustForEdgeChild(
-  target: HTMLElement,
-  position: DropPosition,
-): { target: HTMLElement; position: DropPosition } {
-  if (position === 'before' && !target.previousElementSibling && target.parentElement) {
-    return { target: target.parentElement as HTMLElement, position: 'first-child' };
-  }
-  if (position === 'after' && !target.nextElementSibling && target.parentElement) {
-    return { target: target.parentElement as HTMLElement, position: 'last-child' };
-  }
-  return { target, position };
-}
+import { getAxis, computeDropPosition, adjustForEdgeChild } from '../../../../shared/drop-geometry';
+export { computeDropPosition, adjustForEdgeChild };
 
 interface UseDropZoneOptions {
   /** The container element whose descendants are potential drop targets */
