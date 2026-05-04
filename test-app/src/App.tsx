@@ -86,9 +86,19 @@ function ThemeIcon() {
   )
 }
 
+function EditIcon() {
+  return (
+    <span className="inline-flex align-middle mx-0.5 rounded bg-[#1a1a1a] p-0.5">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#5fd4da">
+        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+      </svg>
+    </span>
+  )
+}
+
 function App() {
   const { completedSteps, completeStep, resetProgress } = useTutorialProgress()
-  const totalSteps = 11
+  const totalSteps = 14
   const completedCount = [...completedSteps].filter(s => s <= totalSteps).length
 
   return (
@@ -161,17 +171,24 @@ function App() {
               <p>
                 See the round button in the bottom-right corner of the page? That's the <strong>VyBit toggle button</strong>. Click it to open the inspector panel. The panel will slide in as a sidebar on the right side of the page.
               </p>
-              <p className="mt-3">Once open, you'll see three mode buttons at the top of the panel:</p>
+              <p className="mt-3">Once open, you'll see three buttons at the top of the panel:</p>
               <p className="mt-3">
-                <SelectIcon /> <strong>Select</strong> — Click elements in your app to inspect and change them. This is where you'll spend most of your time. Select an element, then describe what you want changed, tweak spacing, adjust colors, or edit text directly.
-              </p>
-              <p className="mt-3">
-                <InsertIcon /> <strong>Insert</strong> — Add new content to the page. Click a spot where you want something new, then describe it, sketch it, or pick a component from your design system.
+                <EditIcon /> <strong>Edit</strong> — The main working mode. Select elements, inspect their styles, send change messages, edit text, and tweak Tailwind classes from here.
               </p>
               <p className="mt-3">
                 <BugReportIcon /> <strong>Bug Report</strong> — Record and describe issues. Pick an element, describe what's wrong, and VyBit captures a timeline snapshot for context.
               </p>
-              <p className="mt-3">You'll try all three in the exercises below.</p>
+              <p className="mt-3">
+                <ThemeIcon /> <strong>Theme</strong> — Browse and adjust your project's Tailwind design tokens — colors, spacing, font sizes — and preview changes live across the whole page.
+              </p>
+              <p className="mt-3">At the <strong>bottom of the page</strong>, you'll also see two toolbar buttons:</p>
+              <p className="mt-3">
+                <SelectIcon /> <strong>Select</strong> — Activates the pointer so you can click elements in your app to inspect and edit them.
+              </p>
+              <p className="mt-3">
+                <InsertIcon /> <strong>Insert</strong> — Activates insertion mode so you can click a gap between elements to set an insertion point for new content.
+              </p>
+              <p className="mt-3">You'll use all of these in the exercises below.</p>
             </>
           }
         />
@@ -186,10 +203,11 @@ function App() {
             <>
               <p>Let's make your first change. <strong>Click the issue card below</strong> to select it, then tell VyBit what to do.</p>
               <ol>
-                <li>In the panel, click the <strong>Select</strong> button (<SelectIcon />) to enter Select mode</li>
-                <li>Click the card below — it will highlight with a teal border and a floating toolbar will appear above it</li>
-                <li>In the floating toolbar's message area, type something like: <em>"Make the bug tag flash red"</em></li>
-                <li>Click the <strong>submit</strong> button (<SendIcon />) to queue the message</li>
+                <li>Use the <strong>Select</strong> button (<SelectIcon />) at the bottom of the page to enter Select mode</li>
+                <li>Click the card below — it will highlight with a teal border and a small toolbar will appear</li>
+                <li>Click <strong>Describe change</strong> in the toolbar — a message form appears</li>
+                <li>Type something like: <em>"Make the bug tag flash red"</em></li>
+                <li>Click the <strong>Queue</strong> button to send the message</li>
                 <li>At the bottom of the panel, click the <strong>draft count</strong> (e.g., "1 draft") to open the queue</li>
                 <li>Click <strong>Commit</strong></li>
               </ol>
@@ -214,11 +232,11 @@ function App() {
             <>
               <p>Sometimes it's easier to talk than type. VyBit has a microphone button for voice messages.</p>
               <ol>
-                <li>Click the <strong>Select</strong> button (<SelectIcon />) in the panel to enter Select mode</li>
+                <li>Use the <strong>Select</strong> button (<SelectIcon />) at the bottom of the page to enter Select mode</li>
                 <li>Click the <strong>Assign</strong> button below to select it</li>
                 <li>In the floating toolbar, click the <strong>microphone</strong> (<MicIcon />) button next to the message input</li>
                 <li>Speak your change — something like <em>"When assigning, show a spinner in the assign button and disable the button"</em></li>
-                <li>Click the mic again to stop recording, then click the <strong>submit</strong> button (<SendIcon />)</li>
+                <li>Click the mic again to stop recording, then click the <strong>Queue</strong> button to send</li>
               </ol>
             </>
           }
@@ -239,11 +257,12 @@ function App() {
             <>
               <p>You can edit text directly on the page using the overlay toolbar.</p>
               <ol>
-                <li>Make sure you're in <strong>Select</strong> mode — click the <SelectIcon /> button in the panel if needed</li>
+                <li>Make sure you're in <strong>Select</strong> mode — use the <SelectIcon /> button at the bottom of the page if needed</li>
                 <li>Click the empty state card below to select it — it will highlight with a teal border</li>
-                <li>In the floating toolbar that appears above it, click the <strong>Text</strong> button</li>
+                <li>Click the <strong>Edit text</strong> button in the toolbar that appears below the selection</li>
                 <li>The text becomes editable — try changing it to something friendlier, like <em>"Nothing here yet — Create your first issue!"</em></li>
                 <li>Click away or press Escape to finish editing</li>
+                <li>Click the <strong>Queue</strong> button in the toolbar to stage the text change as a draft</li>
               </ol>
             </>
           }
@@ -265,11 +284,12 @@ function App() {
             <>
               <p>Now let's <strong>add a new field</strong> to this form.</p>
               <ol>
-                <li>In the panel header, click the <strong>Insert</strong> (<InsertIcon />) mode button</li>
+                <li>Use the <strong>Insert</strong> button (<InsertIcon />) at the bottom of the page to enter Insert mode</li>
                 <li>Hover over the form below — you'll see insertion indicators between the fields</li>
                 <li>Click the gap between <strong>Email</strong> and <strong>Role</strong> to set an <strong>insert point</strong></li>
-                <li>In the floating toolbar's message area, describe the field to add — something like: <em>"Add a phone number field"</em></li>
-                <li>Click the <strong>submit</strong> button (<SendIcon />)</li>
+                <li>Click <strong>Describe change</strong> in the toolbar — a message form appears</li>
+                <li>Type something like: <em>"Add a phone number field"</em></li>
+                <li>Click the <strong>Queue</strong> button to send</li>
               </ol>
             </>
           }
@@ -294,8 +314,8 @@ function App() {
             <>
               <p>Don't want to describe in words? Draw it instead. The signups below are just numbers — let's sketch a chart to visualize the trend.</p>
               <ol>
-                <li>Switch to <strong>Insert</strong> mode (<InsertIcon />) and click between <strong>"Monthly Signups"</strong> and <strong>"January"</strong> to set an insertion point</li>
-                <li>In the panel's <strong>Place</strong> tab, click <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span></li>
+                <li>Use the <strong>Insert</strong> button (<InsertIcon />) at the bottom of the page and click between <strong>"Monthly Signups"</strong> and <strong>"January"</strong> to set an insertion point</li>
+                <li>In the panel's <strong>Components</strong> tab, click <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span></li>
                 <li>On the canvas, sketch a bar chart — draw a few bars of different heights with labels underneath</li>
                 <li>Click <strong style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#00848B',color:'#fff',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>✓ Add to Drafts</strong> to queue the drawing</li>
               </ol>
@@ -325,21 +345,128 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 8: Place a Component ── */}
+        {/* ── Section 8: Move Elements ── */}
         <TutorialSection
           step={8}
-          title="Place a Component"
+          title="Move Elements"
           completed={completedSteps.has(8)}
           onMarkComplete={() => completeStep(8)}
           instructions={
             <>
+              <p>Elements you've placed — or any existing element — can be dragged to a new position. The same teal drop-zone indicators that guided you during placement will show you exactly where it will land.</p>
+              <p className="mt-3">The priority queue below has a <strong>Critical</strong> issue at the bottom when it should be first. Let's fix that.</p>
+              <ol>
+                <li>Use the <strong>Select</strong> button (<SelectIcon />) at the bottom of the page</li>
+                <li>Click the <strong>Critical — Fix payment gateway timeout</strong> row to select it</li>
+                <li>Drag it to the top of the list — drop-zone indicators will show you where it will land</li>
+                <li>Release to move it — the change is staged as a draft</li>
+              </ol>
+              <p className="mt-3 text-sm text-gray-500">Tip: Press <strong>Escape</strong> while dragging to cancel and return the element to its original position.</p>
+            </>
+          }
+        >
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Issue Priority Queue</h3>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+                <Badge color="yellow">Medium</Badge>
+                <span className="text-sm text-gray-700">Improve dashboard load time</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+                <Badge color="blue">Low</Badge>
+                <span className="text-sm text-gray-700">Update onboarding copy</span>
+              </div>
+              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+                <Badge color="red">Critical</Badge>
+                <span className="text-sm text-gray-700">Fix payment gateway timeout</span>
+              </div>
+            </div>
+          </div>
+        </TutorialSection>
+
+        {/* ── Section 9: Delete Elements ── */}
+        <TutorialSection
+          step={9}
+          title="Delete Elements"
+          completed={completedSteps.has(9)}
+          onMarkComplete={() => completeStep(9)}
+          instructions={
+            <>
+              <p>Removing an element is a single keypress. VyBit hides it on the page and queues a delete change for your agent — nothing is permanently removed until the agent writes the code.</p>
+              <p className="mt-3">The resolved issue card below is stale and should be cleaned up.</p>
+              <ol>
+                <li>Use the <strong>Select</strong> button (<SelectIcon />) at the bottom of the page</li>
+                <li>Click the <strong>Resolved</strong> card below to select it</li>
+                <li>Press <strong>Delete</strong> or <strong>Backspace</strong> — the card disappears and a delete change is staged in your drafts</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 opacity-60">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium text-gray-500 line-through">Migrate to new auth provider</span>
+              <Badge color="green">Resolved</Badge>
+            </div>
+            <p className="text-xs text-gray-400">Closed 14 days ago · No longer relevant</p>
+          </div>
+        </TutorialSection>
+
+        {/* ── Section 10: Copy and Paste ── */}
+        <TutorialSection
+          step={10}
+          title="Copy and Paste"
+          completed={completedSteps.has(10)}
+          onMarkComplete={() => completeStep(10)}
+          instructions={
+            <>
+              <p>VyBit lets you copy any element and paste it anywhere on the page. <strong>Cmd+D</strong> gives you an instant duplicate right after the original — no placement flow needed.</p>
+              <p className="mt-3">The team roster below has two members. Let's add a third slot.</p>
+              <ol>
+                <li>Use the <strong>Select</strong> button (<SelectIcon />) at the bottom of the page</li>
+                <li>Click one of the team member cards to select it</li>
+                <li>Press <strong>Cmd+D</strong> to instantly duplicate it right after itself</li>
+                <li>Or: press <strong>Cmd+C</strong> to copy, then <strong>Cmd+V</strong> — the drop-zone placement flow activates so you can drop the copy anywhere on the page</li>
+                <li>Your agent will fill in the new member's details</li>
+              </ol>
+            </>
+          }
+        >
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Project Team</h3>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold">AL</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Alice Lim</p>
+                  <p className="text-xs text-gray-500">Engineering Lead</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
+                <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">MR</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Marco Reyes</p>
+                  <p className="text-xs text-gray-500">Product Designer</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TutorialSection>
+
+        {/* ── Section 11: Place a Component ── */}
+        <TutorialSection
+          step={11}
+          title="Place a Component"
+          completed={completedSteps.has(11)}
+          onMarkComplete={() => completeStep(11)}
+          instructions={
+            <>
               <p>VyBit can browse your component library and place components directly onto the page.</p>
               <ol>
-                <li>Switch to <strong>Insert</strong> mode (<InsertIcon />) if not already active</li>
+                <li>Use the <strong>Insert</strong> button (<InsertIcon />) at the bottom of the page if not already active</li>
                 <li>In the panel, you'll see the <strong>Components</strong> tab with your available components</li>
-                <li>Find a component (e.g., <strong>Badge</strong>) and click its <strong>Place</strong> button</li>
-                <li>Hover over the page — you'll see a ghost preview of the component following your cursor</li>
-                <li>Click to drop it next to the existing status badges</li>
+                <li><strong>Drag</strong> the thumbnail of a component (e.g., <strong>Badge</strong>) from the panel out onto the page — a semi-transparent ghost preview will follow your cursor</li>
+                <li>Drop-zone indicators (teal lines) appear as you hover over different positions — release to place the component</li>
+                <li>Alternatively, you can click a component's <strong>Place</strong> button and then click on the page to drop it</li>
               </ol>
             </>
           }
@@ -352,21 +479,22 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 9: Build with Nested Components ── */}
+        {/* ── Section 12: Build with Nested Components ── */}
         <TutorialSection
-          step={9}
+          step={12}
           title="Build with Nested Components"
-          completed={completedSteps.has(9)}
-          onMarkComplete={() => completeStep(9)}
+          completed={completedSteps.has(12)}
+          onMarkComplete={() => completeStep(12)}
           instructions={
             <>
-              <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component. VyBit lets you fill these slots directly in the component drawer.</p>
+              <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component. You can fill these slots by dragging — just drop a component thumbnail directly onto the slot field in the panel.</p>
               <ol>
-                <li>In <strong>Insert</strong> mode (<InsertIcon />), find the <strong>Button</strong> component in the panel's Components tab and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Customize</span> button</li>
+                <li>Use the <strong>Insert</strong> button (<InsertIcon />) at the bottom of the page if not already active</li>
+                <li>In the panel's <strong>Components</strong> tab, find <strong>Button</strong> and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Customize</span> button</li>
                 <li>In the props drawer, switch the <strong>variant</strong> to <code style={{background:'#f3f4f6',border:'1px solid #e5e7eb',borderRadius:'3px',padding:'0 4px',fontSize:'12px'}}>warning</code></li>
-                <li>Find the <strong>leftIcon</strong> row — click the <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:'18px',height:'18px',background:'#374151',color:'#f9fafb',fontSize:'13px',fontWeight:700,borderRadius:'3px',fontFamily:'sans-serif',lineHeight:1}}>⊞</span> button to open the component picker for that prop</li>
-                <li>Find the <svg style={{display:'inline',verticalAlign:'middle',marginLeft:'2px',marginRight:'2px'}} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><strong>Icon</strong> component and click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#F5532D',color:'#fff',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Set Prop</span> button — you'll see a star appear in the Button preview</li>
-                <li>Back in the Button drawer, click its <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'1px 7px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>Place</span> button and drop the composed button onto the page</li>
+                <li>Find the <strong>leftIcon</strong> slot field — <strong>drag</strong> the <svg style={{display:'inline',verticalAlign:'middle',marginLeft:'2px',marginRight:'2px'}} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="0"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><strong>Icon</strong> component thumbnail and drop it directly onto the <strong>leftIcon</strong> slot — the slot will glow teal to show it's a valid drop target</li>
+                <li>You'll see a star appear in the Button preview</li>
+                <li>Drag the Button thumbnail onto the page to place the composed button</li>
               </ol>
             </>
           }
@@ -377,18 +505,18 @@ function App() {
           </div>
         </TutorialSection>
 
-        {/* ── Section 10: Fine-Tune the Design ── */}
+        {/* ── Section 13: Fine-Tune the Design ── */}
         <TutorialSection
-          step={10}
+          step={13}
           title="Fine-Tune the Design"
-          completed={completedSteps.has(10)}
-          onMarkComplete={() => completeStep(10)}
+          completed={completedSteps.has(13)}
+          onMarkComplete={() => completeStep(13)}
           playgroundClassName="bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300"
           instructions={
             <>
               <p>VyBit isn't just for big changes — you can precisely adjust Tailwind classes too. Scrub spacing values, pick colors from a palette, adjust shadows, and see changes live as you drag.</p>
               <ol>
-                <li>Switch to <strong>Select</strong> mode (<SelectIcon />)</li>
+                <li>Use the <strong>Select</strong> button (<SelectIcon />) at the bottom of the page</li>
                 <li>Click the purple banner below (not the text inside it) — it will show its Tailwind properties in the panel</li>
                 <li>
                   Try any of these in the panel's <strong>Design</strong> tab:
@@ -409,12 +537,12 @@ function App() {
           <p className="text-indigo-200">Your hub for issues, roadmaps, and team collaboration.</p>
         </TutorialSection>
 
-        {/* ── Section 11: Report a Bug ── */}
+        {/* ── Section 14: Report a Bug ── */}
         <TutorialSection
-          step={11}
+          step={14}
           title="Report a Bug"
-          completed={completedSteps.has(11)}
-          onMarkComplete={() => completeStep(11)}
+          completed={completedSteps.has(14)}
+          onMarkComplete={() => completeStep(14)}
           instructions={
             <>
               <p>Found something broken? VyBit's Bug Report mode captures element context, console errors, network failures, and a visual timeline so the AI agent knows exactly what to fix.</p>
@@ -481,6 +609,9 @@ function App() {
                   <li>✓ Inline text editing</li>
                   <li>✓ Describing new content to insert</li>
                   <li>✓ Sketching layouts</li>
+                  <li>✓ Moving and rearranging elements</li>
+                  <li>✓ Deleting elements</li>
+                  <li>✓ Copying and pasting elements</li>
                   <li>✓ Placing design system components</li>
                   <li>✓ Composing nested components</li>
                   <li>✓ Fine-tuning Tailwind styles</li>
@@ -527,12 +658,12 @@ function App() {
           </p>
         </div>
 
-        {/* ── Bonus Step: Explore Your Theme ── */}
+        {/* ── Bonus Step 15: Explore Your Theme ── */}
         <TutorialSection
-          step={12}
+          step={15}
           title="Explore Your Theme"
-          completed={completedSteps.has(12)}
-          onMarkComplete={() => completeStep(12)}
+          completed={completedSteps.has(15)}
+          onMarkComplete={() => completeStep(15)}
           instructions={
             <>
               <p>
@@ -575,6 +706,42 @@ function App() {
               <div className="bg-indigo-500 text-white text-lg font-light p-5 rounded">
                 <div className="flex"><span className="flex-1">indigo-500</span><span className="flex-1">text-lg</span><span className="flex-1">font-light</span><span className="flex-1">p-5</span></div>
               </div>
+          </div>
+        </TutorialSection>
+
+        {/* ── Bonus Step 16: Wireframe with HTML Elements ── */}
+        <TutorialSection
+          step={16}
+          title="Wireframe with HTML Elements"
+          completed={completedSteps.has(16)}
+          onMarkComplete={() => completeStep(16)}
+          instructions={
+            <>
+              <p>
+                The <strong>Elements</strong> tab in the panel gives you plain HTML building blocks — flex rows, flex columns, and a button — that you can drag directly onto the page to rough out a layout. These aren't design-system components; they're bare HTML so the agent can adapt them to match your app's style when implementing.
+              </p>
+              <ol>
+                <li>Use the <strong>Insert</strong> button (<InsertIcon />) at the bottom of the page</li>
+                <li>In the panel, click the <strong>Elements</strong> tab</li>
+                <li><strong>Drag</strong> one of the elements (e.g., <code className="bg-gray-100 text-gray-800 px-1 rounded text-xs">div.flex-row</code>) onto the page — drop it wherever you want a new layout slot</li>
+                <li>The agent will see the raw HTML and infer the appropriate styles from your existing page when it implements the change</li>
+              </ol>
+              <p className="mt-3 text-sm text-gray-500">
+                Elements available: <code className="bg-gray-100 text-gray-800 px-1 rounded text-xs">div.flex-row</code>, <code className="bg-gray-100 text-gray-800 px-1 rounded text-xs">div.flex-row &gt; .flex-auto</code>, <code className="bg-gray-100 text-gray-800 px-1 rounded text-xs">div.flex-col</code>, <code className="bg-gray-100 text-gray-800 px-1 rounded text-xs">button.inline</code>
+              </p>
+              <p className="mt-3 text-sm text-gray-500">
+                Tip: Use these to sketch layout structure quickly, then describe what each slot should contain in a follow-up change message.
+              </p>
+            </>
+          }
+        >
+          <div className="bg-white rounded-lg shadow p-6 flex flex-col gap-4">
+            <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded p-4 text-center text-sm text-gray-400">
+              Drop a <code className="text-xs bg-gray-200 px-1 rounded">div.flex-row</code> here to add a row layout
+            </div>
+            <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded p-4 text-center text-sm text-gray-400">
+              Drop a <code className="text-xs bg-gray-200 px-1 rounded">div.flex-col</code> here to add a column layout
+            </div>
           </div>
         </TutorialSection>
       </main>

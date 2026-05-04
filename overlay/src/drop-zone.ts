@@ -526,6 +526,53 @@ function updateCursorLabel(e: MouseEvent): void {
   }
 }
 
+/**
+ * When the cursor lands on a container element, check whether it is actually
+ * sitting inside a CSS gap between two adjacent children. If so, return the
+ * child that precedes the gap (the drop should be 'after' that child).
+ * Returns null if the cursor is not in any inter-child gap.
+ */
+function findChildInGap(
+  container: HTMLElement,
+  cx: number,
+  cy: number,
+): { child: HTMLElement; position: 'before' | 'after' } | null {
+  const children = Array.from(container.children) as HTMLElement[];
+  if (children.length === 0) return null;
+  const axis = getAxis(container);
+  const containerRect = container.getBoundingClientRect();
+
+  // Leading padding: cursor is before the first child
+  const first = children[0].getBoundingClientRect();
+  const beforeFirst =
+    axis === 'vertical'
+      ? cy >= containerRect.top && cy < first.top
+      : cx >= containerRect.left && cx < first.left;
+  if (beforeFirst) return { child: children[0], position: 'before' };
+
+  // Gaps between adjacent children
+  for (let i = 0; i < children.length - 1; i++) {
+    const a = children[i].getBoundingClientRect();
+    const b = children[i + 1].getBoundingClientRect();
+    const inGap =
+      axis === 'vertical'
+        ? cy > a.bottom && cy < b.top
+        : cx > a.right && cx < b.left;
+    if (inGap) return { child: children[i], position: 'after' };
+  }
+
+  // Trailing padding: cursor is past the last child but still within the container
+  const last = children[children.length - 1];
+  const lastRect = last.getBoundingClientRect();
+  const pastLast =
+    axis === 'vertical'
+      ? cy > lastRect.bottom && cy <= containerRect.bottom
+      : cx > lastRect.right && cx <= containerRect.right;
+  if (pastLast) return { child: last, position: 'after' };
+
+  return null;
+}
+
 function onMouseMove(e: MouseEvent): void {
   if (mode.kind === 'idle') return;
 
@@ -557,10 +604,20 @@ function onMouseMove(e: MouseEvent): void {
     return;
   }
 
-  const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
-  const rect = target.getBoundingClientRect();
-  const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
-  const adjusted = adjustForEdgeChild(target, rawPosition);
+  // Gap/padding detection: if the cursor landed on a container, check whether
+  // it is in a CSS gap between two children, in the leading padding (before the
+  // first child), or in the trailing padding (after the last child). In those
+  // cases bypass the 4-zone position heuristic and use the adjacent child
+  // directly so we always stay inside the right container.
+  const gapResult = findChildInGap(target, e.clientX, e.clientY);
+  const resolvedTarget = gapResult ? gapResult.child : target;
+
+  const parentAxis = resolvedTarget.parentElement ? getAxis(resolvedTarget.parentElement) : 'vertical';
+  const rect = resolvedTarget.getBoundingClientRect();
+  const rawPosition = gapResult
+    ? gapResult.position
+    : computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  const adjusted = adjustForEdgeChild(resolvedTarget, rawPosition);
 
   dom.currentTarget = adjusted.target;
   dom.currentPosition = adjusted.position;

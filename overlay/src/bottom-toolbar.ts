@@ -54,8 +54,7 @@ function setTool(tool: EditTool): void {
 	isPicking = false;
 	isEngaged = false;
 	onToolChange?.(tool);
-	// Notify panel of tool change
-	sendTo("panel", { type: "EDIT_TOOL_CHANGED", tool });
+	// Panel notification is handled by the state machine via dispatch effects.
 	updateButtonStates();
 }
 

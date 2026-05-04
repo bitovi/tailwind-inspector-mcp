@@ -29,13 +29,16 @@ import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab, clearSelectionState, setGrabCursor, clearGrabCursor } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
 import { showDrawButton, initToolbar, repositionToolbar, showGroupPicker } from "./element-toolbar";
-import { initElementDrawer } from "./element-drawer";
+import { initElementDrawer, removeElementDrawer } from "./element-drawer";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
 import { getSameRectCandidates, showDepthPicker, dismissDepthPicker } from "./depth-picker";
-import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides, resetToolbar } from "./bottom-toolbar";
+import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides, resetToolbar, setTextEditingLock } from "./bottom-toolbar";
 import type { BugReportElement } from "../../shared/types";
 import { setClipboard, getClipboard, extractGhostCssForElement } from "./clipboard";
+import { initStateMachine, dispatch, subscribe, type EffectDeps } from './overlay-state-machine';
+import type { ToolbarVisual, ToolButtonVisual } from './overlay-state-machine/types';
+import type { EditTool } from '../../shared/types';
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
 function onBrowseLocked(target: HTMLElement): void {
@@ -681,68 +684,7 @@ function init(): void {
 	});
 	initBottomToolbar({
 		onToolChange: (tool) => {
-			console.log(`[paste-debug] onToolChange(${tool}): selectModeOn=${state.selectModeOn}, currentTargetEl=${!!state.currentTargetEl}`);
-			// ── Select re-click toggle ──
-			if (tool === 'select' && state.selectModeOn && state.currentTargetEl) {
-				// Orange + element → Teal: stop selecting, keep element
-				console.log(`[paste-debug] → Select toggle: Orange+element → Teal`);
-				setSelectMode(false);
-				updateToolState('select', false, true);
-				sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
-				return;
-			}
-			if (tool === 'select' && !state.selectModeOn && state.currentTargetEl) {
-				// Teal → Orange: clear element, fresh selecting
-				console.log(`[paste-debug] → Select toggle: Teal → Orange (clear element, fresh select)`);
-				revertPreview();
-				clearHighlights();
-				cancelInsert();
-				clearLockedInsert();
-				clearSelectionState();
-				setSelectMode(true);
-				updateToolState('select', true, false);
-				sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
-				return;
-			}
-
-			// ── Insert re-click toggle ──
-			if (tool === 'insert' && isDropZoneActive() && getLockedInsert()) {
-				// Orange + point (browsing active) → Teal: stop browsing, keep point
-				cancelInsert();
-				updateToolState('insert', false, true);
-				sendTo("panel", { type: "EDIT_TOOL_CHANGED", tool: "insert" });
-				return;
-			}
-			if (tool === 'insert' && !isDropZoneActive() && getLockedInsert()) {
-				// Teal → Orange: clear point, fresh browsing
-				clearLockedInsert();
-				clearHighlights();
-				clearSelectionState();
-				startBrowse(state.shadowHost, onBrowseLocked);
-				updateToolState('insert', true, false);
-				sendTo("panel", { type: "MODE_CHANGED", mode: "insert" });
-				return;
-			}
-
-			// Clear previous selection/mode state (same cleanup as MODE_CHANGED handler)
-			revertPreview();
-			clearHighlights();
-			cancelInsert();
-			clearLockedInsert();
-			clearSelectionState();
-
-			// Enter the new mode
-			if (tool === 'select') {
-				setSelectMode(true);
-				updateToolState('select', true, false); // orange: picking
-			} else if (tool === 'insert') {
-				setSelectMode(false);
-				startBrowse(state.shadowHost, onBrowseLocked);
-				updateToolState('insert', true, false); // orange: browsing
-			} else {
-				setSelectMode(false);
-				updateToolState(null, false, false);
-			}
+			dispatch({ type: 'TOOLBAR_TOOL_CLICK', tool });
 		},
 		onAdjunctClick: () => {
 			// Toggle group picker from the bottom toolbar's 1+ button
@@ -765,6 +707,77 @@ function init(): void {
 		},
 	});
 	initDesignCanvasManager({ serverOrigin: SERVER_ORIGIN, showToast });
+
+	// ── Initialize overlay state machine ─────────────────────────────────
+	// The state machine provides a pure reducer for all mode/interaction
+	// transitions. Effects are executed via the deps interface below.
+	// A subscriber keeps the legacy overlay-state.ts in sync during migration.
+
+	const smEffectDeps: EffectDeps = {
+		revertPreview: () => revertPreview(),
+		clearHighlights: () => clearHighlights(),
+		clearHoverPreview: () => clearHoverPreview(),
+		clearSelectionState: () => clearSelectionState(),
+		highlightElement: (el) => highlightElement(el),
+		showDrawButton: (el) => showDrawButton(el),
+		removeDrawButton: () => removeElementDrawer(),
+		setGrabCursor: (el) => { el.style.cursor = 'grab'; },
+		clearGrabCursor: (el) => { el.style.cursor = ''; },
+		startBrowse: () => startBrowse(state.shadowHost, onBrowseLocked),
+		cancelInsert: () => cancelInsert(),
+		clearLockedInsert: () => clearLockedInsert(),
+		showToolbar: () => showBottomToolbar(),
+		hideToolbar: () => hideBottomToolbar(),
+		updateToolbar: (visual: ToolbarVisual) => {
+			// Bridge from ToolbarVisual to existing updateToolState API.
+			// Handle override states (completed = paste flow)
+			if (visual.select === 'completed' || visual.insert === 'completed') {
+				const overrides: Record<string, string> = {};
+				for (const [key, val] of Object.entries(visual)) {
+					if (val !== 'gray') overrides[key] = val;
+				}
+				setToolOverrides(overrides as any);
+				return;
+			}
+			// Normal case: find active tool and its state
+			const tool: EditTool =
+				(visual.select !== 'gray') ? 'select'
+				: (visual.text !== 'gray') ? 'text'
+				: (visual.insert !== 'gray') ? 'insert'
+				: null;
+			const picking = tool ? visual[tool as keyof ToolbarVisual] === 'picking' : false;
+			const engaged = tool ? visual[tool as keyof ToolbarVisual] === 'engaged' : false;
+			updateToolState(tool, picking, engaged);
+		},
+		sendToPanel: (msg) => sendTo('panel', msg),
+		setSelectMode: (on) => setSelectMode(on),
+		openPanel: () => {
+			if (!insideStorybook) {
+				const panelUrl = `${SERVER_ORIGIN}/panel`;
+				if (!state.activeContainer.isOpen()) state.activeContainer.open(panelUrl);
+			}
+		},
+		setTextEditingLock: (locked) => setTextEditingLock(locked),
+	};
+
+	initStateMachine(smEffectDeps);
+
+	// Sync state machine → legacy overlay-state.ts so modules that still
+	// read the old `state` object (click handlers, drag-move, etc.) see
+	// consistent values. This bridge is temporary — modules will be
+	// migrated to read from getState() directly.
+	subscribe((newState) => {
+		(state as any).currentMode = newState.mode;
+		state.selectModeOn = newState.selectPhase === 'picking';
+		state.currentTab = newState.currentTab;
+		state.tabPreference = newState.tabPreference;
+		state.active = newState.active;
+		state.exclusiveInteraction =
+			newState.interaction.kind === 'drag-moving' ? 'drag-moving'
+			: newState.interaction.kind === 'component-drag' ? 'component-drag'
+			: newState.interaction.kind === 'text-editing' ? 'text-editing'
+			: null;
+	});
 
 	// Initialize containers
 	state.containers = {
@@ -1164,97 +1177,29 @@ function init(): void {
 	onMessage((msg: any) => {
 		if (msg.type === "TOGGLE_SELECT_MODE") {
 			if (msg.active) {
-				state.active = true;
 				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
-				setSelectMode(true);
-				showBottomToolbar();
-				updateToolState('select', true, false);
-				// Ensure panel is open (skip in Storybook — panel lives in addon tab)
-				if (!insideStorybook) {
-					const panelUrl = `${SERVER_ORIGIN}/panel`;
-					if (!state.activeContainer.isOpen()) state.activeContainer.open(panelUrl);
-				}
-			} else {
-				setSelectMode(false);
-				// Update toolbar to show engaged (teal) state — element still selected
-				if (state.currentTargetEl) {
-					updateToolState('select', false, true);
-				}
 			}
+			dispatch({ type: 'CMD_TOGGLE_SELECT_MODE', active: msg.active });
 		} else if (msg.type === "TOGGLE_INSERT_BROWSE") {
-			if (msg.active) {
-				// Teal → Orange: re-enable browsing (clear point, restart browse)
-				clearLockedInsert();
-				clearSelectionState();
-				startBrowse(state.shadowHost, onBrowseLocked);
-				showBottomToolbar();
-				updateToolState('insert', true, false);
-			} else {
-				// Orange → Teal: stop browsing, keep locked insert point
-				cancelInsert();
-				if (getLockedInsert()) {
-					updateToolState('insert', false, true);
-				}
-			}
+			dispatch({ type: 'CMD_TOGGLE_INSERT_BROWSE', active: msg.active });
 		} else if (msg.type === "MODE_CHANGED") {
-			// Mark VyBit as active when any mode is engaged
 			if (msg.mode) {
-				state.active = true;
 				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
 			}
-			// Clear current selection and toolbar
-			revertPreview();
-			clearHighlights();
-			cancelInsert();
-			clearLockedInsert();
-			clearSelectionState();
-
-			state.currentMode = msg.mode;
-			if (msg.mode === 'insert') {
-				setSelectMode(false);
-				if (state.tabPreference === 'design') state.tabPreference = 'component';
-				state.currentTab = resolveTab();
-				startBrowse(state.shadowHost, onBrowseLocked);
-			} else if (msg.mode === 'select') {
-				state.currentTab = resolveTab();
-				setSelectMode(true);
-			} else {
-				// bug-report or null — no element selection
-				setSelectMode(false);
-			}
-
-			// Show/hide bottom toolbar based on edit mode
-			const isEditMode = msg.mode === 'select' || msg.mode === 'insert' || msg.mode === null;
-			if (isEditMode && state.active) {
-				showBottomToolbar();
-				// Update tool state based on current mode
-				const tool = msg.mode === 'select' ? 'select' : msg.mode === 'insert' ? 'insert' : null;
-				updateToolState(tool, !!tool && !state.currentTargetEl, !!state.currentTargetEl);
-			} else {
-				hideBottomToolbar();
-			}
+			dispatch({ type: 'CMD_MODE_CHANGED', mode: msg.mode });
 		} else if (msg.type === "EDIT_TOOL_CHANGED") {
-			// Panel changed the active edit tool — update overlay toolbar state
-			const tool = msg.tool as import("../../shared/types").EditTool;
-			updateToolState(tool, !!tool && !state.currentTargetEl, !!state.currentTargetEl);
+			dispatch({ type: 'CMD_EDIT_TOOL_CHANGED', tool: msg.tool });
 		} else if (msg.type === "COLOR_SCHEME_CHANGED") {
 			const scheme = msg.colorScheme as 'dark' | 'light';
 			state.shadowHost.classList.toggle('light', scheme === 'light');
 			try { localStorage.setItem('vybit-color-scheme', scheme); } catch { /* ignore */ }
 		} else if (msg.type === "TAB_CHANGED") {
-			state.currentTab = msg.tab;
-			state.tabPreference = (msg.tab === 'replace' || msg.tab === 'place') ? 'component' : 'design';
+			dispatch({ type: 'CMD_TAB_CHANGED', tab: msg.tab });
 			state.replaceDirection = (msg.tab === 'replace' && state.currentTargetEl) ? 'element-first' : null;
 			// Rebuild toolbar to highlight the correct action button
 			if (state.currentTargetEl) showDrawButton(state.currentTargetEl);
 		} else if (msg.type === "CANCEL_MODE") {
-			// Panel sent cancel — deactivate all modes, clear selection
-			revertPreview();
-			clearHighlights();
-			clearSelectionState();
-			setSelectMode(false);
-			cancelInsert();
-			clearLockedInsert();
+			dispatch({ type: 'CMD_CANCEL_MODE' });
 		} else if (
 			msg.type === "PATCH_PREVIEW" &&
 			state.currentEquivalentNodes.length > 0 &&
