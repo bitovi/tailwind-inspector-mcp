@@ -21,6 +21,10 @@ export interface DragStartMessage {
   /** Cursor position in iframe-local client coordinates (used by iframe path). */
   clientX?: number;
   clientY?: number;
+  /** When true, this drag inserts a design canvas instead of a component. */
+  canvasInsert?: boolean;
+  /** Insert mode context for canvas insertion ('replace' | 'place'). */
+  canvasInsertMode?: string;
 }
 
 /** Sent on every mousemove during drag. */
@@ -66,5 +70,61 @@ export function isDragMessage(data: unknown): data is DragMessage {
     data !== null &&
     '__vybitDrag' in data &&
     (data as Record<string, unknown>).__vybitDrag === true
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Canvas drag postMessage types (overlay → design canvas iframe)
+// ---------------------------------------------------------------------------
+
+/** Sent when cursor enters a design canvas during a drag session. */
+export interface CanvasDragEnterMessage {
+  __vybitCanvasDrag: true;
+  type: 'CANVAS_DRAG_ENTER';
+  componentName: string;
+  storyId: string;
+  ghostHtml: string;
+  ghostCss: string | null;
+  componentPath: string;
+  args: Record<string, unknown>;
+  /** Cursor position relative to the design canvas iframe viewport. */
+  x: number;
+  y: number;
+}
+
+/** Sent on every move while cursor is over the design canvas. */
+export interface CanvasDragMoveMessage {
+  __vybitCanvasDrag: true;
+  type: 'CANVAS_DRAG_MOVE';
+  x: number;
+  y: number;
+}
+
+/** Sent when the user drops onto the design canvas. */
+export interface CanvasDragDropMessage {
+  __vybitCanvasDrag: true;
+  type: 'CANVAS_DRAG_DROP';
+  x: number;
+  y: number;
+}
+
+/** Sent when cursor leaves the design canvas during drag. */
+export interface CanvasDragLeaveMessage {
+  __vybitCanvasDrag: true;
+  type: 'CANVAS_DRAG_LEAVE';
+}
+
+export type CanvasDragMessage =
+  | CanvasDragEnterMessage
+  | CanvasDragMoveMessage
+  | CanvasDragDropMessage
+  | CanvasDragLeaveMessage;
+
+export function isCanvasDragMessage(data: unknown): data is CanvasDragMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    '__vybitCanvasDrag' in data &&
+    (data as Record<string, unknown>).__vybitCanvasDrag === true
   );
 }

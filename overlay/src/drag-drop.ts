@@ -19,12 +19,14 @@ import {
   type DropPosition,
 } from './drop-zone';
 import { buildComponentDropPatch } from './patch-builder';
-import { isDragMessage, type DragStartMessage } from '../../shared/drag-types';
+import { isDragMessage, type DragStartMessage, type CanvasDragEnterMessage, type CanvasDragMoveMessage, type CanvasDragDropMessage, type CanvasDragLeaveMessage } from '../../shared/drag-types';
 import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, FIXED_OVERLAY } from './styles';
 import { state } from './overlay-state';
 import { GHOST_STYLE_RESET } from '../../shared/css-utils';
 import { createAutoScroller } from '../../shared/auto-scroll';
 import { createDropPreview, type DropPreviewHandle } from './drop-preview';
+import { detectComponent } from './framework-detect';
+import { injectDesignCanvas } from './design-canvas-manager';
 
 // ── Session state ────────────────────────────────────────────────────────
 
@@ -39,12 +41,19 @@ interface DragSession {
   source: 'iframe' | 'popup';
   /** Drag mode: 'replace' = Select active (outline + replace on drop), 'insert' = positional insert */
   mode: DragMode;
+  /** When true, drop inserts a design canvas instead of a component. */
+  canvasInsert: boolean;
+  /** Insert mode context from the panel ('replace' | 'place'). */
+  canvasInsertMode: string;
 }
 
 let session: DragSession | null = null;
 
 /** Hover-to-preview handle for the current drag session. */
 let dropPreview: DropPreviewHandle | null = null;
+
+/** Design canvas iframe currently under the drag cursor (or null). */
+let activeCanvasIframe: HTMLIFrameElement | null = null;
 
 // ── DOM elements owned by the drag session ───────────────────────────────
 
@@ -210,6 +219,8 @@ function handleDragStart(msg: DragStartMessage): void {
     componentArgs: msg.args ?? {},
     source: isPopup ? 'popup' : 'iframe',
     mode: dragMode,
+    canvasInsert: msg.canvasInsert ?? false,
+    canvasInsertMode: msg.canvasInsertMode ?? 'place',
   };
 
   state.exclusiveInteraction = 'component-drag';
@@ -231,7 +242,9 @@ function handleDragStart(msg: DragStartMessage): void {
   });
 
   // If ghost HTML is already available, render a visual thumbnail
-  if (session.ghostHtml) {
+  if (session.canvasInsert) {
+    renderTextPreview(dom.preview, '🎨 Canvas');
+  } else if (session.ghostHtml) {
     renderGhostPreview(dom.preview, session.ghostHtml, session.ghostCss, msg.componentName);
   } else {
     // Fallback: text-only label until DRAG_GHOST_READY arrives
@@ -295,6 +308,43 @@ function findPanelIframe(): HTMLIFrameElement | null {
   return shadow.querySelector('iframe') as HTMLIFrameElement | null;
 }
 
+// ── Design canvas detection ──────────────────────────────────────────────
+
+/** Find the design canvas iframe if the given point is over a `<vb-design-canvas>`. */
+function findDesignCanvasAt(clientX: number, clientY: number): HTMLIFrameElement | null {
+  // Hide drag DOM elements to avoid self-hits
+  if (dom.preview) dom.preview.style.display = 'none';
+  if (dom.indicator) dom.indicator.style.display = 'none';
+  if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
+
+  const el = document.elementFromPoint(clientX, clientY);
+
+  if (dom.preview) dom.preview.style.display = 'flex';
+  if (dom.indicator) dom.indicator.style.display = '';
+
+  if (!el || !(el instanceof HTMLElement)) return null;
+
+  // Walk up to find a [data-tw-design-canvas] wrapper
+  const canvasWrapper = el.closest('[data-tw-design-canvas]');
+  if (!canvasWrapper) return null;
+
+  const iframe = canvasWrapper.querySelector('iframe');
+  return iframe as HTMLIFrameElement | null;
+}
+
+/** Convert parent-page clientX/Y to coordinates relative to the design canvas iframe. */
+function toCanvasLocal(iframe: HTMLIFrameElement, clientX: number, clientY: number): { x: number; y: number } {
+  const rect = iframe.getBoundingClientRect();
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+/** Send a postMessage to the design canvas iframe. */
+function postToCanvas(iframe: HTMLIFrameElement, msg: CanvasDragEnterMessage | CanvasDragMoveMessage | CanvasDragDropMessage | CanvasDragLeaveMessage): void {
+  if (iframe.contentWindow) {
+    iframe.contentWindow.postMessage(msg, '*');
+  }
+}
+
 // ── Drag position update (shared by both paths) ─────────────────────────
 
 function updateDragPosition(clientX: number, clientY: number): void {
@@ -310,6 +360,62 @@ function updateDragPosition(clientX: number, clientY: number): void {
   // skip hit-testing entirely — the live preview holds stable.
   if (dropPreview?.isInsideLockedRect(clientX, clientY)) {
     return;
+  }
+
+  // ── Design canvas detection ──────────────────────────────────────────
+  // Check if the cursor is over a design canvas iframe. If so, relay drag
+  // coordinates to the canvas via postMessage instead of doing page hit-testing.
+  // Skip for canvas-insert drags (can't drop a canvas onto a canvas).
+  const canvasIframe = session.canvasInsert ? null : findDesignCanvasAt(clientX, clientY);
+  if (canvasIframe && session.ghostHtml) {
+    const local = toCanvasLocal(canvasIframe, clientX, clientY);
+
+    // Hide the floating drag preview while over the canvas — the canvas
+    // shows its own placement indicator, so the preview is just clutter.
+    if (dom.preview) dom.preview.style.display = 'none';
+
+    if (activeCanvasIframe !== canvasIframe) {
+      // Left a previous canvas? Send leave.
+      if (activeCanvasIframe) {
+        postToCanvas(activeCanvasIframe, { __vybitCanvasDrag: true, type: 'CANVAS_DRAG_LEAVE' });
+      }
+      activeCanvasIframe = canvasIframe;
+      // Entered a new canvas — send enter with full component data.
+      postToCanvas(canvasIframe, {
+        __vybitCanvasDrag: true,
+        type: 'CANVAS_DRAG_ENTER',
+        componentName: session.componentName,
+        storyId: session.storyId,
+        ghostHtml: session.ghostHtml,
+        ghostCss: session.ghostCss,
+        componentPath: session.componentPath,
+        args: session.componentArgs,
+        x: local.x,
+        y: local.y,
+      });
+    } else {
+      // Still over the same canvas — send move.
+      postToCanvas(canvasIframe, {
+        __vybitCanvasDrag: true,
+        type: 'CANVAS_DRAG_MOVE',
+        x: local.x,
+        y: local.y,
+      });
+    }
+
+    // Hide page-level indicators while over the canvas
+    hideDropIndicator();
+    hideReplaceOutline();
+    dropPreview?.clear();
+    autoScroller.stop();
+    return;
+  }
+
+  // Cursor left the design canvas — notify it and restore drag preview
+  if (activeCanvasIframe) {
+    postToCanvas(activeCanvasIframe, { __vybitCanvasDrag: true, type: 'CANVAS_DRAG_LEAVE' });
+    activeCanvasIframe = null;
+    if (dom.preview) dom.preview.style.display = 'flex';
   }
 
   // Hit-test: hide preview/indicator/outline to avoid self-hits
@@ -328,7 +434,7 @@ function updateDragPosition(clientX: number, clientY: number): void {
     return;
   }
 
-  if (session.mode === 'replace') {
+  if (session.mode === 'replace' && !session.canvasInsert) {
     // Replace mode: show dashed teal outline around the target element
     hideDropIndicator();
     showReplaceOutline(target);
@@ -352,8 +458,8 @@ function updateDragPosition(clientX: number, clientY: number): void {
     const indicatorAxis = adjusted.target.parentElement ? getAxis(adjusted.target.parentElement) : 'vertical';
     showDropIndicator(adjusted.target, adjusted.position, indicatorAxis);
 
-    // Start/update hover-to-preview timer (insert)
-    if (session.ghostHtml && dropPreview) {
+    // Start/update hover-to-preview timer (insert) — skip for canvas-insert drags
+    if (session.ghostHtml && dropPreview && !session.canvasInsert) {
       dropPreview.update(adjusted.target, adjusted.position, session.ghostHtml, session.ghostCss, clientX, clientY);
     }
   }
@@ -384,6 +490,50 @@ function onKeyDown(e: KeyboardEvent): void {
 function executeDrop(clientX: number, clientY: number): void {
   if (!session) return;
 
+  // ── Canvas-insert drag: insert a design canvas at the drop position ──
+  if (session.canvasInsert) {
+    dropPreview?.clear();
+
+    // Find the target at the drop point
+    if (dom.preview) dom.preview.style.display = 'none';
+    if (dom.indicator) dom.indicator.style.display = 'none';
+    if (dom.replaceOutline) dom.replaceOutline.style.display = 'none';
+    const hitTarget = findTarget(clientX, clientY);
+    if (dom.preview) dom.preview.style.display = 'flex';
+
+    if (!hitTarget) {
+      endSession(true);
+      return;
+    }
+
+    const isReplace = session.canvasInsertMode === 'replace';
+    let canvasTarget = hitTarget;
+    let insertMode: string;
+
+    if (isReplace) {
+      insertMode = 'replace';
+    } else {
+      const parentAxis = canvasTarget.parentElement ? getAxis(canvasTarget.parentElement) : 'vertical';
+      const rect = canvasTarget.getBoundingClientRect();
+      const rawPos = computeDropPosition({ x: clientX, y: clientY }, rect, parentAxis);
+      const adj = adjustForEdgeChild(canvasTarget, rawPos);
+      canvasTarget = adj.target;
+      insertMode = adj.position;
+    }
+
+    // Set overlay state needed by injectDesignCanvas
+    const boundary = detectComponent(canvasTarget);
+    state.currentTargetEl = canvasTarget;
+    state.currentBoundary = boundary
+      ? { componentName: boundary.componentName }
+      : { componentName: canvasTarget.tagName.toLowerCase() };
+    state.currentEquivalentNodes = [canvasTarget];
+
+    injectDesignCanvas(insertMode as any);
+    endSession(false);
+    return;
+  }
+
   // If ghost not ready yet, queue the drop
   if (!session.ghostHtml) {
     pendingDrop = { x: clientX, y: clientY };
@@ -391,6 +541,22 @@ function executeDrop(clientX: number, clientY: number): void {
       dom.preview.innerHTML = '';
       renderTextPreview(dom.preview, `${session.componentName} (loading…)`);
     }
+    return;
+  }
+
+  // ── Design canvas drop ──────────────────────────────────────────────
+  // If cursor is over a design canvas, forward the drop to the canvas iframe.
+  const canvasIframe = activeCanvasIframe ?? findDesignCanvasAt(clientX, clientY);
+  if (canvasIframe) {
+    const local = toCanvasLocal(canvasIframe, clientX, clientY);
+    postToCanvas(canvasIframe, {
+      __vybitCanvasDrag: true,
+      type: 'CANVAS_DRAG_DROP',
+      x: local.x,
+      y: local.y,
+    });
+    activeCanvasIframe = null;
+    endSession(false);
     return;
   }
 
@@ -495,6 +661,12 @@ function endSession(cancelled: boolean): void {
   if (dropPreview) {
     dropPreview.destroy();
     dropPreview = null;
+  }
+
+  // Notify any active design canvas that the drag ended
+  if (activeCanvasIframe) {
+    postToCanvas(activeCanvasIframe, { __vybitCanvasDrag: true, type: 'CANVAS_DRAG_LEAVE' });
+    activeCanvasIframe = null;
   }
 
   // Remove event listeners

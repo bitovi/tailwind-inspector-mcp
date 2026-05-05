@@ -29,6 +29,7 @@ function toSummary(p: Patch): PatchSummary {
     originalHtml: p.originalHtml,
     newHtml: p.newHtml,
     bugDescription: p.bugDescription,
+    target: p.target,
   };
 }
 

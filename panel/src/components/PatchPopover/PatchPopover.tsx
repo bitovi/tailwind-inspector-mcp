@@ -39,6 +39,24 @@ function stripHtml(html: string, maxLen: number): string {
 	return text.length > maxLen ? text.slice(0, maxLen) + "…" : text;
 }
 
+/**
+ * Build a short label for a delete-element or move-element patch.
+ * Shows `<tag>` in `<Component>` when the deleted element is a child,
+ * or just `<Component>` when the component itself is deleted.
+ */
+function describeDeleteTarget(item: PatchItem): string {
+	const componentName = item.component?.name;
+	const tag = "target" in item ? item.target?.tag : undefined;
+
+	// If we have a target tag that differs from the component name, show both
+	if (tag && componentName && tag.toLowerCase() !== componentName.toLowerCase()) {
+		return `<${tag}> in <${componentName}>`;
+	}
+	if (componentName) return `<${componentName}>`;
+	if (tag) return `<${tag}>`;
+	return item.elementKey || "element";
+}
+
 interface PatchPopoverProps {
 	label: string;
 	count: number;
@@ -160,18 +178,37 @@ export function PatchPopover({
 								const isComponentDrop = "kind" in item && item.kind === "component-drop";
 								const isTextChange = "kind" in item && item.kind === "text-change";
 								const isBugReport = "kind" in item && item.kind === "bug-report";
+								const isDeleteElement = "kind" in item && item.kind === "delete-element";
+								const isMoveElement = "kind" in item && item.kind === "move-element";
 								return (
 									<div
 										key={item.id}
 										className="flex items-center gap-1.5 px-3 py-1.5 border-b border-bit-border last:border-b-0 group"
 									>
 										<div className="flex-1 min-w-0">
-											{!isMessage && !isDesign && !isComponentDrop && !isTextChange && !isBugReport && item.component?.name && (
+											{!isMessage && !isDesign && !isComponentDrop && !isTextChange && !isBugReport && !isDeleteElement && !isMoveElement && item.component?.name && (
 												<div className="text-[10px] text-bit-muted truncate">
 													{item.component.name}
 												</div>
 											)}
-											{isBugReport ? (
+											{isDeleteElement ? (
+												<div className="text-[11px] text-bit-text">
+													<div className="truncate">
+														<span className="mr-1">🗑️</span>
+														Delete {describeDeleteTarget(item)}
+													</div>
+													{"target" in item && item.target?.innerText && (
+														<div className="text-[10px] text-bit-muted truncate mt-0.5">
+															"{item.target.innerText}"
+														</div>
+													)}
+												</div>
+											) : isMoveElement ? (
+												<div className="text-[11px] text-bit-text truncate">
+													<span className="mr-1">↕️</span>
+													Move {describeDeleteTarget(item)}
+												</div>
+											) : isBugReport ? (
 												<div className="text-[11px] text-bit-text">
 													<div className="flex items-center gap-1.5">
 														<span>🐛</span>

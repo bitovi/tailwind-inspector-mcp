@@ -314,8 +314,8 @@ function App() {
             <>
               <p>Don't want to describe in words? Draw it instead. The signups below are just numbers — let's sketch a chart to visualize the trend.</p>
               <ol>
-                <li>Use the <strong>Insert</strong> button (<InsertIcon />) at the bottom of the page and click between <strong>"Monthly Signups"</strong> and <strong>"January"</strong> to set an insertion point</li>
-                <li>In the panel's <strong>Components</strong> tab, click <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span></li>
+                <li>In the panel's <strong>Components</strong> tab, find the <span style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#374151',color:'#f9fafb',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}><span style={{color:'#5fd4da',fontSize:'13px',lineHeight:1}}>＋</span> Draw / Screenshot Canvas</span> button</li>
+                <li><strong>Drag</strong> it from the panel onto the page and drop it between <strong>"Monthly Signups"</strong> and <strong>"January"</strong> — teal drop-zone indicators will guide you</li>
                 <li>On the canvas, sketch a bar chart — draw a few bars of different heights with labels underneath</li>
                 <li>Click <strong style={{display:'inline-flex',alignItems:'center',gap:'4px',background:'#00848B',color:'#fff',fontSize:'11px',fontWeight:600,padding:'2px 8px',borderRadius:'4px',fontFamily:'sans-serif',letterSpacing:'0.01em'}}>✓ Add to Drafts</strong> to queue the drawing</li>
               </ol>

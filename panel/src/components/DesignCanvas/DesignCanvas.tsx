@@ -22,9 +22,14 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponen
     handleSubmit,
     ghostPos,
     ghostSize,
+    dragGhost,
   } = useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onComponentPlaced });
 
   const isArmed = !!armedComponent;
+  const isDragging = !!dragGhost;
+  // Ghost HTML/CSS comes from either the armed component (Place button) or a drag session
+  const activeGhostHtml = armedComponent?.ghostHtml ?? dragGhost?.ghostHtml;
+  const activeGhostCss = armedComponent?.ghostCss ?? dragGhost?.ghostCss;
 
   return (
     <div className="flex flex-col h-full" data-testid="design-canvas">
@@ -46,15 +51,15 @@ export function DesignCanvas({ onSubmit, onClose, backgroundImage, armedComponen
 
       <div
         ref={containerRef}
-        className={`bg-white overflow-hidden relative ${isArmed ? 'cursor-crosshair' : ''}`}
+        className={`bg-white overflow-hidden relative ${isArmed || isDragging ? 'cursor-crosshair' : ''}`}
         style={{ flex: 1 }}
       >
         <canvas ref={canvasElRef} />
-        {/* Ghost HTML preview following cursor when a component is armed */}
-        {isArmed && ghostPos && armedComponent?.ghostHtml && armedComponent?.ghostCss && (
+        {/* Ghost HTML preview following cursor when a component is armed or being dragged */}
+        {(isArmed || isDragging) && ghostPos && activeGhostHtml && (
           <ShadowGhost
-            ghostHtml={armedComponent.ghostHtml}
-            ghostCss={armedComponent.ghostCss}
+            ghostHtml={activeGhostHtml}
+            ghostCss={activeGhostCss ?? ''}
             style={{
               position: 'absolute',
               left: ghostPos.x - (ghostSize?.width ?? 0) / 2,

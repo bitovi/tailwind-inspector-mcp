@@ -124,6 +124,8 @@ export interface PatchSummary {
   newHtml?: string;
   // Bug-report display fields:
   bugDescription?: string;
+  // Delete/move display fields:
+  target?: { tag: string; classes: string; innerText: string };
 }
 
 export interface CommitSummary {

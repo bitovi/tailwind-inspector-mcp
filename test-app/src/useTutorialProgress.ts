@@ -30,6 +30,8 @@ interface ServerMessage {
   patch?: {
     kind?: string
     componentArgs?: Record<string, unknown>
+    componentStoryId?: string
+    component?: { name?: string }
   }
 }
 
@@ -70,26 +72,36 @@ export function useTutorialProgress() {
         case 'MESSAGE_STAGE':
           if (msg.insertMode) completeStep(6)
           if (msg.inputMethod === 'voice') completeStep(4)
-          if (msg.elementKey === 'theme') completeStep(12)
+          if (msg.elementKey === 'theme') completeStep(15)
           break
         case 'TEXT_EDIT_DONE':
           completeStep(5)
           break
         case 'COMPONENT_DROPPED': {
-          completeStep(8)
+          const cName = msg.patch?.component?.name ?? ''
+          const isElement = /^(div|button|span|section|header|footer|nav|main|aside|article)\b/.test(cName)
+          if (msg.patch?.componentStoryId) {
+            completeStep(11)  // Place a Component (from Storybook)
+          } else if (isElement) {
+            completeStep(16)  // Wireframe with HTML Elements
+          } else {
+            completeStep(10)  // Copy and Paste (duplicate/paste, no storyId)
+          }
           const args = msg.patch?.componentArgs
           const hasNested = args != null && Object.values(args).some(
             (v) => v != null && typeof v === 'object' && (v as Record<string, unknown>).type === 'component'
           )
-          if (hasNested) completeStep(9)
+          if (hasNested) completeStep(12)
           break
         }
         case 'PATCH_STAGED':
-          if ((msg.patch?.kind ?? 'class-change') === 'class-change') completeStep(10)
+          if ((msg.patch?.kind ?? 'class-change') === 'class-change') completeStep(13)
           if (msg.patch?.kind === 'design') completeStep(7)
+          if (msg.patch?.kind === 'delete-element') completeStep(9)
+          if (msg.patch?.kind === 'move-element') completeStep(8)
           break
         case 'BUG_REPORT_STAGE':
-          completeStep(11)
+          completeStep(14)
           break
         case 'DESIGN_SUBMIT':
           completeStep(7)

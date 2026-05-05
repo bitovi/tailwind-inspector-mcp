@@ -6,6 +6,7 @@ import { DragProvider } from './context/DragContext';
 import { DragPreview } from './components/DragPreview';
 import { sendTo, send, onMessage } from '../../ws';
 import { useGhostCache } from '../../hooks/useGhostCache';
+import { useCanvasDrag } from './hooks/useCanvasDrag';
 
 interface ReceptiveFieldTarget {
   groupName: string;
@@ -39,6 +40,11 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
   const [armedCanvas, setArmedCanvas] = useState(false);
   const [armedComponentData, setArmedComponentData] = useState<ArmedComponentData | null>(null);
   const { getCachedGhost, submitToCache } = useGhostCache();
+
+  // ── Canvas button drag support ──────────────────────────────────────
+  const { onPointerDown: onCanvasPointerDown, onPointerMove: onCanvasPointerMove, onPointerUp: onCanvasPointerUp, didDragRef: canvasDragRef } = useCanvasDrag({
+    insertMode: insertMode === 'replace' ? 'replace' : 'place',
+  });
 
   // ── Receptive field state (Flow E: Set Prop) ────────────────────────
   const [receptiveField, setReceptiveField] = useState<ReceptiveFieldTarget | null>(null);
@@ -185,11 +191,16 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
   return (
     <DragProvider>
     <div className="p-3 flex flex-col gap-3">
-      {/* Canvas button — triggers design canvas on the overlay */}
+      {/* Canvas button — triggers design canvas on the overlay (click or drag) */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          // Suppress click if a drag just completed
+          if (canvasDragRef.current) {
+            canvasDragRef.current = false;
+            return;
+          }
           if (armedCanvas) {
             // Already armed — disarm
             setArmedCanvas(false);
@@ -200,7 +211,10 @@ export function DrawTab({ insertMode, hasPageSelection, selectedComponentName, s
           const mode: InsertMode = insertMode === 'replace' ? 'replace' : 'after';
           sendTo('overlay', { type: 'INSERT_DESIGN_CANVAS', insertMode: mode });
         }}
-        className={`flex items-center gap-2.5 px-3 py-2 rounded-md border transition-all cursor-pointer text-left ${
+        onPointerDown={onCanvasPointerDown}
+        onPointerMove={onCanvasPointerMove}
+        onPointerUp={onCanvasPointerUp}
+        className={`flex items-center gap-2.5 px-3 py-2 rounded-md border transition-all cursor-grab active:cursor-grabbing text-left touch-none ${
           armedCanvas
             ? 'border-bit-teal bg-bit-teal/10 ring-1 ring-bit-teal'
             : 'border-bit-border bg-bit-surface hover:border-bit-teal hover:bg-bit-teal/5'

@@ -146,7 +146,7 @@ function InspectorApp() {
 	const tailwindVersion = themeConfig?.tailwindVersion ?? 4;
 	useEffect(() => {
 		sendTo('overlay', { type: 'THEME_PREVIEW', overrides: themeOverrides, tailwindVersion });
-	}, [themeOverrides, tailwindVersion]);
+	}, [themeOverrides, tailwindVersion, wsConnected]);
 	// On unmount / mode change away from theme, clear preview
 	useEffect(() => {
 		return () => {

@@ -54,7 +54,7 @@ export const PRIMITIVES: Primitive[] = [
   {
     id: 'button-inline',
     name: 'button.inline',
-    ghostHtml: `<button class="inline p-1 text-sm rounded border border-dashed border-black">button</button>`,
+    ghostHtml: `<button class="inline p-1 text-sm rounded border border-dashed border-black bg-[#e5e7eb]">button</button>`,
     previewCss: `
       .inline { display: inline; }
       .p-1 { padding: 0.25rem; }
@@ -63,7 +63,7 @@ export const PRIMITIVES: Primitive[] = [
       .border { border-width: 1px; }
       .border-dashed { border-style: dashed; }
       .border-black { border-color: black; }
-      button { cursor: pointer; background: none; font: inherit; }
+      .bg-\\[\\#e5e7eb\\] { background-color: #e5e7eb; }
     `,
   },
 ];

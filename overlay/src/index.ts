@@ -22,6 +22,7 @@ import {
 	applyPreview,
 	applyPreviewBatch,
 	commitPreview,
+	ensureCommittedCss,
 	getPreviewState,
 	revertPreview,
 } from "./patcher";
@@ -1205,6 +1206,7 @@ function init(): void {
 			state.currentEquivalentNodes.length > 0 &&
 			!isTextEditing()
 		) {
+			console.log(`[vybit-index] PATCH_PREVIEW received old="${msg.oldClass}" new="${msg.newClass}" nodes=${state.currentEquivalentNodes.length}`);
 			applyPreview(
 				state.currentEquivalentNodes,
 				msg.oldClass,
@@ -1319,16 +1321,33 @@ function init(): void {
 
 			showToast("Change staged");
 
+			console.log(`[vybit-index] PATCH_STAGE received old="${msg.oldClass}" new="${msg.newClass}" hasPreviewState=${!!previewState} nodes=${state.currentEquivalentNodes.length}`);
+			console.log(`[vybit-index] PATCH_STAGE target className="${state.currentTargetEl?.className}"`);
+
 			// The staged change is now the baseline — clear preview tracking so the
 			// next preview captures the current DOM state (with the staged class).
 			// Special case: if this is an "add" (oldClass = '') with no prior preview,
 			// the new class was never applied to the DOM. Apply it now, then commit
 			// once the CSS is injected so the class renders immediately.
 			if (!previewState && !msg.oldClass && msg.newClass) {
+				console.log(`[vybit-index] PATCH_STAGE branch: ADD (no preview, no oldClass) → applyPreview+commitPreview`);
 				applyPreview(state.currentEquivalentNodes, '', msg.newClass, SERVER_ORIGIN)
 					.then(() => commitPreview());
 			} else {
+				console.log(`[vybit-index] PATCH_STAGE branch: COMMIT (has preview or has oldClass) → commitPreview+ensureCommittedCss`);
 				commitPreview();
+				// Guard against PATCH_PREVIEW→PATCH_STAGE race: if the preview's
+				// CSS fetch was still in-flight when we committed, the CSS was never
+				// injected and the class may not have been applied to the DOM.
+				// Ensure both the class and its CSS are present.
+				for (const node of state.currentEquivalentNodes) {
+					if (msg.oldClass) node.classList.remove(msg.oldClass);
+					if (msg.newClass) node.classList.add(msg.newClass);
+					console.log(`[vybit-index] PATCH_STAGE forced classList: node.className="${node.className}"`);
+				}
+				if (msg.newClass) {
+					ensureCommittedCss(msg.newClass, SERVER_ORIGIN);
+				}
 			}
 		} else if (msg.type === "CLEAR_HIGHLIGHTS") {
 			revertPreview();
