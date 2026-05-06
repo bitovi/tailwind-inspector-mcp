@@ -5,6 +5,7 @@
 // logical state (mode, selection, interaction locks, etc.).
 
 import type { ElementGroup } from "./grouping";
+import { getState, dispatch } from './overlay-state-machine';
 
 // ── Exclusive interaction lock ───────────────────────────────────────────
 // At most ONE transient interaction can be active at a time.  Every visual
@@ -29,6 +30,10 @@ export interface DesignCanvasEntry {
 	anchor: ChildNode | null;
 }
 
+// LEGACY: These fields are bridged from the state machine in overlay-state-machine/.
+// The state machine is the source of truth. Direct writes should eventually be
+// replaced with dispatch() calls. Until then, the subscriber bridge in index.ts
+// syncs state machine → old state after every dispatch.
 export const state = {
 	active: false,
 
@@ -60,8 +65,9 @@ export const state = {
 
 /** Derive the concrete tab ID from the current mode + tab preference */
 export function resolveTab(): string {
-	if (state.currentMode === 'insert') return 'place';
-	return state.tabPreference === 'component' ? 'replace' : 'design';
+	const sm = getState();
+	if (sm.mode === 'insert') return 'place';
+	return sm.tabPreference === 'component' ? 'replace' : 'design';
 }
 
 /** Clear all element-selection state. Call before re-entering a mode or resetting. */
@@ -74,6 +80,10 @@ export function clearSelectionState(): void {
 	state.cachedExactMatches = null;
 	state.manuallyAddedNodes = new Set<HTMLElement>();
 	state.addMode = false;
+	// Keep state machine in sync
+	if (getState().selectedEl !== null) {
+		dispatch({ type: 'ELEMENT_DESELECTED' });
+	}
 }
 
 /** Apply grab cursor to the currently selected element. */

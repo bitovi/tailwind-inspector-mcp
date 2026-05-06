@@ -51,6 +51,12 @@ function onBrowseLocked(target: HTMLElement): void {
 		? { componentName: boundary.componentName }
 		: { componentName: target.tagName.toLowerCase() };
 	state.cachedNearGroups = null;
+	dispatch({
+		type: 'ELEMENT_SELECTED',
+		el: target,
+		equivalentNodes: [target],
+		boundary: state.currentBoundary,
+	});
 	showDrawButton(target);
 	// Persistent browse: stay orange (picking) — browse continues
 	updateToolState('insert', true, false);
@@ -294,6 +300,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 
 	// ── Add-mode: toggle element in/out of selection ──
 	if (state.addMode) {
+		// TODO: dispatch to state machine (add-mode modifies equivalentNodes incrementally)
 		if (state.manuallyAddedNodes.has(targetEl)) {
 			state.manuallyAddedNodes.delete(targetEl);
 		} else {
@@ -332,6 +339,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 
 	// ── Shift+click: toggle element in/out of current selection ──
 	if (e.shiftKey && state.currentTargetEl) {
+		// TODO: dispatch to state machine (shift+click modifies equivalentNodes incrementally)
 		const idx = state.currentEquivalentNodes.indexOf(targetEl);
 		if (idx !== -1) {
 			state.currentEquivalentNodes.splice(idx, 1);
@@ -756,6 +764,9 @@ function init(): void {
 		state.currentTab = newState.currentTab;
 		state.tabPreference = newState.tabPreference;
 		state.active = newState.active;
+		state.currentTargetEl = newState.selectedEl;
+		state.currentEquivalentNodes = newState.equivalentNodes;
+		state.currentBoundary = newState.boundary;
 		state.exclusiveInteraction =
 			newState.interaction.kind === 'drag-moving' ? 'drag-moving'
 			: newState.interaction.kind === 'component-drag' ? 'component-drag'
@@ -1188,6 +1199,7 @@ function init(): void {
 					ghostEl.replaceWith(newContent);
 					// Update current selection if we were pointing at this ghost
 					if (state.currentTargetEl === ghostEl) {
+						// TODO: dispatch to state machine (ghost replacement updates selection target)
 						state.currentTargetEl = newContent;
 						state.currentEquivalentNodes = [newContent];
 						clearHighlights();
@@ -1307,6 +1319,9 @@ function init(): void {
 				state.currentTargetEl = null;
 				state.currentBoundary = null;
 				state.cachedNearGroups = null;
+				if (getState().selectedEl !== null) {
+					dispatch({ type: 'ELEMENT_DESELECTED' });
+				}
 			}
 		} else if (msg.type === "SWITCH_CONTAINER") {
 			const newName = msg.container as ContainerName;
@@ -1335,6 +1350,12 @@ function init(): void {
 						state.currentTargetEl = target;
 						state.currentBoundary = { componentName };
 						state.currentEquivalentNodes = result.exactMatch;
+						dispatch({
+							type: 'ELEMENT_SELECTED',
+							el: target,
+							equivalentNodes: result.exactMatch,
+							boundary: { componentName },
+						});
 						handleCaptureScreenshot();
 					});
 				}
@@ -1350,6 +1371,12 @@ function init(): void {
 						? { componentName: boundary.componentName }
 						: { componentName: locked.target.tagName.toLowerCase() };
 					state.currentEquivalentNodes = [locked.target];
+					dispatch({
+						type: 'ELEMENT_SELECTED',
+						el: locked.target,
+						equivalentNodes: [locked.target],
+						boundary: state.currentBoundary,
+					});
 					clearLockedInsert();
 					console.log('[tw-debug] locked path — calling injectDesignCanvas, position=', locked.position, 'boundary=', state.currentBoundary);
 					injectDesignCanvas(locked.position as InsertMode);
@@ -1368,6 +1395,12 @@ function init(): void {
 								? { componentName: boundary.componentName }
 								: { componentName: target.tagName.toLowerCase() };
 							state.currentEquivalentNodes = [target];
+							dispatch({
+								type: 'ELEMENT_SELECTED',
+								el: target,
+								equivalentNodes: [target],
+								boundary: state.currentBoundary,
+							});
 							console.log('[tw-debug] step 4: state set, currentBoundary=', state.currentBoundary, '— calling injectDesignCanvas');
 							injectDesignCanvas(position as InsertMode);
 							console.log('[tw-debug] injectDesignCanvas returned OK');
@@ -1396,6 +1429,12 @@ function init(): void {
 					state.currentTargetEl = selectionTarget;
 					state.currentBoundary = { componentName: msg.componentName };
 					state.currentEquivalentNodes = [selectionTarget];
+					dispatch({
+						type: 'ELEMENT_SELECTED',
+						el: selectionTarget,
+						equivalentNodes: [selectionTarget],
+						boundary: { componentName: msg.componentName },
+					});
 					requestAnimationFrame(() => {
 						clearHighlights();
 						highlightElement(selectionTarget);
