@@ -7,6 +7,7 @@ import { highlightElement, clearHighlights, removeDrawButton } from "./element-h
 import { computeNearGroups, findSamePathElements } from "./grouping";
 import type { PathMatchResult } from "./grouping";
 import { state, resolveTab, clearSelectionState } from "./overlay-state";
+import { dom } from "./overlay-dom";
 import { revertPreview } from "./patcher";
 import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
@@ -56,7 +57,7 @@ function showMicBanner(message: string): void {
 	});
 	banner.appendChild(dismiss);
 
-	state.shadowRoot.appendChild(banner);
+	dom.shadowRoot.appendChild(banner);
 	activeBanner = banner;
 
 	requestAnimationFrame(() => banner.classList.add("visible"));
@@ -85,16 +86,16 @@ function setupToolbarDrag(handle: HTMLElement, toolbar: HTMLElement): void {
 		toolbar.style.left = `${startLeft + dx}px`;
 		toolbar.style.top = `${startTop + dy}px`;
 		// Snap message row directly below toolbar
-		if (state.msgRowEl) {
+		if (dom.msgRowEl) {
 			const tRect = toolbar.getBoundingClientRect();
-			state.msgRowEl.style.left = `${tRect.left}px`;
-			state.msgRowEl.style.top = `${tRect.bottom + 4}px`;
+			dom.msgRowEl.style.left = `${tRect.left}px`;
+			dom.msgRowEl.style.top = `${tRect.bottom + 4}px`;
 		}
 		// Reposition picker if open
-		if (state.pickerEl) {
+		if (dom.pickerEl) {
 			const addGroupBtn = toolbar.querySelector('.tb-adjunct') as HTMLElement | null;
 			if (addGroupBtn) {
-				positionWithFlip(addGroupBtn, state.pickerEl, 'bottom-start');
+				positionWithFlip(addGroupBtn, dom.pickerEl, 'bottom-start');
 			}
 		}
 	};
@@ -184,8 +185,8 @@ export { positionWithFlip };
 
 /** Reposition toolbar + message row at fresh coordinates (call on scroll/resize). */
 export function repositionToolbar(): void {
-	if (state.toolbarEl && state.currentTargetEl && !isToolbarDragged()) {
-		positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+	if (dom.toolbarEl && state.currentTargetEl && !isToolbarDragged()) {
+		positionBothMenus(state.currentTargetEl, dom.toolbarEl, dom.msgRowEl);
 	}
 	repositionDrawer();
 }
@@ -403,18 +404,18 @@ export function showGroupPicker(
 	onClose: () => void,
 	onCountChange: (totalCount: number) => void,
 ): void {
-	if (state.pickerCloseHandler) {
-		document.removeEventListener("click", state.pickerCloseHandler, {
+	if (dom.pickerCloseHandler) {
+		document.removeEventListener("click", dom.pickerCloseHandler, {
 			capture: true,
 		});
-		state.pickerCloseHandler = null;
+		dom.pickerCloseHandler = null;
 	}
-	state.pickerEl?.remove();
+	dom.pickerEl?.remove();
 
 	// Lazily compute near-groups on first open
 	if (!state.cachedNearGroups && state.currentTargetEl) {
 		const exactSet = new Set(state.currentEquivalentNodes);
-		state.cachedNearGroups = computeNearGroups(state.currentTargetEl, exactSet, state.shadowHost);
+		state.cachedNearGroups = computeNearGroups(state.currentTargetEl, exactSet, dom.shadowHost);
 	}
 	const groups = state.cachedNearGroups ?? [];
 
@@ -428,8 +429,8 @@ export function showGroupPicker(
 	picker.className = "el-picker";
 	picker.style.left = "0px";
 	picker.style.top = "0px";
-	state.shadowRoot.appendChild(picker);
-	state.pickerEl = picker;
+	dom.shadowRoot.appendChild(picker);
+	dom.pickerEl = picker;
 
 	// Current selection summary
 	const exactRow = document.createElement("div");
@@ -480,7 +481,7 @@ export function showGroupPicker(
 	let pathMatchChecked = false;
 
 	function clearPreviewHighlights() {
-		state.shadowRoot
+		dom.shadowRoot
 			.querySelectorAll(".highlight-preview")
 			.forEach((el) => el.remove());
 	}
@@ -516,7 +517,7 @@ export function showGroupPicker(
 		}
 
 		state.currentEquivalentNodes = allNodes;
-		state.shadowRoot
+		dom.shadowRoot
 			.querySelectorAll(".highlight-overlay")
 			.forEach((el) => el.remove());
 		state.currentEquivalentNodes.forEach((n) => highlightElement(n));
@@ -534,7 +535,7 @@ export function showGroupPicker(
 					typeof state.currentTargetEl.className === "string"
 						? state.currentTargetEl.className
 						: "",
-				tailwindConfig: state.tailwindConfigCache,
+				tailwindConfig: dom.tailwindConfigCache,
 			});
 		}
 	}
@@ -542,7 +543,7 @@ export function showGroupPicker(
 	const checkedGroups = new Set<number>();
 
 	// Allow external code (add-mode click handler) to refresh the picker
-	state.pickerRefreshCallback = updateSelection;
+	dom.pickerRefreshCallback = updateSelection;
 
 	// ── "All exact matches (N)" row ──
 	const exactMatches = state.cachedExactMatches ?? [];
@@ -578,7 +579,7 @@ export function showGroupPicker(
 				preview.style.left = `${rect.left - 3}px`;
 				preview.style.width = `${rect.width + 6}px`;
 				preview.style.height = `${rect.height + 6}px`;
-				state.shadowRoot.appendChild(preview);
+				dom.shadowRoot.appendChild(preview);
 			}
 		});
 		row.addEventListener("mouseleave", () => clearPreviewHighlights());
@@ -620,7 +621,7 @@ export function showGroupPicker(
 				preview.style.left = `${rect.left - 3}px`;
 				preview.style.width = `${rect.width + 6}px`;
 				preview.style.height = `${rect.height + 6}px`;
-				state.shadowRoot.appendChild(preview);
+				dom.shadowRoot.appendChild(preview);
 			}
 		});
 		row.addEventListener("mouseleave", () => clearPreviewHighlights());
@@ -667,7 +668,7 @@ export function showGroupPicker(
 				preview.style.left = `${rect.left - 3}px`;
 				preview.style.width = `${rect.width + 6}px`;
 				preview.style.height = `${rect.height + 6}px`;
-				state.shadowRoot.appendChild(preview);
+				dom.shadowRoot.appendChild(preview);
 			}
 		});
 
@@ -685,22 +686,22 @@ export function showGroupPicker(
 		if (state.addMode) {
 			setAddMode(false);
 		}
-		state.pickerRefreshCallback = null;
-		state.shadowRoot
+		dom.pickerRefreshCallback = null;
+		dom.shadowRoot
 			.querySelectorAll(".highlight-preview")
 			.forEach((el) => el.remove());
-		if (state.pickerCloseHandler) {
-			document.removeEventListener("click", state.pickerCloseHandler, {
+		if (dom.pickerCloseHandler) {
+			document.removeEventListener("click", dom.pickerCloseHandler, {
 				capture: true,
 			});
-			state.pickerCloseHandler = null;
+			dom.pickerCloseHandler = null;
 		}
-		state.pickerEl?.remove();
-		state.pickerEl = null;
+		dom.pickerEl?.remove();
+		dom.pickerEl = null;
 	};
 
 	setTimeout(() => {
-		state.pickerCloseHandler = (e: MouseEvent) => {
+		dom.pickerCloseHandler = (e: MouseEvent) => {
 			// Don't close the picker while add-mode is active — clicks go to clickHandler
 			if (state.addMode) return;
 			const path = e.composedPath();
@@ -709,6 +710,6 @@ export function showGroupPicker(
 				onClose();
 			}
 		};
-		document.addEventListener("click", state.pickerCloseHandler, { capture: true });
+		document.addEventListener("click", dom.pickerCloseHandler, { capture: true });
 	}, 0);
 }

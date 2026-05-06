@@ -15,6 +15,7 @@ import {
   type DropPosition,
 } from './drop-zone';
 import { state, clearGrabCursor, setGrabCursor } from './overlay-state';
+import { dom } from './overlay-dom';
 import { dispatch, getState } from './overlay-state-machine';
 import { clearHighlights, highlightElement, clearHoverPreview } from './element-highlight';
 import { removeElementDrawer } from './element-drawer';
@@ -90,7 +91,7 @@ function onMouseDown(e: MouseEvent): void {
 
   // Don't start drag if clicking on our own shadow UI
   const composed = e.composedPath();
-  if (composed.some(el => el === state.shadowHost)) return;
+  if (composed.some(el => el === dom.shadowHost)) return;
 
   // Check if click is on or inside the selected element
   const target = e.target as HTMLElement;

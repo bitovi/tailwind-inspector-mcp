@@ -8,6 +8,7 @@
  */
 
 import { computePosition, flip, offset, autoUpdate } from "@floating-ui/dom";
+import { dom } from "./overlay-dom";
 import { state } from "./overlay-state";
 import { sendTo, send } from "./ws";
 import { startTextEdit, endTextEdit, isTextEditing } from "./text-edit";
@@ -54,7 +55,7 @@ export function showElementDrawer(targetEl: HTMLElement): void {
 
 	renderStateA();
 
-	state.shadowRoot.appendChild(drawerEl);
+	dom.shadowRoot.appendChild(drawerEl);
 
 	// Position below element with auto-update
 	cleanupAutoUpdate = autoUpdate(targetEl, drawerEl, () => {
@@ -266,7 +267,7 @@ function enterTextEditMode(): void {
 		buildTextContext,
 		positionToolbar: () => positionDrawer(),
 		repositionHighlights,
-		shadowRoot: state.shadowRoot,
+		shadowRoot: dom.shadowRoot,
 		suppressActionBar: true,
 		onDone: () => {
 			// Text edit ended — go back to State A

@@ -2,7 +2,7 @@
 // Contains Select (with 1+ adjunct), Text, and Insert tool buttons.
 // Lives in the overlay shadow DOM.
 
-import { state } from "./overlay-state";
+import { dom } from "./overlay-dom";
 import { sendTo } from "./ws";
 import { SELECT_SVG, INSERT_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import type { EditTool } from "../../shared/types";
@@ -290,7 +290,7 @@ export function showBottomToolbar(): void {
 	// Setup drag
 	setupDrag(grip, toolbar);
 
-	state.shadowRoot.appendChild(toolbar);
+	dom.shadowRoot.appendChild(toolbar);
 	toolbarEl = toolbar;
 	userDragged = false;
 	centerToolbar();

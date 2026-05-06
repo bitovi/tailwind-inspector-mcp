@@ -28,6 +28,7 @@ import {
 } from "./patcher";
 import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab, clearSelectionState } from "./overlay-state";
+import { dom } from "./overlay-dom";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
 import { showDrawButton, initToolbar, repositionToolbar, showGroupPicker } from "./element-toolbar";
 import { initElementDrawer, removeElementDrawer } from "./element-drawer";
@@ -174,13 +175,13 @@ debugLog('tw-overlay', `Script tags with "overlay.js":`, Array.from(document.que
 const insideStorybook = !!(window as any).__STORYBOOK_PREVIEW__;
 
 async function fetchTailwindConfig(): Promise<any> {
-	if (state.tailwindConfigCache) {
-		return state.tailwindConfigCache;
+	if (dom.tailwindConfigCache) {
+		return dom.tailwindConfigCache;
 	}
 	try {
 		const res = await fetch(`${SERVER_ORIGIN}/tailwind-config`, { credentials: 'include' });
-		state.tailwindConfigCache = await res.json();
-		return state.tailwindConfigCache;
+		dom.tailwindConfigCache = await res.json();
+		return dom.tailwindConfigCache;
 	} catch (err) {
 		console.error("[tw-overlay] Failed to fetch tailwind config:", err);
 		return {};
@@ -251,7 +252,7 @@ function normalizeToHex(cssColor: string): string | null {
 async function clickHandler(e: MouseEvent): Promise<void> {
 	// Ignore clicks on our own shadow DOM UI
 	const composed = e.composedPath();
-	if (composed.some((el) => el === state.shadowHost)) { return; }
+	if (composed.some((el) => el === dom.shadowHost)) { return; }
 
 	// While text editing, suppress page click handlers (buttons, links, etc.)
 	if (handleTextEditingClick(e)) return;
@@ -306,7 +307,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 		}
 		state.currentEquivalentNodes = allNodes;
 		// Remove only highlight overlays — NOT the toolbar/picker
-		state.shadowRoot
+		dom.shadowRoot
 			.querySelectorAll(".highlight-overlay")
 			.forEach((el) => el.remove());
 		for (const n of allNodes) {
@@ -321,11 +322,11 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 					typeof state.currentTargetEl.className === "string"
 						? state.currentTargetEl.className
 						: "",
-				tailwindConfig: state.tailwindConfigCache,
+				tailwindConfig: dom.tailwindConfigCache,
 			});
 		}
 		// Refresh picker UI (count chip, etc.) if open
-		state.pickerRefreshCallback?.();
+		dom.pickerRefreshCallback?.();
 		return;
 	}
 
@@ -352,7 +353,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 					typeof state.currentTargetEl.className === "string"
 						? state.currentTargetEl.className
 						: "",
-				tailwindConfig: state.tailwindConfigCache,
+				tailwindConfig: dom.tailwindConfigCache,
 			});
 		}
 		return;
@@ -387,7 +388,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	const classString =
 		typeof targetEl.className === "string" ? targetEl.className : "";
 
-	const result = findExactMatches(targetEl, state.shadowHost);
+	const result = findExactMatches(targetEl, dom.shadowHost);
 	let componentName = result.componentName ?? targetEl.tagName.toLowerCase();
 
 	// ── Ghost element detection ──
@@ -410,7 +411,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	state.cachedExactMatches = result.exactMatch;
 	state.manuallyAddedNodes = new Set<HTMLElement>();
 
-	state.currentInstances = [{
+	dom.currentInstances = [{
 		index: 0,
 		label: (targetEl.innerText || "").trim().slice(0, 40) || `#1`,
 		parent: targetEl.parentElement?.tagName.toLowerCase() ?? "",
@@ -428,8 +429,8 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
-		if (!state.activeContainer.isOpen()) {
-			state.activeContainer.open(panelUrl);
+		if (!dom.activeContainer.isOpen()) {
+			dom.activeContainer.open(panelUrl);
 		}
 	}
 
@@ -501,7 +502,7 @@ function rebuildSelectionFromSources(): void {
 				typeof state.currentTargetEl.className === "string"
 					? state.currentTargetEl.className
 					: "",
-			tailwindConfig: state.tailwindConfigCache,
+			tailwindConfig: dom.tailwindConfigCache,
 		});
 	}
 }
@@ -561,8 +562,8 @@ function toggleInspect(btn: HTMLButtonElement): void {
 		} else {
 			// Open the container — select mode is activated via the panel's SelectElementButton
 			const panelUrl = `${SERVER_ORIGIN}/panel`;
-			if (!state.activeContainer.isOpen()) {
-				state.activeContainer.open(panelUrl);
+			if (!dom.activeContainer.isOpen()) {
+				dom.activeContainer.open(panelUrl);
 			}
 		}
 	} else {
@@ -570,7 +571,7 @@ function toggleInspect(btn: HTMLButtonElement): void {
 		btn.classList.remove("active");
 		sessionStorage.removeItem(PANEL_OPEN_KEY);
 		if (!insideStorybook) {
-			state.activeContainer.close();
+			dom.activeContainer.close();
 		}
 	}
 }
@@ -580,7 +581,7 @@ export function showToast(message: string, duration: number = 3000): void {
 	toast.className = "toast";
 	toast.textContent = message;
 	toast.style.left = `${getPageCenterX()}px`;
-	state.shadowRoot.appendChild(toast);
+	dom.shadowRoot.appendChild(toast);
 	requestAnimationFrame(() => toast.classList.add("visible"));
 	setTimeout(() => {
 		toast.classList.remove("visible");
@@ -634,21 +635,21 @@ function init(): void {
 	const params = new URLSearchParams(location.search);
 	if (params.get('vybit-ghost') === '1') return;
 
-	state.shadowHost = document.createElement("div");
-	state.shadowHost.id = "tw-visual-editor-host";
-	state.shadowHost.style.cssText = css(SHADOW_HOST);
+	dom.shadowHost = document.createElement("div");
+	dom.shadowHost.id = "tw-visual-editor-host";
+	dom.shadowHost.style.cssText = css(SHADOW_HOST);
 	// Restore color scheme preference
 	try {
 		const scheme = localStorage.getItem('vybit-color-scheme');
-		if (scheme === 'light') state.shadowHost.classList.add('light');
+		if (scheme === 'light') dom.shadowHost.classList.add('light');
 	} catch { /* ignore */ }
-	document.body.appendChild(state.shadowHost);
+	document.body.appendChild(dom.shadowHost);
 
-	state.shadowRoot = state.shadowHost.attachShadow({ mode: "open" });
+	dom.shadowRoot = dom.shadowHost.attachShadow({ mode: "open" });
 
 	const style = document.createElement("style");
 	style.textContent = OVERLAY_CSS;
-	state.shadowRoot.appendChild(style);
+	dom.shadowRoot.appendChild(style);
 
 	// Wire up toolbar callbacks (avoids circular deps)
 	initToolbar({ setSelectMode, showToast, onBrowseLocked, rebuildSelectionFromSources, setAddMode });
@@ -671,12 +672,12 @@ function init(): void {
 		},
 		onAdjunctClick: () => {
 			// Toggle group picker from the bottom toolbar's 1+ button
-			if (state.pickerEl) {
-				state.pickerEl.remove();
-				state.pickerEl = null;
+			if (dom.pickerEl) {
+				dom.pickerEl.remove();
+				dom.pickerEl = null;
 			} else if (state.currentTargetEl) {
 				// Use a dummy anchor positioned near the bottom toolbar
-				const anchor = state.shadowRoot.querySelector('.bt-adjunct') as HTMLElement;
+				const anchor = dom.shadowRoot.querySelector('.bt-adjunct') as HTMLElement;
 				if (anchor) {
 					showGroupPicker(
 						anchor,
@@ -706,7 +707,7 @@ function init(): void {
 		removeDrawButton: () => removeElementDrawer(),
 		setGrabCursor: (el) => { el.style.cursor = 'grab'; },
 		clearGrabCursor: (el) => { el.style.cursor = ''; },
-		startBrowse: () => startBrowse(state.shadowHost, onBrowseLocked),
+		startBrowse: () => startBrowse(dom.shadowHost, onBrowseLocked),
 		cancelInsert: () => cancelInsert(),
 		clearLockedInsert: () => clearLockedInsert(),
 		showToolbar: () => showBottomToolbar(),
@@ -737,7 +738,7 @@ function init(): void {
 		openPanel: () => {
 			if (!insideStorybook) {
 				const panelUrl = `${SERVER_ORIGIN}/panel`;
-				if (!state.activeContainer.isOpen()) state.activeContainer.open(panelUrl);
+				if (!dom.activeContainer.isOpen()) dom.activeContainer.open(panelUrl);
 			}
 		},
 		setTextEditingLock: (locked) => setTextEditingLock(locked),
@@ -763,17 +764,17 @@ function init(): void {
 	});
 
 	// Initialize containers
-	state.containers = {
-		popover: new PopoverContainer(state.shadowRoot),
-		modal: new ModalContainer(state.shadowRoot),
-		sidebar: new SidebarContainer(state.shadowRoot),
+	dom.containers = {
+		popover: new PopoverContainer(dom.shadowRoot),
+		modal: new ModalContainer(dom.shadowRoot),
+		sidebar: new SidebarContainer(dom.shadowRoot),
 		popup: new PopupContainer(),
 	};
-	state.activeContainer = state.containers[getDefaultContainer()];
+	dom.activeContainer = dom.containers[getDefaultContainer()];
 
 	// Initialize drag-drop placement (listens for postMessage from panel)
 	initDragDrop(
-		state.shadowHost,
+		dom.shadowHost,
 		// onDragStart: determine drag mode from current button state, preserve mode
 		() => {
 			// Clear visual clutter but NOT mode state
@@ -806,7 +807,7 @@ function init(): void {
 	);
 
 	// Initialize drag-to-move (mousedown on selected element to reorder/reparent)
-	initDragMove(state.shadowHost);
+	initDragMove(dom.shadowHost);
 
 	const btn = document.createElement("button");
 	btn.className = "toggle-btn";
@@ -816,7 +817,7 @@ function init(): void {
 	if (insideStorybook) {
 		btn.style.display = 'none';
 	}
-	state.shadowRoot.appendChild(btn);
+	dom.shadowRoot.appendChild(btn);
 
 	// Storybook story change — reset all interaction state and return to select mode
 	window.addEventListener('message', (event) => {
@@ -855,7 +856,7 @@ function init(): void {
 				resetToolbar();
 				if (state.currentMode === 'insert') {
 					sendTo("panel", { type: "DESELECT_ELEMENT" });
-					startBrowse(state.shadowHost, onBrowseLocked);
+					startBrowse(dom.shadowHost, onBrowseLocked);
 				} else {
 					sendTo("panel", { type: "RESET_SELECTION" });
 				}
@@ -1043,7 +1044,7 @@ function init(): void {
 						ghostHtml: clip.ghostHtml,
 						ghostCss: clip.ghostCss,
 					},
-					state.shadowHost,
+					dom.shadowHost,
 				);
 				showToast("Click to place");
 			}
@@ -1139,7 +1140,7 @@ function init(): void {
 			dispatch({ type: 'CMD_EDIT_TOOL_CHANGED', tool: msg.tool });
 		} else if (msg.type === "COLOR_SCHEME_CHANGED") {
 			const scheme = msg.colorScheme as 'dark' | 'light';
-			state.shadowHost.classList.toggle('light', scheme === 'light');
+			dom.shadowHost.classList.toggle('light', scheme === 'light');
 			try { localStorage.setItem('vybit-color-scheme', scheme); } catch { /* ignore */ }
 		} else if (msg.type === "TAB_CHANGED") {
 			dispatch({ type: 'CMD_TAB_CHANGED', tab: msg.tab });
@@ -1309,16 +1310,16 @@ function init(): void {
 			}
 		} else if (msg.type === "SWITCH_CONTAINER") {
 			const newName = msg.container as ContainerName;
-			if (state.containers[newName] && newName !== state.activeContainer.name) {
+			if (dom.containers[newName] && newName !== dom.activeContainer.name) {
 				if (!insideStorybook) {
-					const wasOpen = state.activeContainer.isOpen();
-					state.activeContainer.close();
-					state.activeContainer = state.containers[newName];
+					const wasOpen = dom.activeContainer.isOpen();
+					dom.activeContainer.close();
+					dom.activeContainer = dom.containers[newName];
 					if (wasOpen) {
-						state.activeContainer.open(`${SERVER_ORIGIN}/panel`);
+						dom.activeContainer.open(`${SERVER_ORIGIN}/panel`);
 					}
 				} else {
-					state.activeContainer = state.containers[newName];
+					dom.activeContainer = dom.containers[newName];
 				}
 			}
 		} else if (msg.type === "INSERT_DESIGN_CANVAS") {
@@ -1328,8 +1329,8 @@ function init(): void {
 					handleCaptureScreenshot();
 				} else {
 					// No element selected — arm element-select mode
-					armElementSelect('Replace: Canvas', state.shadowHost, (target) => {
-						const result = findExactMatches(target, state.shadowHost);
+					armElementSelect('Replace: Canvas', dom.shadowHost, (target) => {
+						const result = findExactMatches(target, dom.shadowHost);
 						const componentName = result.componentName ?? target.tagName.toLowerCase();
 						state.currentTargetEl = target;
 						state.currentBoundary = { componentName };
@@ -1355,7 +1356,7 @@ function init(): void {
 				} else {
 					// No locked position — arm canvas drop-zone
 					console.log('[tw-debug] arming generic insert...');
-					armGenericInsert('Place: Canvas', state.shadowHost, (target, position) => {
+					armGenericInsert('Place: Canvas', dom.shadowHost, (target, position) => {
 						console.log('[tw-debug] armGenericInsert callback fired, target=', target, 'position=', position);
 						try {
 							console.log('[tw-debug] step 1: setting currentTargetEl');
@@ -1388,7 +1389,7 @@ function init(): void {
 		} else if (msg.type === "COMPONENT_ARM") {
 			if (msg.insertMode === 'replace') {
 				const doReplace = (target: HTMLElement) => {
-					const result = findExactMatches(target, state.shadowHost);
+					const result = findExactMatches(target, dom.shadowHost);
 					const componentName = result.componentName ?? target.tagName.toLowerCase();
 					const ghost = replaceElement(target, msg);
 					const selectionTarget = ghost ?? target;
@@ -1407,11 +1408,11 @@ function init(): void {
 					doReplace(state.currentTargetEl);
 				} else {
 					// Component-first mode — arm crosshair to pick the target
-					armElementSelect(`Replace: ${msg.componentName}`, state.shadowHost, doReplace);
+					armElementSelect(`Replace: ${msg.componentName}`, dom.shadowHost, doReplace);
 				}
 			} else if (!placeAtLockedInsert(msg)) {
 				// No locked insert point — enter crosshair drop mode (Flow A)
-				armInsert(msg, state.shadowHost);
+				armInsert(msg, dom.shadowHost);
 			} else {
 				// Flow B: placed at locked insert — clean up toolbar & selection
 				clearHighlights();
@@ -1474,7 +1475,7 @@ function init(): void {
 		btn.classList.add("active");
 		showBottomToolbar();
 		if (!insideStorybook) {
-			state.activeContainer.open(`${SERVER_ORIGIN}/panel`);
+			dom.activeContainer.open(`${SERVER_ORIGIN}/panel`);
 		}
 	}
 
@@ -1487,16 +1488,16 @@ function init(): void {
 	});
 
 	window.addEventListener("overlay-ws-connected", () => {
-		if (state.wasConnected) {
+		if (dom.wasConnected) {
 			showToast("Reconnected");
 		}
-		state.wasConnected = true;
+		dom.wasConnected = true;
 		// Send theme vars to panel on every connect/reconnect
 		sendThemeVars();
 	});
 
 	window.addEventListener("overlay-ws-disconnected", () => {
-		if (state.wasConnected) {
+		if (dom.wasConnected) {
 			showToast("Connection lost — restart the server and refresh.", 5000);
 		}
 	});
@@ -1535,7 +1536,7 @@ function enterBugReportPickMode(): void {
 		e.stopPropagation();
 
 		const target = e.target as HTMLElement;
-		if (!target || target === state.shadowHost || e.composedPath().some(el => el === state.shadowHost)) {
+		if (!target || target === dom.shadowHost || e.composedPath().some(el => el === dom.shadowHost)) {
 			return;
 		}
 

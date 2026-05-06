@@ -6,7 +6,6 @@
 // mode/interaction transitions.
 
 import type { ContainerName, IContainer } from "./containers/IContainer";
-import type { ElementGroup } from "./grouping";
 import type { DesignCanvasEntry } from "./overlay-state";
 
 export const dom = {
@@ -39,8 +38,6 @@ export const dom = {
 
 	// ── Caches ──
 	tailwindConfigCache: null as any,
-	cachedNearGroups: null as ElementGroup[] | null,
-	cachedExactMatches: null as HTMLElement[] | null,
 
 	// ── Instance metadata ──
 	currentInstances: [] as Array<{ index: number; label: string; parent: string }>,
