@@ -695,8 +695,8 @@ async function doStep10(page: Page): Promise<void> {
   await teamMember.click();
   await page.waitForTimeout(800);
 
-  // Press Cmd+D to duplicate
-  await page.keyboard.press('Meta+d');
+  // Press Cmd+D / Ctrl+D to duplicate
+  await page.keyboard.press('ControlOrMeta+d');
   await page.waitForTimeout(1000);
 }
 
