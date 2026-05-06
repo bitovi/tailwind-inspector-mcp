@@ -131,8 +131,8 @@ test.describe('Flow F: Select — persistent selection mode', () => {
     expect(await hasHoverOutline(page)).toBe(false);
 
     // Hover outside (different element) — should show dashed outline
-    const otherEl = page.locator('body');
-    await otherEl.hover({ position: { x: 5, y: 5 } });
+    const otherEl = page.locator('p').first();
+    await otherEl.hover();
     await page.waitForTimeout(300);
     // The body is outside the heading, so outline should appear
     const outline = await hasHoverOutline(page);

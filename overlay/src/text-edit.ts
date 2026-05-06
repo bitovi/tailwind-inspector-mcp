@@ -3,8 +3,8 @@
  * Produces `text-change` patches that flow through the commit/queue/MCP pipeline.
  */
 import { computePosition, flip, offset, autoUpdate } from "@floating-ui/dom";
-import { setTextEditingLock } from "./bottom-toolbar";
 import { clearGrabCursor, setGrabCursor, state } from './overlay-state';
+import { dispatch } from './overlay-state-machine';
 interface TextEditDeps {
   sendTo: (role: string, msg: any) => void;
   send: (msg: any) => void;
@@ -117,11 +117,8 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
   // Remove grab cursor during text editing
   clearGrabCursor();
 
-  // Mark exclusive interaction
-  state.exclusiveInteraction = 'text-editing';
-
-  // Disable toolbar buttons while editing
-  setTextEditingLock(true);
+  // Mark exclusive interaction via SM (also disables toolbar buttons via set-text-editing-lock effect)
+  dispatch({ type: 'TEXT_EDIT_START', targetEl });
 }
 
 export function endTextEdit(confirm: boolean): void {
@@ -166,11 +163,8 @@ export function endTextEdit(confirm: boolean): void {
   // Restore grab cursor
   setGrabCursor();
 
-  // Clear exclusive interaction
-  state.exclusiveInteraction = null;
-
-  // Re-enable toolbar buttons
-  setTextEditingLock(false);
+  // Clear exclusive interaction via SM (also re-enables toolbar buttons via set-text-editing-lock effect)
+  dispatch({ type: 'TEXT_EDIT_END' });
 
   // Remove listeners
   if (keydownHandler) {

@@ -4,15 +4,16 @@
 import { detectComponent } from "./framework-detect";
 import { removeElementDrawer } from "./element-drawer";
 import { state } from "./overlay-state";
+import { getState } from "./overlay-state-machine";
 
 export function highlightElement(el: HTMLElement): void {
 	const rect = el.getBoundingClientRect();
 	const overlay = document.createElement("div");
 	overlay.className = "highlight-overlay";
-	overlay.style.top = `${rect.top - 3}px`;
-	overlay.style.left = `${rect.left - 3}px`;
-	overlay.style.width = `${rect.width + 6}px`;
-	overlay.style.height = `${rect.height + 6}px`;
+	overlay.style.top = `${rect.top - 4}px`;
+	overlay.style.left = `${rect.left - 4}px`;
+	overlay.style.width = `${rect.width + 8}px`;
+	overlay.style.height = `${rect.height + 8}px`;
 	state.shadowRoot.appendChild(overlay);
 }
 
@@ -41,7 +42,7 @@ export function repositionHighlights(): void {
 	if (existing.length === 0) return;
 	// Don't re-create highlights during any exclusive interaction
 	// (they were intentionally cleared on entry)
-	if (state.exclusiveInteraction) {
+	if (getState().interaction.kind !== 'none') {
 		existing.forEach((el) => el.remove());
 		return;
 	}
@@ -65,10 +66,10 @@ export function showHoverPreview(el: HTMLElement, componentName: string): void {
 		state.hoverOutlineEl.className = "hover-target-outline";
 		state.shadowRoot.appendChild(state.hoverOutlineEl);
 	}
-	state.hoverOutlineEl.style.top = `${rect.top - 3}px`;
-	state.hoverOutlineEl.style.left = `${rect.left - 3}px`;
-	state.hoverOutlineEl.style.width = `${rect.width + 6}px`;
-	state.hoverOutlineEl.style.height = `${rect.height + 6}px`;
+	state.hoverOutlineEl.style.top = `${rect.top - 4}px`;
+	state.hoverOutlineEl.style.left = `${rect.left - 4}px`;
+	state.hoverOutlineEl.style.width = `${rect.width + 8}px`;
+	state.hoverOutlineEl.style.height = `${rect.height + 8}px`;
 
 	if (!state.hoverTooltipEl) {
 		state.hoverTooltipEl = document.createElement("div");
@@ -90,7 +91,7 @@ export function showHoverPreview(el: HTMLElement, componentName: string): void {
 
 export function mouseMoveHandler(e: MouseEvent): void {
 	// Suppress hover previews during any exclusive interaction
-	if (state.exclusiveInteraction) return;
+	if (getState().interaction.kind !== 'none') return;
 
 	// Only show hover previews when actively picking (select mode or add mode)
 	if (!state.selectModeOn && !state.addMode) return;

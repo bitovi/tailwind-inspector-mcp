@@ -27,7 +27,7 @@ import {
 	revertPreview,
 } from "./patcher";
 import { connect, onMessage, send, sendTo } from "./ws";
-import { state, resolveTab, clearSelectionState, setGrabCursor, clearGrabCursor } from "./overlay-state";
+import { state, resolveTab, clearSelectionState } from "./overlay-state";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
 import { showDrawButton, initToolbar, repositionToolbar, showGroupPicker } from "./element-toolbar";
 import { initElementDrawer, removeElementDrawer } from "./element-drawer";
@@ -37,7 +37,7 @@ import { getSameRectCandidates, showDepthPicker, dismissDepthPicker } from "./de
 import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides, resetToolbar, setTextEditingLock } from "./bottom-toolbar";
 import type { BugReportElement } from "../../shared/types";
 import { setClipboard, getClipboard, extractGhostCssForElement } from "./clipboard";
-import { initStateMachine, dispatch, subscribe, type EffectDeps } from './overlay-state-machine';
+import { initStateMachine, dispatch, getState, subscribe, type EffectDeps } from './overlay-state-machine';
 import type { ToolbarVisual, ToolButtonVisual } from './overlay-state-machine/types';
 import type { EditTool } from '../../shared/types';
 
@@ -257,7 +257,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	if (handleTextEditingClick(e)) return;
 
 	// Ignore clicks during any exclusive interaction (drag-move, component-drag, text-editing)
-	if (state.exclusiveInteraction) return;
+	if (getState().interaction.kind !== 'none') return;
 
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
@@ -400,12 +400,9 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 		componentName = ghostComponentName;
 	}
 
-	clearHighlights();
-	highlightElement(targetEl);
-
 	const config = await fetchTailwindConfig();
 
-	// Store selection state
+	// Store DOM caches/infrastructure (not tracked by SM)
 	state.currentEquivalentNodes = [targetEl];
 	state.currentTargetEl = targetEl;
 	state.currentBoundary = { componentName };
@@ -419,14 +416,15 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 		parent: targetEl.parentElement?.tagName.toLowerCase() ?? "",
 	}];
 
-	clearHoverPreview();
-	// Keep select mode active — don't call setSelectMode(false)
-	// The user can continue selecting other elements or click Select to lock
+	// Dispatch to SM — handles highlights, draw button, grab cursor, toolbar
+	dispatch({
+		type: 'ELEMENT_SELECTED',
+		el: targetEl,
+		equivalentNodes: [targetEl],
+		boundary: { componentName },
+	});
 
-	showDrawButton(targetEl);
 	updateInstanceCount(state.currentEquivalentNodes.length);
-	updateToolState('select', state.selectModeOn, true);
-	setGrabCursor();
 
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
@@ -445,9 +443,6 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 		if (boundary) {
 			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
 			componentName = boundary.componentName;
-			// NOTE: We intentionally do NOT override classString with the component
-			// root element's classes. The user selected this specific element (possibly
-			// via the depth picker), so we send its own classes.
 		}
 	}
 
@@ -459,11 +454,8 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 			let hostEl: Element;
 
 			if (instance instanceof Element) {
-				// Prod fallback: componentFiber IS the host element
 				hostEl = instance;
 			} else {
-				// Dev mode: componentFiber is the live component instance.
-				// Find the host element via its tag selector.
 				const selector = instance.constructor?.ɵcmp?.selectors?.[0]?.[0];
 				hostEl = (selector ? targetEl.closest(selector) : null) ?? targetEl;
 			}
@@ -558,11 +550,11 @@ function setAddMode(on: boolean): void {
 const PANEL_OPEN_KEY = "tw-inspector-panel-open";
 
 function toggleInspect(btn: HTMLButtonElement): void {
-	state.active = !state.active;
-	if (state.active) {
+	const wasActive = state.active;
+	if (!wasActive) {
+		dispatch({ type: 'ACTIVATE' });
 		btn.classList.add("active");
 		sessionStorage.setItem(PANEL_OPEN_KEY, "1");
-		showBottomToolbar();
 		if (insideStorybook) {
 			// In Storybook the panel is already in the addon tab — go straight to select mode
 			setSelectMode(true);
@@ -574,15 +566,12 @@ function toggleInspect(btn: HTMLButtonElement): void {
 			}
 		}
 	} else {
+		dispatch({ type: 'DEACTIVATE' });
 		btn.classList.remove("active");
 		sessionStorage.removeItem(PANEL_OPEN_KEY);
-		setSelectMode(false);
-		hideBottomToolbar();
 		if (!insideStorybook) {
 			state.activeContainer.close();
 		}
-		revertPreview();
-		clearHighlights();
 	}
 }
 
@@ -611,16 +600,9 @@ export function showToast(message: string, duration: number = 3000): void {
  */
 function resetOnNavigation(): void {
 	if (isTextEditing()) endTextEdit(false);
-	revertPreview();
-	clearHighlights();
 	dismissDepthPicker();
-	cancelInsert();
-	clearLockedInsert();
 	removeAllDesignCanvases();
-	clearSelectionState();
-	setSelectMode(false);
-	sendTo("panel", { type: "RESET_SELECTION" });
-	sendTo("panel", { type: "COMPONENT_DISARMED" });
+	dispatch({ type: 'NAVIGATION_RESET' });
 }
 
 function getDefaultContainer(): ContainerName {
@@ -848,55 +830,25 @@ function init(): void {
 	// Escape key — layered escape for select and insert modes
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
-			// Exit add-mode first if active
+			// Exit add-mode first if active (SM doesn't handle add-mode yet)
 			if (state.addMode) {
 				setAddMode(false);
 				return;
 			}
 
-			// ── Insert mode escape (mirrors Select pattern) ──
-			if (isDropZoneActive() && getLockedInsert()) {
-				// Orange + locked point → Teal: stop browsing, keep the locked point
-				cancelInsert();
-				updateToolState('insert', false, true);
-				sendTo("panel", { type: "INSERT_BROWSE_CHANGED", active: false });
-				return;
-			}
-			if (!isDropZoneActive() && getLockedInsert()) {
-				// Teal → Gray: clear the locked point entirely
-				clearLockedInsert();
-				resetToolbar();
-				sendTo("panel", { type: "MODE_CHANGED", mode: null });
-				return;
-			}
-			if (isDropZoneActive()) {
-				// Orange + no point → Gray: cancel insert mode entirely
-				cancelInsert();
-				resetToolbar();
-				sendTo("panel", { type: "MODE_CHANGED", mode: null });
-				return;
-			}
+			// Dispatch through the state machine — it handles:
+			// - Insert: browsing+locked → locked, locked → off, browsing → off
+			// - Select: picking+element → engaged, engaged → off, picking → off
+			const prevState = getState();
+			dispatch({ type: 'ESCAPE' });
+			const newState = getState();
 
-			// ── Select mode escape ──
-			if (state.currentTargetEl && state.currentMode === 'select') {
-				if (state.selectModeOn) {
-					// Orange + element → Teal: stop selecting, keep element
-					setSelectMode(false);
-					updateToolState('select', false, true);
-					// Panel will receive SELECT_MODE_CHANGED { active: false } from setSelectMode
-					return;
-				} else {
-					// Teal → Gray: deselect element entirely
-					revertPreview();
-					clearHighlights();
-					clearSelectionState();
-					resetToolbar();
-					sendTo("panel", { type: "MODE_CHANGED", mode: null });
-					return;
-				}
-			}
+			// If the SM handled it (state changed), we're done
+			if (prevState !== newState) return;
+
+			// Fallback: non-select/insert mode with a selected element
+			// (e.g. element selected while in a mode that was cancelled)
 			if (state.currentTargetEl) {
-				// Non-select mode with element — existing behavior
 				revertPreview();
 				clearHighlights();
 				clearSelectionState();
@@ -907,11 +859,6 @@ function init(): void {
 				} else {
 					sendTo("panel", { type: "RESET_SELECTION" });
 				}
-			} else if (state.selectModeOn) {
-				// Orange + no element → Gray: cancel select mode
-				setSelectMode(false);
-				resetToolbar();
-				sendTo("panel", { type: "MODE_CHANGED", mode: null });
 			}
 		}
 	});

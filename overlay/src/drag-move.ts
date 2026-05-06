@@ -15,6 +15,7 @@ import {
   type DropPosition,
 } from './drop-zone';
 import { state, clearGrabCursor, setGrabCursor } from './overlay-state';
+import { dispatch, getState } from './overlay-state-machine';
 import { clearHighlights, highlightElement, clearHoverPreview } from './element-highlight';
 import { removeElementDrawer } from './element-drawer';
 import { showDrawButton } from './element-toolbar';
@@ -96,7 +97,7 @@ function onMouseDown(e: MouseEvent): void {
   if (target !== state.currentTargetEl && !state.currentTargetEl.contains(target)) return;
 
   // Don't start during any exclusive interaction
-  if (state.exclusiveInteraction) return;
+  if (getState().interaction.kind !== 'none') return;
   if (isDropZoneActive()) return;
 
 
@@ -128,7 +129,7 @@ function onMouseMove(e: MouseEvent): void {
 
     // Threshold exceeded — start actual drag
     session.dragging = true;
-    state.exclusiveInteraction = 'drag-moving';
+    dispatch({ type: 'DRAG_MOVE_THRESHOLD_MET' });
     session.sourceEl.style.opacity = '0.3';
     clearGrabCursor();
     clearHighlights();
@@ -332,7 +333,7 @@ function onMouseUp(e: MouseEvent): void {
   // Clean up
   cleanupDragUI();
   cleanupListeners();
-  state.exclusiveInteraction = null;
+  dispatch({ type: 'DRAG_MOVE_DROPPED' });
 
   // Keep the moved element selected: re-highlight and show drawer
   clearHighlights();
@@ -381,7 +382,9 @@ function cancelMove(): void {
   session.sourceEl.style.opacity = '';
   cleanupDragUI();
   cleanupListeners();
-  state.exclusiveInteraction = null;
+  if (wasDragging) {
+    dispatch({ type: 'DRAG_MOVE_CANCELLED' });
+  }
 
   // Restore toolbar to pre-drag state
   if (wasDragging) {

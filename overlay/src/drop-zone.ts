@@ -15,6 +15,7 @@ import { state as overlayState } from './overlay-state';
 import { clearSelectionState } from './overlay-state';
 import { clearHighlights } from './element-highlight';
 import { revertPreview } from './patcher';
+import { dispatch } from './overlay-state-machine';
 
 export { type DropPosition, getAxis, computeDropPosition, adjustForEdgeChild } from '../../shared/drop-geometry';
 import type { DropPosition } from '../../shared/drop-geometry';
@@ -686,6 +687,9 @@ function handleBrowseClick(e: MouseEvent): void {
   clearLockedInsert();
   locked.target = dom.currentTarget;
   locked.position = dom.currentPosition;
+
+  // Sync SM so ESCAPE and toolbar three-way toggle see the locked point
+  dispatch({ type: 'INSERT_POINT_LOCKED', target: dom.currentTarget, position: dom.currentPosition });
 
   const parentAxis = dom.currentTarget.parentElement ? getAxis(dom.currentTarget.parentElement) : 'vertical';
   locked.indicator = document.createElement('div');

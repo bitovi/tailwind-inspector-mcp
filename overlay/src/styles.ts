@@ -436,7 +436,7 @@ export const OVERLAY_CSS = `
   .highlight-overlay {
     position: fixed;
     pointer-events: none;
-    border: 2px solid var(--ov-teal);
+    border: 1px dashed var(--ov-teal);
     border-radius: 2px;
     box-sizing: border-box;
     z-index: 999998;

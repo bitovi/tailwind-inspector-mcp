@@ -22,6 +22,7 @@ import { buildComponentDropPatch } from './patch-builder';
 import { isDragMessage, type DragStartMessage, type CanvasDragEnterMessage, type CanvasDragMoveMessage, type CanvasDragDropMessage, type CanvasDragLeaveMessage } from '../../shared/drag-types';
 import { css, TEAL, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, FIXED_OVERLAY } from './styles';
 import { state } from './overlay-state';
+import { dispatch } from './overlay-state-machine';
 import { GHOST_STYLE_RESET } from '../../shared/css-utils';
 import { createAutoScroller } from '../../shared/auto-scroll';
 import { createDropPreview, type DropPreviewHandle } from './drop-preview';
@@ -223,7 +224,7 @@ function handleDragStart(msg: DragStartMessage): void {
     canvasInsertMode: msg.canvasInsertMode ?? 'place',
   };
 
-  state.exclusiveInteraction = 'component-drag';
+  dispatch({ type: 'COMPONENT_DRAG_START', mode: dragMode });
 
   // Create drag preview
   const { clientX: initClientX, clientY: initClientY } = toParentClient(msg);
@@ -692,7 +693,7 @@ function endSession(cancelled: boolean): void {
 
   autoScroller.stop();
 
-  state.exclusiveInteraction = null;
+  dispatch({ type: cancelled ? 'COMPONENT_DRAG_CANCELLED' : 'COMPONENT_DRAG_DROPPED' });
   session = null;
 }
 

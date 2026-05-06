@@ -320,11 +320,12 @@ export function overlayReducer(
           toolbar,
         },
         effects: [
+          { kind: 'clear-highlights' },
+          { kind: 'clear-hover-preview' },
           { kind: 'highlight-element', el: action.el },
           { kind: 'show-draw-button', el: action.el },
           { kind: 'set-grab-cursor', el: action.el },
           { kind: 'update-toolbar', visual: toolbar },
-          { kind: 'send-to-panel', message: { type: 'ELEMENT_SELECTED' } },
         ],
       };
     }

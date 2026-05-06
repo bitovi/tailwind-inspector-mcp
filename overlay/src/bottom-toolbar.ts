@@ -39,12 +39,9 @@ function createButton(label: string, svgHtml: string, tool: EditTool): HTMLEleme
 	btn.innerHTML = `${svgHtml} ${label}`;
 	btn.title = label;
 	btn.addEventListener("click", () => {
-		if (currentTool === tool) {
-			// Re-click same tool → deselect
-			setTool(null);
-		} else {
-			setTool(tool);
-		}
+		// Always forward the clicked tool to the state machine — it handles
+		// the three-way toggle (e.g. orange+element → teal, teal → orange).
+		setTool(tool);
 	});
 	return btn;
 }
