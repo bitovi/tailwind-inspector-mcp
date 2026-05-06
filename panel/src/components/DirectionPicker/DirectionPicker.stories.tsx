@@ -9,7 +9,7 @@ function InteractiveDirectionPicker() {
   const [preview, setPreview] = useState<GradientDirection | null>(null);
 
   return (
-    <div className="flex items-start gap-6 p-6 bg-bv-bg">
+    <div className="flex items-start gap-6 p-6 bg-bit-bg">
       <DirectionPicker
         direction={direction}
         mode={mode}
@@ -18,10 +18,10 @@ function InteractiveDirectionPicker() {
         onDirectionClick={(dir) => { setDirection(dir); setMode('gradient'); setPreview(null); }}
         onSolidClick={() => setMode('solid')}
       />
-      <div className="text-[11px] font-mono text-bv-text-mid space-y-1">
-        <div>mode: <span className="text-bv-teal font-bold">{mode}</span></div>
-        <div>direction: <span className="text-bv-teal font-bold">{direction}</span></div>
-        {preview && <div>preview: <span className="text-bv-orange font-bold">{preview}</span></div>}
+      <div className="text-[11px] font-mono text-bit-text-mid space-y-1">
+        <div>mode: <span className="text-bit-teal font-bold">{mode}</span></div>
+        <div>direction: <span className="text-bit-teal font-bold">{direction}</span></div>
+        {preview && <div>preview: <span className="text-bit-orange font-bold">{preview}</span></div>}
       </div>
     </div>
   );

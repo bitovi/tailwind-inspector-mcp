@@ -38,8 +38,8 @@ export function DirectionPicker({
                 type="button"
                 className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-xs cursor-pointer transition-all duration-150
                   ${active
-                    ? 'border-[1.5px] border-bv-teal bg-bv-teal text-white'
-                    : 'border-[1.5px] border-bv-border bg-bv-bg text-bv-muted hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
+                    ? 'border-[1.5px] border-bit-teal bg-bit-teal text-white'
+                    : 'border-[1.5px] border-bit-border bg-bit-bg text-bit-muted hover:border-bit-teal hover:bg-bit-teal/9 hover:text-bit-teal'
                   }`}
                 title="Solid color"
                 onClick={onSolidClick}
@@ -57,8 +57,8 @@ export function DirectionPicker({
               className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-[10px] cursor-pointer transition-all duration-150
                 ${isSolid ? 'opacity-35 hover:opacity-100' : ''}
                 ${isActive
-                  ? 'border-[1.5px] border-bv-teal bg-bv-teal text-white'
-                  : 'border-[1.5px] border-bv-border bg-bv-bg text-bv-muted hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
+                  ? 'border-[1.5px] border-bit-teal bg-bit-teal text-white'
+                  : 'border-[1.5px] border-bit-border bg-bit-bg text-bit-muted hover:border-bit-teal hover:bg-bit-teal/9 hover:text-bit-teal'
                 }`}
               onMouseEnter={() => onHover(cell.dir)}
               onClick={() => onDirectionClick(cell.dir)}
@@ -68,13 +68,13 @@ export function DirectionPicker({
           );
         })}
       </div>
-      <div className="text-[10px] font-mono text-bv-text-mid mt-0.75 max-w-[68px] truncate text-center">
+      <div className="text-[10px] font-mono text-bit-text-mid mt-0.75 max-w-[68px] truncate text-center">
         {isSolid ? (
           solidColorName
-            ? <span className="text-bv-text font-bold">{solidColorName}</span>
-            : <span className="text-bv-muted italic">none</span>
+            ? <span className="text-bit-text font-bold">{solidColorName}</span>
+            : <span className="text-bit-muted italic">none</span>
         ) : (
-          <span>to-<span className="text-bv-teal font-bold">{direction}</span></span>
+          <span>to-<span className="text-bit-teal font-bold">{direction}</span></span>
         )}
       </div>
     </div>

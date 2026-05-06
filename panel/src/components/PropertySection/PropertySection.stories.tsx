@@ -29,14 +29,14 @@ function Chip({ label, active = true }: { label: string; active?: boolean }) {
     <span
       className={`group inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono border cursor-ew-resize select-none transition-colors ${
         active
-          ? 'bg-bv-surface text-bv-text-mid border-transparent hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
-          : 'bg-bv-surface text-bv-text-mid border-transparent hover:border-bv-teal hover:text-bv-teal'
+          ? 'bg-bit-surface text-bit-text-mid border-transparent hover:border-bit-teal hover:bg-bit-teal/9 hover:text-bit-teal'
+          : 'bg-bit-surface text-bit-text-mid border-transparent hover:border-bit-teal hover:text-bit-teal'
       }`}
     >
       <span className="inline-block mr-0.5 text-[9px] opacity-0 group-hover:opacity-50 transition-opacity">‹</span>
       {label}
       <span className="inline-block ml-0.5 text-[9px] opacity-0 group-hover:opacity-50 transition-opacity">›</span>
-      <span className="text-[9px] text-bv-muted opacity-0 group-hover:opacity-100 hover:text-bv-orange ml-0.5 transition-opacity">×</span>
+      <span className="text-[9px] text-bit-muted opacity-0 group-hover:opacity-100 hover:text-bit-orange ml-0.5 transition-opacity">×</span>
     </span>
   );
 }
@@ -47,7 +47,7 @@ const meta: Meta<typeof PropertySection> = {
   tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div className="w-[280px] bg-bv-surface p-3 rounded-lg font-[family-name:var(--font-ui)]">
+      <div className="w-[280px] bg-bit-surface p-3 rounded-lg font-[family-name:var(--font-ui)]">
         <Story />
       </div>
     ),

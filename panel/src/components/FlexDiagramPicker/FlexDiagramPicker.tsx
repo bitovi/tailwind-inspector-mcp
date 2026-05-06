@@ -65,14 +65,14 @@ export function FlexDiagramPicker({
 
   const pillBase = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono border cursor-pointer select-none transition-all duration-150';
   const pillStyle = open
-    ? 'border-bv-teal bg-bv-teal/9 text-bv-teal'
+    ? 'border-bit-teal bg-bit-teal/9 text-bit-teal'
     : isThisLocked
-    ? 'border-bv-border bg-bv-surface-hi text-bv-text hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
+    ? 'border-bit-border bg-bit-surface-hi text-bit-text hover:border-bit-teal hover:bg-bit-teal/9 hover:text-bit-teal'
     : foreignLocked
-    ? 'border-transparent bg-bv-surface text-bv-text-mid cursor-default'
+    ? 'border-transparent bg-bit-surface text-bit-text-mid cursor-default'
     : isUnset
-    ? 'border-dashed border-bv-border bg-bv-bg text-bv-muted hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal'
-    : 'border-bv-border bg-bv-bg text-bv-text-mid hover:border-bv-teal hover:bg-bv-teal/9 hover:text-bv-teal';
+    ? 'border-dashed border-bit-border bg-bit-bg text-bit-muted hover:border-bit-teal hover:bg-bit-teal/9 hover:text-bit-teal'
+    : 'border-bit-border bg-bit-bg text-bit-text-mid hover:border-bit-teal hover:bg-bit-teal/9 hover:text-bit-teal';
 
   return (
     <div className="relative inline-block">
@@ -105,14 +105,14 @@ export function FlexDiagramPicker({
           {...getFloatingProps()}
         >
         <FocusTrapContainer
-          className="bg-bv-bg border border-bv-border rounded-lg shadow-lg p-2 flex flex-col gap-1"
+          className="bg-bit-bg border border-bit-border rounded-lg shadow-lg p-2 flex flex-col gap-1"
           onMouseLeave={onLeave}
           onClose={close}
         >
           {/* Remove row */}
           {onRemove && (
             <div
-              className="flex items-center gap-1.5 px-1.5 py-1 text-[10px] font-mono text-bv-muted border-b border-bv-border mb-1 pb-1.5 cursor-pointer transition-colors duration-150 hover:text-bv-orange"
+              className="flex items-center gap-1.5 px-1.5 py-1 text-[10px] font-mono text-bit-muted border-b border-bit-border mb-1 pb-1.5 cursor-pointer transition-colors duration-150 hover:text-bit-orange"
               onMouseEnter={onRemoveHover}
               onMouseLeave={onLeave}
               onClick={() => { onRemove(); close(); }}
@@ -150,15 +150,15 @@ export function FlexDiagramPicker({
                     <div
                       className={`group w-[60px] h-[60px] rounded-[5px] border-[1.5px] p-1 flex overflow-hidden transition-all duration-150
                         ${isActive
-                          ? 'border-bv-teal bg-bv-teal/9 shadow-[0_0_0_2px_rgba(0,132,139,0.18)]'
-                          : 'border-bv-border bg-bv-surface hover:border-bv-teal hover:bg-bv-teal/9'
+                          ? 'border-bit-teal bg-bit-teal/9 shadow-[0_0_0_2px_rgba(0,132,139,0.18)]'
+                          : 'border-bit-border bg-bit-surface hover:border-bit-teal hover:bg-bit-teal/9'
                         }`}
                       style={opt.getContainerStyle(diagramFlexDirection)}
                     >
                       {opt.renderItems(diagramFlexDirection)}
                     </div>
                     <span className={`text-[9px] font-mono text-center transition-colors duration-150
-                      ${isActive ? 'text-bv-teal font-semibold' : 'text-bv-text-mid'}`}>
+                      ${isActive ? 'text-bit-teal font-semibold' : 'text-bit-text-mid'}`}>
                       {opt.label}
                     </span>
                   </div>

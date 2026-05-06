@@ -22,12 +22,12 @@ export function ThemeTabV3({ tailwindConfig, themeEdits, onThemeEdit }: ThemeTab
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-bv-border">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-bit-border">
         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
           Tailwind v3
         </span>
         {editCount > 0 && (
-          <span className="ml-auto text-[9px] text-bv-orange font-medium">
+          <span className="ml-auto text-[9px] text-bit-orange font-medium">
             {editCount} edit{editCount !== 1 ? 's' : ''}
           </span>
         )}

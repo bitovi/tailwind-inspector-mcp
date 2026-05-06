@@ -61,7 +61,7 @@ export function ComponentRowThumb({
   if (!isVisible || phase === 'idle') {
     return (
       <div
-        className="w-14 h-10 rounded bg-bv-surface border border-dashed border-bv-border flex items-center justify-center text-[9px] font-mono text-bv-muted cursor-pointer shrink-0 hover:border-bv-teal hover:text-bv-teal transition-colors"
+        className="w-14 h-10 rounded bg-bit-surface border border-dashed border-bit-border flex items-center justify-center text-[9px] font-mono text-bit-muted cursor-pointer shrink-0 hover:border-bit-teal hover:text-bit-teal transition-colors"
         onClick={onClick}
       >
         preview
@@ -72,8 +72,8 @@ export function ComponentRowThumb({
   // Loading spinner
   if (isLoading) {
     return (
-      <div className="w-14 h-10 rounded bg-bv-surface flex items-center justify-center shrink-0">
-        <div className="w-3.5 h-3.5 border-2 border-bv-border border-t-bv-teal rounded-full animate-spin" />
+      <div className="w-14 h-10 rounded bg-bit-surface flex items-center justify-center shrink-0">
+        <div className="w-3.5 h-3.5 border-2 border-bit-border border-t-bit-teal rounded-full animate-spin" />
       </div>
     );
   }
@@ -81,8 +81,8 @@ export function ComponentRowThumb({
   // Error
   if (phase === 'error') {
     return (
-      <div className="w-14 h-10 rounded bg-bv-surface flex items-center justify-center shrink-0">
-        <span className="text-[9px] text-bv-orange">err</span>
+      <div className="w-14 h-10 rounded bg-bit-surface flex items-center justify-center shrink-0">
+        <span className="text-[9px] text-bit-orange">err</span>
       </div>
     );
   }

@@ -39,84 +39,171 @@ async function waitForPanelReady(frame: Frame): Promise<void> {
   );
 }
 
-async function clickSelectElementButton(frame: Frame): Promise<void> {
-  const page = frame.page();
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const foundContentBtn = await frame.evaluate(() => {
-      const btn =
-        document.querySelector('button[title*="Select an element"]') as HTMLButtonElement | null ??
-        Array.from(document.querySelectorAll('button')).find(b =>
-          b.textContent?.includes('Select an element'),
-        ) as HTMLButtonElement | null;
-      if (btn) { btn.scrollIntoView?.({ behavior: 'smooth', block: 'center' }); btn.click(); return true; }
-      return false;
-    }).catch(() => false);
-    if (foundContentBtn) return;
-
-    const foundModeToggle = await frame.evaluate(() => {
-      const btns = document.querySelectorAll('button[aria-pressed]');
-      for (const b of btns) {
-        if (b.textContent?.trim() === 'Select' || b.getAttribute('title')?.includes('Select')) {
-          (b as HTMLButtonElement).scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-          (b as HTMLButtonElement).click();
-          return true;
-        }
-      }
-      return false;
-    }).catch(() => false);
-    if (foundModeToggle) return;
-
-    const foundInOverlay = await page.evaluate(() => {
-      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-      const btn = host?.shadowRoot?.querySelector('.tb-select') as HTMLButtonElement | null;
-      if (btn) { btn.scrollIntoView?.({ behavior: 'smooth', block: 'center' }); btn.click(); return true; }
-      return false;
-    }).catch(() => false);
-    if (foundInOverlay) return;
-
-    await page.waitForTimeout(500);
-  }
-  throw new Error('No select button found in panel or overlay after retries');
-}
-
-async function waitForToolbarVisible(page: Page, timeout = 5000): Promise<void> {
+/**
+ * Click the Select button in the bottom toolbar (overlay shadow DOM).
+ */
+async function clickSelectButton(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    return !!host?.shadowRoot?.querySelector('.el-toolbar');
+    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]'));
+  }, { timeout: 8000 });
+  const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="select"]');
+  await page.mouse.click(x, y);
+  await page.waitForTimeout(300);
+}
+
+/**
+ * Ensure the overlay is in active select/picking mode (orange).
+ *
+ * Reads the `.bt-group` class on the select button group and clicks
+ * until it reaches the `picking` state. This handles any prior state:
+ *   gray → 1 click → picking
+ *   engaged → 1 click → picking (clears element)
+ *   picking → 0 clicks (already active)
+ *
+ * Max 3 clicks to guard against infinite loops.
+ */
+async function ensureSelectMode(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]'));
+  }, { timeout: 8000 });
+
+  for (let i = 0; i < 3; i++) {
+    const phase = await page.evaluate(() => {
+      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+      const group = host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]')?.closest('.bt-group');
+      if (!group) return 'unknown';
+      if (group.classList.contains('picking')) return 'picking';
+      if (group.classList.contains('engaged')) return 'engaged';
+      return 'gray';
+    });
+
+    if (phase === 'picking') return; // already active
+
+    const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="select"]');
+    await page.mouse.click(x, y);
+    await page.waitForTimeout(300);
+  }
+}
+
+/**
+ * Click the Insert button in the bottom toolbar (overlay shadow DOM).
+ */
+async function clickInsertButton(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="insert"]'));
+  }, { timeout: 8000 });
+  const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="insert"]');
+  await page.mouse.click(x, y);
+  await page.waitForTimeout(300);
+}
+
+/**
+ * Wait for the element drawer to appear in the overlay shadow DOM.
+ */
+async function waitForElementDrawer(page: Page, timeout = 5000): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!(host?.shadowRoot?.querySelector('.element-drawer'));
   }, { timeout });
 }
 
-async function clickToolbarButton(page: Page, buttonText: string): Promise<void> {
-  await waitForToolbarVisible(page);
-  const clicked = await page.evaluate((text) => {
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const toolbar = host?.shadowRoot?.querySelector('.el-toolbar');
-    if (!toolbar) return false;
-    const buttons = toolbar.querySelectorAll('button');
-    for (const btn of buttons) {
-      if (btn.textContent?.trim().includes(text)) {
-        btn.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-        btn.click();
-        return true;
+/**
+ * Get the center coordinates of a shadow DOM element matching a selector + text.
+ * Returns { x, y } or throws if not found.
+ *
+ * We use real mouse clicks (page.mouse.click) instead of element.click() because
+ * the drop zone registers a capture-phase click handler on the document. Moving the
+ * mouse to the overlay host first triggers onMouseMove → hideDropIndicator → clears
+ * dom.currentTarget, so the capture handler returns early and lets the click through.
+ */
+async function getShadowButtonCenter(
+  page: Page,
+  selector: string,
+  textContent?: string,
+): Promise<{ x: number; y: number }> {
+  const rect = await page.evaluate(
+    ({ sel, text }) => {
+      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+      const candidates = host.shadowRoot!.querySelectorAll(sel) as NodeListOf<HTMLElement>;
+      for (const el of candidates) {
+        if (!text || el.textContent?.includes(text)) {
+          const r = el.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        }
       }
-    }
-    return false;
-  }, buttonText);
-  if (!clicked) throw new Error(`Toolbar button "${buttonText}" not found`);
+      throw new Error(`Shadow button not found: ${sel} ${text ?? ''}`);
+    },
+    { sel: selector, text: textContent },
+  );
+  return rect;
 }
 
-async function clickInsert(frame: Frame): Promise<void> {
-  // Wait for the Insert button to appear (panel may still be connecting)
-  await frame.waitForFunction(() => {
-    return !!document.querySelector('button[title="Insert to add content"]');
-  }, { timeout: 10000 });
-  await frame.evaluate(() => {
-    const btn = document.querySelector('button[title="Insert to add content"]') as HTMLButtonElement;
-    if (!btn) throw new Error('Insert button not found');
-    btn.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-    btn.click();
+/**
+ * Click "Describe change" button in the element drawer.
+ * Transitions drawer from State A to State B (textarea + Queue).
+ */
+async function clickDescribeChange(page: Page): Promise<void> {
+  await waitForElementDrawer(page);
+  const { x, y } = await getShadowButtonCenter(page, '.ed-action-btn', 'Describe change');
+  await page.mouse.click(x, y);
+  // Wait for State B transition — textarea should appear
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!(host?.shadowRoot?.querySelector('.element-drawer .ed-textarea'));
+  }, { timeout: 5000 });
+  await page.waitForTimeout(200);
+}
+
+/**
+ * Click "Edit text" button in the element drawer.
+ * Transitions drawer to State C (text editing mode).
+ *
+ * Uses direct JS click (not page.mouse.click) because the drawer may be
+ * positioned off-screen when the selected element is near the top/bottom of
+ * the viewport. The drop-zone capture handler is idle during select mode so
+ * there is no interception risk.
+ */
+async function clickEditText(page: Page): Promise<void> {
+  await waitForElementDrawer(page);
+  await page.evaluate(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const btns = host?.shadowRoot?.querySelectorAll('.ed-action-btn') as NodeListOf<HTMLElement>;
+    for (const btn of btns) {
+      if (btn.textContent?.includes('Edit text')) {
+        btn.click();
+        return;
+      }
+    }
+    throw new Error('Shadow button not found: .ed-action-btn[text~="Edit text"]');
   });
-  await frame.page().waitForTimeout(500);
+  await page.waitForTimeout(300);
+}
+
+/**
+ * Type text in the element drawer textarea (State B).
+ */
+async function typeInDrawerTextarea(page: Page, text: string): Promise<void> {
+  await page.evaluate((t) => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const textarea = host.shadowRoot!.querySelector('.element-drawer .ed-textarea') as HTMLTextAreaElement;
+    if (!textarea) throw new Error('Drawer textarea not found');
+    textarea.focus();
+    textarea.value = t;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  }, text);
+  await page.waitForTimeout(200);
+}
+
+/**
+ * Click "Queue" button in the element drawer (State B or State C-dirty).
+ */
+async function clickDrawerQueue(page: Page): Promise<void> {
+  const { x, y } = await getShadowButtonCenter(page, '.ed-queue-btn');
+  await page.mouse.click(x, y);
+  await page.waitForTimeout(500);
 }
 
 // ── Tutorial section titles (indexed by step number) ─────────────────────
@@ -129,14 +216,18 @@ const SECTION_TITLES = [
   'Edit Text In Place',
   'Describe What to Add',
   'Sketch What to Add',
+  'Move Elements',
+  'Delete Elements',
+  'Copy and Paste',
   'Place a Component',
   'Build with Nested Components',
   'Fine-Tune the Design',
   'Report a Bug',
   'Explore Your Theme',
+  'Wireframe with HTML Elements',
 ];
 
-const TOTAL_STEPS = 11;
+const TOTAL_STEPS = 14;
 
 // ── Internal: assertion helpers ──────────────────────────────────────────
 
@@ -188,36 +279,7 @@ async function scrollToStep(page: Page, step: number): Promise<void> {
 }
 
 // ── Internal: overlay shadow DOM helpers ─────────────────────────────────
-
-async function typeInToolbarTextarea(page: Page, text: string): Promise<void> {
-  await waitForToolbarVisible(page);
-  await page.evaluate((t) => {
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const textarea = host.shadowRoot!.querySelector('.msg-row textarea') as HTMLTextAreaElement;
-    if (!textarea) throw new Error('Toolbar textarea not found');
-    textarea.focus();
-    textarea.value = t;
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  }, text);
-}
-
-async function clickToolbarSend(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const btn = host.shadowRoot!.querySelector('.msg-send') as HTMLButtonElement;
-    if (!btn) throw new Error('Send button not found');
-    btn.click();
-  });
-}
-
-async function clickTextConfirm(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const btn = host.shadowRoot!.querySelector('.text-action-confirm') as HTMLButtonElement;
-    if (!btn) throw new Error('Text confirm button not found');
-    btn.click();
-  });
-}
+// (Element drawer helpers are defined above)
 
 // ── Internal: panel frame helpers ────────────────────────────────────────
 
@@ -268,18 +330,21 @@ async function doStep3(page: Page): Promise<void> {
   await scrollToStep(page, 3);
   const frame = await getPanelFrame(page);
 
-  // Enter select mode
-  await clickSelectElementButton(frame);
-  await page.waitForTimeout(300);
+  // Enter select mode via bottom toolbar
+  await ensureSelectMode(page);
 
   // Click the Card in section 3 ("Fix Login Page Timeout")
   await page.locator('text=Fix Login Page Timeout').first().click();
   await page.waitForTimeout(1000);
 
-  // Type a message in the overlay toolbar
-  await typeInToolbarTextarea(page, 'Make the bug tag flash red');
-  await clickToolbarSend(page);
-  await page.waitForTimeout(500);
+  // Click "Describe change" in the element drawer
+  await clickDescribeChange(page);
+
+  // Type a message in the drawer textarea
+  await typeInDrawerTextarea(page, 'Make the bug tag flash red');
+
+  // Click Queue to stage the message
+  await clickDrawerQueue(page);
 
   // Open drafts and commit
   await openDraftsAndCommit(frame);
@@ -297,34 +362,31 @@ async function doStep4(page: Page): Promise<void> {
 
 async function doStep5(page: Page): Promise<void> {
   await scrollToStep(page, 5);
-  const frame = await getPanelFrame(page);
 
-  // Enter select mode
-  await clickSelectElementButton(frame);
-  await page.waitForTimeout(300);
+  // Enter select mode via bottom toolbar
+  await ensureSelectMode(page);
 
   // Click the empty state card ("No Data Available")
   await page.locator('text=No Data Available').first().click();
   await page.waitForTimeout(1000);
 
-  // Click "Text" in the overlay toolbar
-  await clickToolbarButton(page, 'Text');
+  // Click "Edit text" in the element drawer
+  await clickEditText(page);
   await page.waitForTimeout(500);
 
-  // Type replacement text
+  // Type replacement text (element is now contentEditable)
   await page.keyboard.type('Nothing here yet!');
   await page.waitForTimeout(300);
 
-  // Confirm the text edit
-  await clickTextConfirm(page);
+  // Click "Queue" in the drawer (C-dirty state) to commit the text edit
+  await clickDrawerQueue(page);
 }
 
 async function doStep6(page: Page): Promise<void> {
   await scrollToStep(page, 6);
-  const frame = await getPanelFrame(page);
 
-  // Switch to Insert mode via the panel button
-  await clickInsert(frame);
+  // Switch to Insert mode via bottom toolbar
+  await clickInsertButton(page);
   await page.waitForTimeout(500);
 
   // Click between form fields to set an insertion point.
@@ -337,9 +399,14 @@ async function doStep6(page: Page): Promise<void> {
   await page.mouse.click(emailBox.x + emailBox.width / 2, emailBox.y + emailBox.height + 10);
   await page.waitForTimeout(800);
 
-  // Type a message in the overlay toolbar
-  await typeInToolbarTextarea(page, 'Add a phone number field');
-  await clickToolbarSend(page);
+  // Click "Describe change" in the element drawer
+  await clickDescribeChange(page);
+
+  // Type a message in the drawer textarea
+  await typeInDrawerTextarea(page, 'Add a phone number field');
+
+  // Click Queue to stage the message
+  await clickDrawerQueue(page);
 }
 
 async function getDesignFrame(page: Page): Promise<Frame> {
@@ -358,7 +425,7 @@ async function doStep7(page: Page): Promise<void> {
   const frame = await getPanelFrame(page);
 
   // Switch to Insert mode
-  await clickInsert(frame);
+  await clickInsertButton(page);
   await page.waitForTimeout(500);
 
   // Click a placement site on the page (non-interactive element)
@@ -464,6 +531,79 @@ async function clickComponentPlace(frame: Frame, componentName: string): Promise
 }
 
 /**
+ * Drag a component from the panel thumbnail to a target element on the page.
+ * Uses the drag-drop flow: mousedown on thumbnail → drag past threshold →
+ * overlay captures pointermove → mouseup on target to drop.
+ */
+async function dragComponentToTarget(
+  frame: Frame,
+  componentName: string,
+  dropTarget: { x: number; y: number },
+): Promise<void> {
+  const page = frame.page();
+
+  // Wait for the component's drag-handle thumbnail to be present
+  await frame.waitForFunction((name) => {
+    const items = document.querySelectorAll('li');
+    for (const item of items) {
+      const nameEl = Array.from(item.querySelectorAll('a, div')).find(el => el.textContent?.includes(name));
+      if (nameEl) {
+        const dragHandle = item.querySelector('.cursor-grab');
+        if (dragHandle) return true;
+      }
+    }
+    return false;
+  }, componentName, { timeout: 15000 });
+
+  // Scroll the thumbnail into view and get its bounding box in iframe-local coords
+  const thumbRect = await frame.evaluate((name) => {
+    const items = document.querySelectorAll('li');
+    for (const item of items) {
+      const nameEl = Array.from(item.querySelectorAll('a, div')).find(el => el.textContent?.includes(name));
+      if (nameEl) {
+        const dragHandle = item.querySelector('.cursor-grab') as HTMLElement | null;
+        if (dragHandle) {
+          dragHandle.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+          const rect = dragHandle.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        }
+      }
+    }
+    throw new Error(`Drag handle for "${name}" not found`);
+  }, componentName);
+
+  // Get the iframe's position in the parent page to convert coords
+  const iframeOffset = await page.evaluate(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const iframe = host?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement;
+    if (!iframe) throw new Error('Panel iframe not found');
+    const rect = iframe.getBoundingClientRect();
+    return { x: rect.x, y: rect.y };
+  });
+
+  // Calculate parent-page coordinates of the thumbnail center
+  const startX = iframeOffset.x + thumbRect.x;
+  const startY = iframeOffset.y + thumbRect.y;
+
+  // Perform drag: mousedown → move past threshold → move to target → mouseup
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.waitForTimeout(50);
+
+  // Move past the 5px drag threshold to trigger DRAG_START
+  await page.mouse.move(startX, startY - 10, { steps: 3 });
+  await page.waitForTimeout(100);
+
+  // Move to the drop target (overlay's pointermove now handles indicators)
+  await page.mouse.move(dropTarget.x, dropTarget.y, { steps: 5 });
+  await page.waitForTimeout(200);
+
+  // Drop the component
+  await page.mouse.up();
+  await page.waitForTimeout(1500);
+}
+
+/**
  * Returns true if Storybook components loaded, false if unavailable (e.g. demo).
  */
 async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
@@ -516,6 +656,103 @@ async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
 async function doStep8(page: Page): Promise<void> {
   await scrollToStep(page, 8);
 
+  // Enter select mode via bottom toolbar
+  await ensureSelectMode(page);
+
+  // Click the "Critical - Fix payment gateway timeout" row to select it
+  const criticalRow = page.locator('text=Fix payment gateway timeout').first();
+  await criticalRow.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
+  await criticalRow.click();
+  await page.waitForTimeout(800);
+
+  // Get the bounding box of the selected row for drag start
+  const criticalBox = await criticalRow.boundingBox();
+  if (!criticalBox) throw new Error('Critical row bounding box not found');
+
+  // Get the bounding box of the first row (target for drop)
+  const firstRow = page.locator('text=Improve dashboard load time').first();
+  const firstBox = await firstRow.boundingBox();
+  if (!firstBox) throw new Error('First row bounding box not found');
+
+  const dragStartX = criticalBox.x + criticalBox.width / 2;
+  const dragStartY = criticalBox.y + criticalBox.height / 2;
+  const dropX = firstBox.x + firstBox.width / 2;
+  const dropY = firstBox.y - 5; // Drop above the first row
+
+  // Drag: mousedown → move past threshold → move to target → mouseup
+  await page.mouse.move(dragStartX, dragStartY);
+  await page.mouse.down();
+  await page.waitForTimeout(50);
+  await page.mouse.move(dragStartX, dragStartY - 10, { steps: 3 });
+  await page.waitForTimeout(100);
+  await page.mouse.move(dropX, dropY, { steps: 8 });
+  await page.waitForTimeout(200);
+  await page.mouse.up();
+  await page.waitForTimeout(1000);
+}
+
+async function doStep9(page: Page): Promise<void> {
+  await scrollToStep(page, 9);
+
+  // Ensure select mode is active (picking/orange)
+  await ensureSelectMode(page);
+
+  // Click the "Resolved" card to select it
+  const resolvedCard = page.locator('text=Migrate to new auth provider').first();
+  await resolvedCard.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await resolvedCard.click();
+
+  // Wait for selection to register (element drawer appears)
+  await waitForElementDrawer(page);
+  await page.waitForTimeout(300);
+
+  // Press Backspace to remove the element
+  await page.keyboard.press('Backspace');
+  await page.waitForTimeout(500);
+}
+
+async function doStep10(page: Page): Promise<void> {
+  await scrollToStep(page, 10);
+
+  // Ensure select mode is active (picking/orange)
+  await ensureSelectMode(page);
+
+  // Click one of the team member cards to select it
+  const teamMember = page.locator('text=Alice Lim').first();
+  await teamMember.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
+  await teamMember.click();
+
+  // Wait for element selection to register (element drawer appears)
+  await waitForElementDrawer(page);
+  await page.waitForTimeout(300);
+
+  // Duplicate: dispatch a synthetic Ctrl+D / Cmd+D KeyboardEvent directly
+  // into the document so the overlay's keydown handler fires reliably.
+  // Using page.keyboard.press('ControlOrMeta+d') is unreliable in headless CI
+  // because browsers may intercept Ctrl+D (bookmark shortcut) before the page
+  // handler sees it.
+  await page.evaluate(() => {
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const event = new KeyboardEvent('keydown', {
+      key: 'd',
+      code: 'KeyD',
+      ctrlKey: !isMac,
+      metaKey: isMac,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(event);
+  });
+
+  await page.waitForTimeout(1000);
+}
+
+async function doStep11(page: Page): Promise<void> {
+  await scrollToStep(page, 11);
+
   // Ensure panel is open and connected
   const panelAlreadyOpen = await page.evaluate(() => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
@@ -529,37 +766,39 @@ async function doStep8(page: Page): Promise<void> {
   await waitForPanelReady(frame);
   await page.waitForTimeout(300);
 
-  // Switch to Insert mode
-  await clickInsert(frame);
+  // Switch to Insert mode via bottom toolbar
+  await clickInsertButton(page);
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
   const hasStorybook = await ensureStorybookConnected(frame);
 
   if (hasStorybook) {
-    // Click Place on the Badge component
-    await clickComponentPlace(frame, 'Badge');
-
-    // Drop next to the existing status badges in section 8's content area
+    // Drag the Badge component from the panel thumbnail to the page
     const dropTarget = page.locator('text=Priority: High').first();
     await dropTarget.scrollIntoViewIfNeeded();
     await page.waitForTimeout(500);
-    await dropTarget.click();
-    await page.waitForTimeout(1500);
+    const dropBox = await dropTarget.boundingBox();
+    if (!dropBox) throw new Error('Drop target "Priority: High" not found');
+
+    await dragComponentToTarget(frame, 'Badge', {
+      x: dropBox.x + dropBox.width / 2,
+      y: dropBox.y + dropBox.height / 2,
+    });
   } else {
     // No Storybook (e.g. demo project) — use fallback "Mark complete" button
-    console.log('[tutorial] step 8: no Storybook, clicking Mark complete');
-    const section = page.locator('section').filter({ has: page.locator(`h2:has-text("${SECTION_TITLES[8]}")`) });
+    console.log('[tutorial] step 11: no Storybook, clicking Mark complete');
+    const section = page.locator('section').filter({ has: page.locator(`h2:has-text("${SECTION_TITLES[11]}")`) });
     await section.getByRole('button', { name: 'Mark complete' }).click();
   }
 }
 
-async function doStep9(page: Page): Promise<void> {
-  await scrollToStep(page, 9);
+async function doStep12(page: Page): Promise<void> {
+  await scrollToStep(page, 12);
   const frame = await getPanelFrame(page);
 
-  // Switch to Insert mode
-  await clickInsert(frame);
+  // Switch to Insert mode via bottom toolbar
+  await clickInsertButton(page);
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
@@ -567,8 +806,8 @@ async function doStep9(page: Page): Promise<void> {
 
   if (!hasStorybook) {
     // No Storybook (e.g. demo project) — use fallback "Mark complete" button
-    console.log('[tutorial] step 9: no Storybook, clicking Mark complete');
-    const section = page.locator('section').filter({ has: page.locator(`h2:has-text("${SECTION_TITLES[9]}")`) });
+    console.log('[tutorial] step 12: no Storybook, clicking Mark complete');
+    const section = page.locator('section').filter({ has: page.locator(`h2:has-text("${SECTION_TITLES[12]}")`) });
     await section.getByRole('button', { name: 'Mark complete' }).click();
     return;
   }
@@ -631,32 +870,39 @@ async function doStep9(page: Page): Promise<void> {
   await page.waitForTimeout(800);
 
   // Now the Button should show "Place" with the nested Icon in leftIcon.
-  // Click Place on Button to arm it.
-  await clickComponentPlace(frame, 'Button');
-
-  // Drop on the "Close Issue" button in section 9's content area
+  // Drag the Button component from the panel to the page
   const dropTarget = page.locator('button:has-text("Close Issue")').first();
   await dropTarget.scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
-  await dropTarget.click();
-  await page.waitForTimeout(2000);
+  const dropBox = await dropTarget.boundingBox();
+  if (!dropBox) throw new Error('Drop target "Close Issue" not found');
+
+  await dragComponentToTarget(frame, 'Button', {
+    x: dropBox.x + dropBox.width / 2,
+    y: dropBox.y + dropBox.height / 2,
+  });
 }
 
-async function doStep10(page: Page): Promise<void> {
-  await scrollToStep(page, 10);
+async function doStep13(page: Page): Promise<void> {
+  await scrollToStep(page, 13);
   const frame = await getPanelFrame(page);
 
-  // Switch back to Select mode
-  await clickSelectElementButton(frame);
-  await page.waitForTimeout(300);
+  // Switch back to Select mode via bottom toolbar
+  await ensureSelectMode(page);
 
-  // Click a visible element that has Tailwind padding classes.
-  // The tutorial page has "Assign" and "Close Issue" buttons with padding.
-  const assignBtn = page.locator('button:has-text("Assign")').first();
-  await assignBtn.scrollIntoViewIfNeeded();
+  // Click the purple banner element (section 13's playground)
+  // The banner has classes: bg-indigo-600 text-white rounded-2xl p-12 ...
+  const banner = page.locator('.bg-indigo-600.text-white.rounded-2xl').first();
+  await banner.scrollIntoViewIfNeeded();
   await page.waitForTimeout(200);
-  await assignBtn.click();
+  await banner.click();
   await page.waitForTimeout(1000);
+
+  // Switch to the Design tab in the panel (it may default to Components)
+  const designTab = frame.locator('button', { hasText: 'Design' });
+  await designTab.waitFor({ timeout: 5000 });
+  await designTab.click();
+  await page.waitForTimeout(500);
 
   // Wait for the box model padding slots to appear
   const paddingSlot = frame.locator('[data-layer="padding"] .bm-slot').first();
@@ -681,8 +927,8 @@ async function doStep10(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 }
 
-async function doStep12(page: Page): Promise<void> {
-  await scrollToStep(page, 12);
+async function doStep15(page: Page): Promise<void> {
+  await scrollToStep(page, 15);
   const frame = await getPanelFrame(page);
 
   // Switch to Theme mode — wait for button, click it, then wait for Theme tab content
@@ -712,19 +958,6 @@ async function doStep12(page: Page): Promise<void> {
   // Verify the input accepted the new value
   await expect(textXlInput).toHaveValue('2rem', { timeout: 3000 });
 
-  // Verify the live preview actually changed computed styles on the page.
-  // The panel sends THEME_PREVIEW → overlay injects :root { --text-xl: 2rem !important; }
-  // so any element using text-xl should now render at 32px instead of 20px.
-  await expect.poll(async () => {
-    return page.evaluate(() => {
-      const el = document.querySelector('.text-xl.font-bold') as HTMLElement;
-      return el ? getComputedStyle(el).fontSize : null;
-    });
-  }, {
-    message: 'Expected .text-xl computed font-size to change to 32px after theme preview',
-    timeout: 10000,
-  }).toBe('32px');
-
   // Verify a draft was staged — the panel footer should show a draft count
   await expect.poll(async () => {
     return frame.evaluate(() => {
@@ -732,6 +965,24 @@ async function doStep12(page: Page): Promise<void> {
       return btn?.textContent?.trim() ?? '';
     });
   }, { message: 'Expected a draft to appear after theme edit', timeout: 5000 }).toMatch(/draft/i);
+
+  // Verify the live preview actually changed the computed style on the page.
+  // The overlay injects `:root { --text-xl: 2rem !important; }` which should
+  // make .text-xl elements compute to 32px (2rem × 16px base).
+  await expect.poll(async () => {
+    const info = await page.evaluate(() => {
+      const styleEl = document.getElementById('vybit-theme-preview');
+      const el = document.querySelector('.text-xl.font-bold') as HTMLElement;
+      return {
+        styleExists: !!styleEl,
+        fontSize: el ? getComputedStyle(el).fontSize : null,
+        varValue: getComputedStyle(document.documentElement).getPropertyValue('--text-xl').trim(),
+      };
+    });
+    if (info.fontSize === '32px') return '32px';
+    // Include diagnostic info in the received value so failures show context
+    return `${info.fontSize} [styleExists=${info.styleExists}, --text-xl="${info.varValue}"]`;
+  }, { message: 'Expected .text-xl computed font-size to change to 32px after theme preview', timeout: 10000 }).toBe('32px');
 
   // The panel sends MESSAGE_STAGE via postMessage to the parent, but in the
   // cross-origin iframe test setup the event doesn't reliably reach
@@ -744,8 +995,8 @@ async function doStep12(page: Page): Promise<void> {
   });
 }
 
-async function doStep11(page: Page): Promise<void> {
-  await scrollToStep(page, 11);
+async function doStep14(page: Page): Promise<void> {
+  await scrollToStep(page, 14);
   const frame = await getPanelFrame(page);
 
   // Click "Refresh Invoice" to trigger console error + failed fetch
@@ -799,6 +1050,9 @@ export async function runTutorial(page: Page): Promise<void> {
     { step: 9, fn: doStep9 },
     { step: 10, fn: doStep10 },
     { step: 11, fn: doStep11 },
+    { step: 12, fn: doStep12 },
+    { step: 13, fn: doStep13 },
+    { step: 14, fn: doStep14 },
   ];
 
   for (const { step, fn } of STEPS) {
@@ -811,12 +1065,12 @@ export async function runTutorial(page: Page): Promise<void> {
 
   await assertCompletionBanner(page);
 
-  // Bonus steps (after the core 11-step completion banner)
-  console.log(`[tutorial] → starting bonus step 12 ("${SECTION_TITLES[12]}")`);
-  await doStep12(page);
-  console.log(`[tutorial] → step 12 action done, asserting localStorage`);
-  await assertStepCompleted(page, 12);
-  console.log(`[tutorial] ✓ step 12 complete`);
+  // Bonus steps (after the core 14-step completion banner)
+  console.log(`[tutorial] → starting bonus step 15 ("${SECTION_TITLES[15]}")`);
+  await doStep15(page);
+  console.log(`[tutorial] → step 15 action done, asserting localStorage`);
+  await assertStepCompleted(page, 15);
+  console.log(`[tutorial] ✓ step 15 complete`);
 }
 
 export { SECTION_TITLES, TOTAL_STEPS };

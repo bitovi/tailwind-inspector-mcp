@@ -393,11 +393,11 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Event Timeline */}
-      <div ref={timelineRef} className="flex-1 overflow-y-auto border-b border-bv-border">
+      <div ref={timelineRef} className="flex-1 overflow-y-auto border-b border-bit-border">
         {groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-            <div className="text-[11px] text-bv-muted">No recording events yet</div>
-            <div className="text-[10px] text-bv-muted/60">
+            <div className="text-[11px] text-bit-muted">No recording events yet</div>
+            <div className="text-[10px] text-bit-muted/60">
               Interact with the page to start recording events.
             </div>
           </div>
@@ -415,7 +415,7 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
                 onClick={(e) => togglePrimary(gi, e.shiftKey)}
               >
                 <span
-                  className="w-9 shrink-0 text-right pr-1.5 font-mono text-[10px] text-bv-muted font-medium"
+                  className="w-9 shrink-0 text-right pr-1.5 font-mono text-[10px] text-bit-muted font-medium"
                   title={formatAbsoluteTime(group.primary.timestamp)}
                 >
                   {gi === groups.length - 1 ? '0s' : formatDelta(group.primary.timestamp, anchorTs)}
@@ -425,15 +425,15 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
                   onChange={() => togglePrimary(gi, false)}
                 />
                 <TriggerBadge trigger={group.primary.trigger} />
-                <span className="text-[11px] text-bv-text flex-1 min-w-0 truncate">
+                <span className="text-[11px] text-bit-text flex-1 min-w-0 truncate">
                   {group.primary.trigger === 'click' && group.primary.elementInfo && (
                     <>
-                      on <span className="font-mono text-[10px] text-bv-text-mid">
+                      on <span className="font-mono text-[10px] text-bit-text-mid">
                         &lt;{group.primary.elementInfo.tag}&gt;
                       </span>
                       {group.primary.elementInfo.componentName && (
                         <>
-                          {' '}in <span className="font-mono text-[10px] text-bv-text-mid">
+                          {' '}in <span className="font-mono text-[10px] text-bit-text-mid">
                             &lt;{group.primary.elementInfo.componentName}&gt;
                           </span>
                         </>
@@ -441,10 +441,10 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
                     </>
                   )}
                   {group.primary.trigger === 'page-load' && (
-                    <span className="font-mono text-[10px] text-bv-text-mid">{group.primary.url}</span>
+                    <span className="font-mono text-[10px] text-bit-text-mid">{group.primary.url}</span>
                   )}
                   {group.primary.trigger === 'navigation' && (
-                    <span className="font-mono text-[10px] text-bv-text-mid">{group.primary.url}</span>
+                    <span className="font-mono text-[10px] text-bit-text-mid">{group.primary.url}</span>
                   )}
                   {group.primary.trigger === 'error' && (
                     <span className="text-[#f87171]">
@@ -474,7 +474,7 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
                     visible={group.checked}
                     onChange={() => toggleSecondary(gi, si)}
                   />
-                  <span className={`text-[10px] text-bv-text-mid flex-1 min-w-0 truncate ${
+                  <span className={`text-[10px] text-bit-text-mid flex-1 min-w-0 truncate ${
                     group.checked && !sec.checked ? 'line-through decoration-white/25' : ''
                   }`}>
                     {sec.type === 'network' && sec.networkStatus && (
@@ -497,13 +497,13 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
       {/* Report Form */}
       <div className="px-3 py-2.5 flex flex-col gap-2">
         {/* Selection summary */}
-        <div className="text-[10px] text-bv-text-mid">
+        <div className="text-[10px] text-bit-text-mid">
           <span className="font-bold text-[#00848B]">{selectedCount}</span> event{selectedCount !== 1 ? 's' : ''} selected
           {selectedCount > 0 && (() => {
             const selected = groups.filter(g => g.checked);
             const start = formatAbsoluteTime(selected[0].primary.timestamp);
             const end = formatAbsoluteTime(selected[selected.length - 1].primary.timestamp);
-            return <span className="text-bv-muted font-mono text-[9px] ml-1.5">{start} – {end}</span>;
+            return <span className="text-bit-muted font-mono text-[9px] ml-1.5">{start} – {end}</span>;
           })()}
         </div>
 
@@ -512,7 +512,7 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe the bug…"
-          className="w-full min-h-[48px] max-h-[140px] px-2.5 py-2 rounded-md border border-bv-border bg-bv-surface text-bv-text text-[11px] leading-[1.5] resize-none outline-none transition-colors duration-[120ms] focus:border-[#00848B] placeholder:text-[#666] overflow-y-auto"
+          className="w-full min-h-[48px] max-h-[140px] px-2.5 py-2 rounded-md border border-bit-border bg-bit-surface text-bit-text text-[11px] leading-[1.5] resize-none outline-none transition-colors duration-[120ms] focus:border-[#00848B] placeholder:text-[#666] overflow-y-auto"
           style={{ fieldSizing: 'content' } as any}
         />
 
@@ -525,7 +525,7 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
               className={`flex items-center gap-[5px] px-2.5 py-[5px] rounded-md border border-dashed text-[10px] font-medium cursor-pointer transition-all duration-[120ms] whitespace-nowrap ${
                 pickMode
                   ? 'border-[#00848B] text-[#00848B] bg-[rgba(0,132,139,0.12)]'
-                  : 'border-bv-border text-bv-text-mid bg-transparent hover:border-[#00848B] hover:text-[#00848B] hover:bg-[rgba(0,132,139,0.12)]'
+                  : 'border-bit-border text-bit-text-mid bg-transparent hover:border-[#00848B] hover:text-[#00848B] hover:bg-[rgba(0,132,139,0.12)]'
               }`}
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" className="shrink-0">
@@ -535,18 +535,18 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
               {pickMode ? 'Click an element…' : 'Pick Element'}
             </button>
           ) : (
-            <div className="flex items-center gap-1 flex-1 min-w-0 px-2 py-1 rounded bg-bv-surface border border-bv-border font-mono text-[10px] text-bv-text">
+            <div className="flex items-center gap-1 flex-1 min-w-0 px-2 py-1 rounded bg-bit-surface border border-bit-border font-mono text-[10px] text-bit-text">
               <span className="text-[#00848B] font-semibold">&lt;{pickedElement.tag}&gt;</span>
-              {pickedElement.id && <span className="text-bv-muted">#{pickedElement.id}</span>}
+              {pickedElement.id && <span className="text-bit-muted">#{pickedElement.id}</span>}
               {pickedElement.componentName && (
-                <span className="text-[9px] text-bv-text-mid bg-[rgba(0,132,139,0.1)] px-1 rounded-[2px] font-medium font-sans">
+                <span className="text-[9px] text-bit-text-mid bg-[rgba(0,132,139,0.1)] px-1 rounded-[2px] font-medium font-sans">
                   {pickedElement.componentName}
                 </span>
               )}
               <button
                 type="button"
                 onClick={() => setPickedElement(null)}
-                className="w-3.5 h-3.5 rounded-[3px] border-none bg-white/[0.08] text-bv-muted text-[9px] flex items-center justify-center cursor-pointer ml-auto hover:bg-white/15 hover:text-bv-text"
+                className="w-3.5 h-3.5 rounded-[3px] border-none bg-white/[0.08] text-bit-muted text-[9px] flex items-center justify-center cursor-pointer ml-auto hover:bg-white/15 hover:text-bit-text"
               >
                 ✕
               </button>
@@ -562,7 +562,7 @@ export function BugReportMode({ onSubmit }: BugReportModeProps) {
           className={`flex items-center justify-center gap-1.5 w-full py-2 rounded-md border-none text-[11px] font-semibold cursor-pointer transition-all duration-[120ms] ${
             canSubmit
               ? 'bg-[#F5532D] text-white hover:bg-[#e04420]'
-              : 'bg-bv-surface text-[#555] cursor-not-allowed'
+              : 'bg-bit-surface text-[#555] cursor-not-allowed'
           }`}
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">

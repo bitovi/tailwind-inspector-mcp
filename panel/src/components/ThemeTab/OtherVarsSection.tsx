@@ -18,11 +18,11 @@ function VarRow({ variable, value, editedValue, onEdit }: {
   const tokenKey = `other-${variable}`;
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bv-orange/5' : ''}`}>
+    <div className={`flex items-center gap-2 px-3 py-1 ${isEdited ? 'bg-bit-orange/5' : ''}`}>
       {isEdited && (
-        <div className="w-1.5 h-1.5 rounded-full bg-bv-orange shrink-0" />
+        <div className="w-1.5 h-1.5 rounded-full bg-bit-orange shrink-0" />
       )}
-      <span className="text-[10px] text-bv-text-mid shrink-0 font-mono truncate max-w-[140px]" title={variable}>
+      <span className="text-[10px] text-bit-text-mid shrink-0 font-mono truncate max-w-[140px]" title={variable}>
         {variable}
       </span>
       <input
@@ -31,7 +31,7 @@ function VarRow({ variable, value, editedValue, onEdit }: {
         onChange={(e) => {
           onEdit(tokenKey, { variable, value: e.target.value });
         }}
-        className="flex-1 min-w-0 bg-transparent text-[10px] text-bv-text font-mono border border-bv-border rounded px-1.5 py-0.5 focus:border-bv-teal focus:outline-none"
+        className="flex-1 min-w-0 bg-transparent text-[10px] text-bit-text font-mono border border-bit-border rounded px-1.5 py-0.5 focus:border-bit-teal focus:outline-none"
         spellCheck={false}
       />
     </div>
@@ -62,7 +62,7 @@ export function OtherVarsSection({ otherVars, edits, onEdit }: OtherVarsSectionP
       {hasMore && !showAll && (
         <button
           onClick={() => setShowAll(true)}
-          className="w-full px-3 py-1.5 text-[10px] text-bv-teal hover:text-bv-teal/80 transition-colors text-left"
+          className="w-full px-3 py-1.5 text-[10px] text-bit-teal hover:text-bit-teal/80 transition-colors text-left"
         >
           Show {vars.length - INITIAL_LIMIT} more...
         </button>

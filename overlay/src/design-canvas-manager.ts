@@ -6,6 +6,7 @@ import { sendTo } from "./ws";
 import { css, SUBMITTED_IMAGE } from './styles';
 import { clearHighlights } from "./element-highlight";
 import { showCanvasMessageRow, hideCanvasMessageRow, getCanvasMessageText } from "./element-toolbar";
+import { dom } from "./overlay-dom";
 import { state, clearSelectionState } from "./overlay-state";
 import { send } from "./ws";
 
@@ -76,13 +77,13 @@ export function injectDesignCanvas(insertMode: InsertMode): void {
 			targetEl.insertAdjacentElement("beforebegin", canvas);
 	}
 
-	state.designCanvasWrappers.push({
+	dom.designCanvasWrappers.push({
 		wrapper: canvas as unknown as HTMLElement,
 		replacedNodes,
 		parent: replacedParent,
 		anchor: replacedAnchor,
 	});
-	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), boundary, state.shadowRoot));
+	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), boundary, dom.shadowRoot));
 	// Use a short delay to allow the iframe's WS client to connect and register
 	console.log('[tw-debug] canvas inserted into DOM, listening for vb-canvas-ready...');
 	canvas.addEventListener('vb-canvas-ready', () => {
@@ -196,8 +197,8 @@ export async function handleCaptureScreenshot(): Promise<void> {
 	parent.insertBefore(canvas, marker);
 	marker.remove();
 
-	state.designCanvasWrappers.push({ wrapper: canvas as unknown as HTMLElement, replacedNodes, parent, anchor: canvas.nextSibling });
-	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), boundary, state.shadowRoot));
+	dom.designCanvasWrappers.push({ wrapper: canvas as unknown as HTMLElement, replacedNodes, parent, anchor: canvas.nextSibling });
+	requestAnimationFrame(() => showCanvasMessageRow(canvas.getWrapper(), boundary, dom.shadowRoot));
 	canvas.addEventListener('vb-canvas-ready', () => {
 		const contextMsg = {
 			type: "ELEMENT_CONTEXT",
@@ -224,14 +225,14 @@ export async function handleCaptureScreenshot(): Promise<void> {
 }
 
 export function removeAllDesignCanvases(): void {
-	for (const entry of state.designCanvasWrappers) {
+	for (const entry of dom.designCanvasWrappers) {
 		entry.wrapper.remove();
 	}
-	state.designCanvasWrappers.length = 0;
+	dom.designCanvasWrappers.length = 0;
 }
 
 export function handleDesignSubmitted(msg: { image?: string; patchId?: string }): void {
-	const lastEntry = state.designCanvasWrappers[state.designCanvasWrappers.length - 1];
+	const lastEntry = dom.designCanvasWrappers[dom.designCanvasWrappers.length - 1];
 	const last = lastEntry?.wrapper;
 	if (last) {
 		// last may be the <vb-design-canvas> custom element; the actual wrapper div is its first child
@@ -258,7 +259,7 @@ export function handleDesignSubmitted(msg: { image?: string; patchId?: string })
 }
 
 export function handleDesignClose(): void {
-	const last = state.designCanvasWrappers.pop();
+	const last = dom.designCanvasWrappers.pop();
 	if (last) {
 		if (last.replacedNodes) {
 			for (const node of last.replacedNodes) {

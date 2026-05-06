@@ -8,11 +8,11 @@ function Interactive() {
   const [dir, setDir] = useState<FlexDirectionCss>('row');
 
   return (
-    <div className="p-6 bg-bv-bg flex flex-col gap-4">
+    <div className="p-6 bg-bit-bg flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <label className="text-[10px] font-mono text-bv-muted uppercase">Direction</label>
+        <label className="text-[10px] font-mono text-bit-muted uppercase">Direction</label>
         <select
-          className="bg-bv-surface text-bv-text text-[11px] font-mono border border-bv-border rounded px-1.5 py-0.5"
+          className="bg-bit-surface text-bit-text text-[11px] font-mono border border-bit-border rounded px-1.5 py-0.5"
           value={dir}
           onChange={(e) => setDir(e.target.value as FlexDirectionCss)}
         >
@@ -33,7 +33,7 @@ function Interactive() {
         onClick={setValue}
         onRemove={() => setValue(null)}
       />
-      <span className="text-[11px] font-mono text-bv-teal">{value ?? '(none)'}</span>
+      <span className="text-[11px] font-mono text-bit-teal">{value ?? '(none)'}</span>
     </div>
   );
 }

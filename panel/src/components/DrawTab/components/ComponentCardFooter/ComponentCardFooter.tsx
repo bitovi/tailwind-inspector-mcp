@@ -17,22 +17,22 @@ export function ComponentCardFooter({
   onToggleProps,
 }: ComponentCardFooterProps) {
   return (
-    <div className="flex items-center justify-between px-2.5 py-1.5 border-t border-bv-border bg-bv-bg">
+    <div className="flex items-center justify-between px-2.5 py-1.5 border-t border-bit-border bg-bit-bg">
       {isArmed ? (
-        <span className="text-[11px] font-medium text-bv-teal">Click the page to place</span>
+        <span className="text-[11px] font-medium text-bit-teal">Click the page to place</span>
       ) : (
         group.stories[0] ? (
           <a
             href={`${STORYBOOK_BASE}/?path=/story/${group.stories[0].id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[11px] text-bv-text hover:text-bv-orange hover:underline transition-colors"
+            className="text-[11px] text-bit-text hover:text-bit-orange hover:underline transition-colors"
             onClick={(e) => { e.stopPropagation(); }}
           >
             <ComponentTitle fullTitle={group.fullTitle} />
           </a>
         ) : (
-          <span className="text-[11px] text-bv-text">
+          <span className="text-[11px] text-bit-text">
             <ComponentTitle fullTitle={group.fullTitle} />
           </span>
         )
@@ -40,7 +40,7 @@ export function ComponentCardFooter({
       {hasArgs && (
         <button
           className={`w-5.5 h-5.5 rounded flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 ${
-            showProps ? 'opacity-100 bg-bv-surface-hi text-bv-text' : 'text-bv-muted hover:bg-bv-surface-hi hover:text-bv-text'
+            showProps ? 'opacity-100 bg-bit-surface-hi text-bit-text' : 'text-bit-muted hover:bg-bit-surface-hi hover:text-bit-text'
           }`}
           title="Customize props"
           onClick={(e) => { e.stopPropagation(); onToggleProps(); }}
@@ -64,8 +64,8 @@ function ComponentTitle({ fullTitle }: { fullTitle: string }) {
   const name = segments.at(-1);
   return (
     <>
-      <span className="text-bv-muted font-normal">{path.join(' / ')}</span>
-      <span className="text-bv-muted font-normal"> / </span>
+      <span className="text-bit-muted font-normal">{path.join(' / ')}</span>
+      <span className="text-bit-muted font-normal"> / </span>
       <span className="font-semibold">{name}</span>
     </>
   );

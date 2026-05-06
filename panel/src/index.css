@@ -2,18 +2,37 @@
 
 @theme {
   /* Bitovi design tokens — dark theme */
-  --color-bv-bg: #2c2c2c;
-  --color-bv-surface: #383838;
-  --color-bv-surface-hi: #404040;
-  --color-bv-border: #3a3a3a;
-  --color-bv-text: #e5e5e5;
-  --color-bv-text-mid: #b3b3b3;
-  --color-bv-muted: #999999;
-  --color-bv-orange: #F5532D;
-  --color-bv-orange-hover: #C73D26;
-  --color-bv-teal: #00848B;
-  --color-bv-teal-dark: #00464A;
-  --color-bv-green: #2E7229;
+  --color-bit-bg: #2c2c2c;
+  --color-bit-surface: #383838;
+  --color-bit-surface-hi: #404040;
+  --color-bit-border: #3a3a3a;
+  --color-bit-text: #e5e5e5;
+  --color-bit-text-mid: #b3b3b3;
+  --color-bit-muted: #999999;
+  --color-bit-orange: #F5532D;
+  --color-bit-orange-hover: #C73D26;
+  --color-bit-teal: #00848B;
+  --color-bit-teal-dark: #00464A;
+  --color-bit-green: #2E7229;
+  --color-bit-warn-bg: rgba(69, 26, 3, 0.4);
+  --color-bit-warn-border: rgba(146, 64, 14, 0.4);
+  --color-bit-warn-accent: rgba(146, 64, 14, 0.6);
+  --color-bit-warn-text: #fcd34d;
+  --color-bit-warn-text-sub: #fcd34d;
+  --color-bit-warn-link: #fbbf24;
+  --color-bit-warn-link-hover: #fef3c7;
+  --color-bit-warn-btn-bg: rgba(120, 53, 15, 0.4);
+  --color-bit-warn-btn-border: rgba(146, 64, 14, 0.5);
+  --color-bit-warn-btn-text: #fcd34d;
+  --color-bit-warn-btn-hover-bg: rgba(120, 53, 15, 0.6);
+  --color-bit-warn-btn-hover-border: rgba(146, 64, 14, 0.7);
+  --color-bit-warn-btn-hover-text: #fef3c7;
+  --color-bit-warn-btn-shadow: rgba(0, 0, 0, 0.2);
+  --color-bit-warn-icon-bg: rgba(146, 64, 14, 0.6);
+  --color-bit-warn-icon-color: #fcd34d;
+  --color-bit-warn-icon-shadow: rgba(0, 0, 0, 0.3);
+  --color-bit-draft: #fbbf24;
+  --color-bit-committed: #F5532D;
   --font-display: 'Poppins', sans-serif;
   --font-ui: 'Inter', sans-serif;
   --font-mono: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
@@ -23,3 +42,35 @@
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 3px; }
+
+/* ── Light mode overrides ─────────────────────────────────────────────── */
+.light {
+  --color-bit-bg: #f5f5f5;
+  --color-bit-surface: #ffffff;
+  --color-bit-surface-hi: #e8e8e8;
+  --color-bit-border: #d4d4d4;
+  --color-bit-text: #1a1a1a;
+  --color-bit-text-mid: #555555;
+  --color-bit-muted: #888888;
+  --color-bit-warn-bg: #FFF7E6;
+  --color-bit-warn-border: #F2D9A0;
+  --color-bit-warn-accent: #CF7C01;
+  --color-bit-warn-text: #3D1800;
+  --color-bit-warn-text-sub: #5E2E00;
+  --color-bit-warn-link: #834600;
+  --color-bit-warn-link-hover: #4A2000;
+  --color-bit-warn-btn-bg: #FFFFFF;
+  --color-bit-warn-btn-border: #834600;
+  --color-bit-warn-btn-text: #4A2000;
+  --color-bit-warn-btn-hover-bg: #3D1800;
+  --color-bit-warn-btn-hover-border: #3D1800;
+  --color-bit-warn-btn-hover-text: #FFFFFF;
+  --color-bit-warn-btn-shadow: rgba(165, 95, 1, 0.08);
+  --color-bit-warn-icon-bg: #CF7C01;
+  --color-bit-warn-icon-color: #FFFCF6;
+  --color-bit-warn-icon-shadow: rgba(165, 95, 1, 0.35);
+  --color-bit-draft: #b45309;
+  --color-bit-committed: #c2410c;
+  /* Brand colors stay the same */
+}
+.light ::-webkit-scrollbar-thumb { background: #c0c0c0; }

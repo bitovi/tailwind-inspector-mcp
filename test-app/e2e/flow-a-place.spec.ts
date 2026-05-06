@@ -12,20 +12,20 @@ import {
 
 // ── Flow A table (mirrors SKILL.md exactly) ──────────────────────────────
 //
-// | Step | Action              | Tab   | Panel Insert | Overlay    | Components | Page                |
-// |------|---------------------|-------|-------------|------------|------------|---------------------|
-// |  1   | initial             | null  | gray        | no-toolbar | —          | none                |
-// |  2   | clickInsert         | place | orange      | no-toolbar | gray       | browse-mode         |
-// |  3   | clickComponentPlace | place | gray        | no-toolbar | one-orange | browse-mode (drop)  |
-// |  4   | placeOnPage         | place | gray        | no-toolbar | gray       | none                |
-// |  5   | clickInsert (repeat)| place | orange      | no-toolbar | gray       | browse-mode         |
+// | Step | Action              | Tab   | Panel Insert | Overlay    | Components | Page                | Reasoning                                    |
+// |------|---------------------|-------|-------------|------------|------------|---------------------|----------------------------------------------|
+// |  1   | initial             | null  | gray        | no-toolbar | —          | none                | Nothing active                               |
+// |  2   | clickInsert         | place | orange      | no-toolbar | gray       | browse-mode         | Orange = crosshair active                    |
+// |  3   | clickComponentPlace | place | orange      | no-toolbar | one-orange | browse-mode         | Insert stays orange — user still placing     |
+// |  4   | placeOnPage         | place | orange      | no-toolbar | gray       | browse-mode         | Placed — browse restarts for rapid placement |
+// |  5   | clickInsert (stop)  | place | gray        | no-toolbar | gray       | none                | User stops — gray (no locked point)          |
 
 const FLOW_A_TABLE: FlowTableRow[] = [
-  { step: 1, action: 'initial',            tab: null,    panelInsert: 'gray',   overlay: 'no-toolbar', components: '—',      page: 'none' },
-  { step: 2, action: 'clickInsert',        tab: 'place', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',   page: 'browse-mode' },
-  { step: 3, action: 'clickComponentPlace', tab: 'place', panelInsert: 'gray',  overlay: 'no-toolbar', components: 'one-orange', page: 'browse-mode' },
-  { step: 4, action: 'placeOnPage',        tab: 'place', panelInsert: 'gray',   overlay: 'no-toolbar', components: 'gray',   page: 'none' },
-  { step: 5, action: 'clickInsert',        tab: 'place', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',   page: 'browse-mode' },
+  { step: 1, action: 'initial',                          panelInsert: 'gray',   overlay: 'no-toolbar', components: '—',          page: 'none' },
+  { step: 2, action: 'clickInsert',        tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',       page: 'browse-mode' },
+  { step: 3, action: 'clickComponentPlace', tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'one-orange', page: 'browse-mode' },
+  { step: 4, action: 'placeOnPage',        tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',       page: 'browse-mode' },
+  { step: 5, action: 'clickInsert',        tab: 'components', panelInsert: 'gray',   overlay: 'no-toolbar', components: 'gray',       page: 'none' },
 ];
 
 const ACTIONS: Record<string, (page: Page, frame: Frame) => Promise<void>> = {

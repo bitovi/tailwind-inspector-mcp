@@ -24,10 +24,10 @@
   --r-label-hover: rgba(165, 126, 245, 0.90);
 
   /* Interactive */
-  --teal: var(--color-bv-teal, #00848B);
+  --teal: var(--color-bit-teal, #00848B);
   --teal-dim: rgba(0, 132, 139, 0.15);
-  --text-mid: var(--color-bv-text-mid, #b3b3b3);
-  --c-fill: var(--color-bv-bg, #2c2c2c);
+  --text-mid: var(--color-bit-text-mid, #b3b3b3);
+  --c-fill: var(--color-bit-bg, #2c2c2c);
   --c-bdr: #555555;
 
   user-select: none;

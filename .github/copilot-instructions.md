@@ -11,15 +11,15 @@ A browser overlay + inspector panel + MCP server for visually editing Tailwind C
 Used throughout panel UI — do not substitute generic colors:
 
 ```
-bv-teal:      #00848B
-bv-orange:    #F5532D
-bv-surface:   panel background
-bv-surface-hi: elevated surface
-bv-bg:        page background
-bv-border:    border color
-bv-text:      primary text
-bv-text-mid:  secondary text
-bv-muted:     muted/disabled text
+bit-teal:      #00848B
+bit-orange:    #F5532D
+bit-surface:   panel background
+bit-surface-hi: elevated surface
+bit-bg:        page background
+bit-border:    border color
+bit-text:      primary text
+bit-text-mid:  secondary text
+bit-muted:     muted/disabled text
 ```
 
 ## Code Conventions

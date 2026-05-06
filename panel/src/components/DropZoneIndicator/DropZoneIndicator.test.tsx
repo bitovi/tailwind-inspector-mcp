@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { DropZoneIndicator } from './DropZoneIndicator';
-import { computeDropPosition } from './useDropZone';
+import { computeDropPosition, adjustForEdgeChild } from './useDropZone';
 
 /* ── computeDropPosition unit tests ─────────────────────── */
 
@@ -60,6 +60,79 @@ describe('computeDropPosition', () => {
     test('right 25% → after', () => {
       expect(computeDropPosition({ x: 280, y: 250 }, rect, 'horizontal')).toBe('after');
     });
+  });
+});
+
+/* ── adjustForEdgeChild unit tests ──────────────────────── */
+
+describe('adjustForEdgeChild', () => {
+  let parent: HTMLElement;
+
+  beforeEach(() => {
+    parent = document.createElement('div');
+    document.body.appendChild(parent);
+  });
+
+  afterEach(() => {
+    parent.remove();
+  });
+
+  test('"before" on first child → first-child of parent', () => {
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    const result = adjustForEdgeChild(child, 'before');
+    expect(result.position).toBe('first-child');
+    expect(result.target).toBe(parent);
+  });
+
+  test('"after" on last child → last-child of parent', () => {
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    const result = adjustForEdgeChild(child, 'after');
+    expect(result.position).toBe('last-child');
+    expect(result.target).toBe(parent);
+  });
+
+  test('"before" on non-first child → unchanged', () => {
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+    parent.appendChild(first);
+    parent.appendChild(second);
+
+    const result = adjustForEdgeChild(second, 'before');
+    expect(result.position).toBe('before');
+    expect(result.target).toBe(second);
+  });
+
+  test('"after" on non-last child → unchanged', () => {
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+    parent.appendChild(first);
+    parent.appendChild(second);
+
+    const result = adjustForEdgeChild(first, 'after');
+    expect(result.position).toBe('after');
+    expect(result.target).toBe(first);
+  });
+
+  test('"first-child" position passes through unchanged', () => {
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    const result = adjustForEdgeChild(child, 'first-child');
+    expect(result.position).toBe('first-child');
+    expect(result.target).toBe(child);
+  });
+
+  test('"last-child" position passes through unchanged', () => {
+    const child = document.createElement('div');
+    parent.appendChild(child);
+
+    const result = adjustForEdgeChild(child, 'last-child');
+    expect(result.position).toBe('last-child');
+    expect(result.target).toBe(child);
   });
 });
 

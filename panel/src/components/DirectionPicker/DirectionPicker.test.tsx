@@ -21,7 +21,7 @@ describe('DirectionPicker', () => {
   it('shows active state on the current direction', () => {
     render(<DirectionPicker {...defaultProps} direction="b" />);
     const downArrow = screen.getByText('↓');
-    expect(downArrow.className).toContain('bg-bv-teal');
+    expect(downArrow.className).toContain('bg-bit-teal');
   });
 
   it('calls onDirectionClick when an arrow is clicked', () => {
@@ -48,7 +48,7 @@ describe('DirectionPicker', () => {
   it('shows solid active state when mode is solid', () => {
     render(<DirectionPicker {...defaultProps} mode="solid" />);
     const centerBtn = screen.getByText('●');
-    expect(centerBtn.className).toContain('bg-bv-teal');
+    expect(centerBtn.className).toContain('bg-bit-teal');
   });
 
   it('dims direction arrows in solid mode', () => {
@@ -65,6 +65,6 @@ describe('DirectionPicker', () => {
 
   it('shows the solid color label with the main text color', () => {
     render(<DirectionPicker {...defaultProps} mode="solid" solidColorName="indigo-600" />);
-    expect(screen.getByText('indigo-600').className).toContain('text-bv-text');
+    expect(screen.getByText('indigo-600').className).toContain('text-bit-text');
   });
 });

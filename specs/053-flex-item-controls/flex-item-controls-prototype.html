@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flex Item Controls — Panel UX Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── DESIGN TOKENS (Bitovi) ──────────────────────────────── */
+    :root {
+      --bg:           #FFFFFF;
+      --page-bg:      #EAECED;
+      --surface:      #F4F5F5;
+      --surface-hi:   #E6E9E9;
+      --border:       #DFE2E2;
+      --text:         #334041;
+      --text-mid:     #687879;
+      --muted:        #A3ADAD;
+      --orange:       #F5532D;
+      --orange-dim:   rgba(245, 83, 45, 0.09);
+      --teal:         #00848B;
+      --teal-dim:     rgba(0, 132, 139, 0.09);
+      --teal-dark:    #005A5F;
+      --highlight:     #E8B931;
+      --highlight-dim: rgba(232, 185, 49, 0.15);
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+      --t-fast:       150ms ease-in-out;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--page-bg);
+      font-family: var(--font-ui);
+      font-size: 13px;
+      color: var(--text);
+      padding: 24px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--text-mid);
+      margin-bottom: 32px;
+      max-width: 800px;
+      line-height: 1.6;
+    }
+
+    /* ─── LAYOUT ──────────────────────────────────────────────── */
+    .sections { display: flex; flex-direction: column; gap: 56px; }
+    .section { display: flex; flex-direction: column; gap: 12px; }
+
+    .section-header { display: flex; align-items: center; gap: 8px; }
+
+    .section-tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #fff;
+    }
+    .section-tag.teal   { background: var(--teal); }
+    .section-tag.purple { background: #8B5CF6; }
+    .section-tag.green  { background: #10B981; }
+    .section-tag.amber  { background: #F59E0B; }
+    .section-tag.blue   { background: #3B82F6; }
+
+    .section-title { font-family: var(--font-display); font-size: 14px; color: var(--text); }
+
+    .section-desc {
+      font-size: 11px; color: var(--text-mid); line-height: 1.6; max-width: 900px;
+    }
+
+    .demo-row {
+      display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;
+    }
+
+    .annotation {
+      font-size: 9px; font-family: var(--font-mono); color: var(--teal-dark);
+      letter-spacing: 0.3px; padding: 2px 6px;
+      background: rgba(0, 132, 139, 0.08); border-radius: 3px;
+      display: inline-block; margin-bottom: 6px;
+    }
+
+    .note {
+      background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #445566;
+      line-height: 1.6; max-width: 340px;
+    }
+    .note strong { color: #3B82F6; }
+    .note ul { margin-top: 6px; padding-left: 16px; }
+    .note li { margin-bottom: 2px; }
+
+    /* ─── PANEL SIMULATION ────────────────────────────────────── */
+    .panel-sim {
+      width: 340px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06); overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 8px 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .comp-name {
+      font-family: var(--font-display); font-weight: 700;
+      font-size: 13px; color: var(--text);
+    }
+
+    .comp-tag {
+      font-size: 9px; font-family: var(--font-mono);
+      color: var(--teal); background: var(--teal-dim);
+      padding: 1px 6px; border-radius: 3px;
+    }
+
+    .panel-body { padding: 12px; }
+
+    /* ─── SECTION HEADER (matches PropertySection) ────────────── */
+    .prop-section { margin-bottom: 8px; }
+
+    .prop-section-header {
+      margin-top: 10px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .prop-section-header .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--teal); opacity: 0.5; flex-shrink: 0;
+    }
+
+    .prop-section-header .label {
+      font-size: 9px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--text-mid);
+    }
+
+    .prop-section-header .add-btn {
+      margin-left: auto; width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; font-size: 11px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer; transition: all var(--t-fast);
+    }
+    .prop-section-header .add-btn:hover {
+      border-color: var(--teal); color: var(--teal); background: var(--teal-dim);
+    }
+
+    .divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    .sub-label {
+      font-size: 8px; font-family: var(--font-mono); color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FLEX SHORTHAND — 2×2 DIAGRAM GRID
+    ═══════════════════════════════════════════════════════════ */
+    .flex-shorthand-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 4px; width: fit-content;
+    }
+
+    .flex-short-cell {
+      width: 64px; height: 40px; border-radius: 5px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      display: flex; align-items: stretch; padding: 5px; gap: 3px;
+      cursor: pointer; transition: all var(--t-fast); position: relative;
+    }
+    .flex-short-cell:hover {
+      border-color: var(--teal); background: var(--teal-dim);
+    }
+    .flex-short-cell.selected {
+      border-color: var(--teal); background: var(--teal-dim);
+      box-shadow: 0 0 0 2px rgba(0,132,139,0.15);
+    }
+
+    .flex-short-cell .bar {
+      border-radius: 2px; background: var(--teal); opacity: 0.35;
+      transition: opacity var(--t-fast);
+    }
+    .flex-short-cell:hover .bar,
+    .flex-short-cell.selected .bar { opacity: 0.7; }
+
+    .flex-short-label {
+      font-size: 8px; font-family: var(--font-mono); color: var(--text-mid);
+      text-align: center; margin-top: 1px;
+    }
+    .flex-short-cell.selected + .flex-short-label,
+    .flex-short-cell:hover + .flex-short-label {
+      color: var(--teal); font-weight: 500;
+    }
+
+    /* Flex-1: equal bars filling space */
+    .flex-short-cell.flex-1 .bar { flex: 1; }
+
+    /* Flex-auto: different widths, fill space */
+    .flex-short-cell.flex-auto .bar:nth-child(1) { flex: 2; }
+    .flex-short-cell.flex-auto .bar:nth-child(2) { flex: 3; }
+    .flex-short-cell.flex-auto .bar:nth-child(3) { flex: 1; }
+
+    /* Flex-initial: content-sized, gap at end */
+    .flex-short-cell.flex-initial .bar:nth-child(1) { width: 10px; flex: none; }
+    .flex-short-cell.flex-initial .bar:nth-child(2) { width: 16px; flex: none; }
+    .flex-short-cell.flex-initial .bar:nth-child(3) { width: 8px; flex: none; }
+
+    /* Flex-none: fixed bars, no flex */
+    .flex-short-cell.flex-none .bar:nth-child(1) { width: 10px; flex: none; }
+    .flex-short-cell.flex-none .bar:nth-child(2) { width: 14px; flex: none; }
+    .flex-short-cell.flex-none .bar:nth-child(3) { width: 10px; flex: none; }
+    .flex-short-cell.flex-none { border-style: dashed; }
+
+    /* ═══════════════════════════════════════════════════════════
+       ALIGN SELF — DIAGRAM PICKER
+    ═══════════════════════════════════════════════════════════ */
+    .self-diagram-trigger {
+      width: 60px; height: 60px; border-radius: 6px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all var(--t-fast); position: relative;
+    }
+    .self-diagram-trigger:hover {
+      border-color: var(--teal); background: var(--teal-dim);
+    }
+    .self-diagram-trigger.open {
+      border-color: var(--teal); background: var(--teal-dim);
+      box-shadow: 0 0 0 2px rgba(0,132,139,0.15);
+    }
+
+    .self-diagram-inner {
+      width: 48px; height: 48px; display: flex;
+      gap: 3px; padding: 3px;
+    }
+
+    .self-diagram-inner .sibling {
+      background: var(--teal); opacity: 0.2;
+      border-radius: 2px; flex-shrink: 0;
+    }
+
+    .self-diagram-inner .target {
+      background: var(--highlight); opacity: 0.7;
+      border-radius: 2px; flex-shrink: 0;
+      border: 1px solid rgba(232, 185, 49, 0.5);
+    }
+
+    .self-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      padding: 8px; z-index: 10; display: none;
+    }
+    .self-dropdown.visible { display: block; }
+
+    .self-grid {
+      display: grid; grid-template-columns: repeat(3, 60px);
+      gap: 4px;
+    }
+
+    .self-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      cursor: pointer;
+    }
+
+    .self-cell-box {
+      width: 56px; height: 44px; border-radius: 5px;
+      border: 1.5px solid var(--border); background: var(--surface);
+      display: flex; gap: 2px; padding: 3px;
+      transition: all var(--t-fast);
+    }
+    .self-cell:hover .self-cell-box {
+      border-color: var(--teal); background: var(--teal-dim);
+    }
+    .self-cell.selected .self-cell-box {
+      border-color: var(--teal); background: var(--teal-dim);
+      box-shadow: 0 0 0 2px rgba(0,132,139,0.15);
+    }
+
+    .self-cell-box .sib {
+      width: 10px; background: var(--teal); opacity: 0.2;
+      border-radius: 2px; flex-shrink: 0;
+    }
+    .self-cell-box .tgt {
+      width: 12px; background: var(--highlight); opacity: 0.7;
+      border-radius: 2px; flex-shrink: 0;
+      border: 1px solid rgba(232, 185, 49, 0.4);
+    }
+
+    .self-cell:hover .self-cell-box .sib { opacity: 0.3; }
+    .self-cell:hover .self-cell-box .tgt,
+    .self-cell.selected .self-cell-box .tgt { opacity: 0.9; }
+
+    .self-cell-label {
+      font-size: 8px; font-family: var(--font-mono);
+      color: var(--text-mid); text-align: center;
+    }
+    .self-cell:hover .self-cell-label,
+    .self-cell.selected .self-cell-label {
+      color: var(--teal); font-weight: 500;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       GROW/SHRINK — TOGGLE CHIPS
+    ═══════════════════════════════════════════════════════════ */
+    .toggle-group {
+      display: flex; gap: 8px;
+    }
+
+    .toggle-pair {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+
+    .toggle-pair-label {
+      font-size: 8px; font-family: var(--font-mono); color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .toggle-chips {
+      display: inline-flex; border-radius: 5px;
+      border: 1px solid var(--border); overflow: hidden;
+    }
+
+    .toggle-chip {
+      padding: 3px 10px; font-size: 10px; font-family: var(--font-mono);
+      border: none; background: transparent; color: var(--text-mid);
+      cursor: pointer; transition: all var(--t-fast);
+    }
+    .toggle-chip:not(:last-child) { border-right: 1px solid var(--border); }
+    .toggle-chip:hover { background: var(--teal-dim); color: var(--teal); }
+    .toggle-chip.active { background: var(--teal); color: white; font-weight: 500; }
+
+    /* ═══════════════════════════════════════════════════════════
+       BASIS / ORDER — SCRUBBER CHIP
+    ═══════════════════════════════════════════════════════════ */
+    .scrub-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 4px; font-size: 11px;
+      font-family: var(--font-mono); border: 1px solid var(--border);
+      background: var(--bg); color: var(--text-mid);
+      cursor: ew-resize; user-select: none; transition: all var(--t-fast);
+    }
+    .scrub-chip:hover { border-color: var(--teal); color: var(--teal); }
+    .scrub-chip .prefix { opacity: 0.5; }
+    .scrub-chip .value { font-weight: 500; }
+    .scrub-chip .arrows {
+      font-size: 7px; opacity: 0; transition: opacity var(--t-fast);
+      display: flex; flex-direction: column; line-height: 1; gap: -2px;
+    }
+    .scrub-chip:hover .arrows { opacity: 0.6; }
+
+    .control-row {
+      display: flex; gap: 12px; align-items: flex-end;
+    }
+
+    .control-col {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       FULL PANEL MOCK — COMBINED VIEW
+    ═══════════════════════════════════════════════════════════ */
+    .panel-flex-item-block {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .item-row {
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+
+    /* ─── CONTEXT INDICATOR ─────────────────────────────────── */
+    .context-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 9px; font-family: var(--font-mono);
+      color: var(--highlight); background: var(--highlight-dim);
+      padding: 2px 8px; border-radius: 3px; margin-bottom: 4px;
+    }
+    .context-badge svg { width: 10px; height: 10px; }
+
+  </style>
+</head>
+<body>
+
+<h1>Flex Item Controls — Panel UX Prototype</h1>
+<p class="page-subtitle">
+  Design prototypes for flex <strong>child/item</strong> property controls.
+  These appear when the selected element lives inside a flex container.
+  The controls cover: <code>flex-1/auto/initial/none</code>, <code>self-*</code> (align-self),
+  <code>grow/shrink</code>, <code>basis-*</code>, and <code>order-*</code>.
+</p>
+
+<div class="sections">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 1 — FLEX SHORTHAND (2×2 diagram grid)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag teal">1</span>
+      <span class="section-title">Flex Shorthand — 2×2 Diagram Grid</span>
+    </div>
+    <p class="section-desc">
+      The four mutually exclusive <code>flex</code> shorthand values, shown as mini diagrams
+      that visually represent how items grow/shrink. Matches the existing <code>FlexDirectionSelect</code>
+      grid pattern.
+    </p>
+
+    <div class="demo-row">
+      <div>
+        <span class="annotation">flex shorthand</span>
+        <div class="flex-shorthand-grid">
+          <!-- flex-1: equal bars filling entire space -->
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="flex-short-cell flex-1 selected">
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+            <span class="flex-short-label">1</span>
+          </div>
+          <!-- flex-auto: content-proportional, fill space -->
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="flex-short-cell flex-auto">
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+            <span class="flex-short-label">auto</span>
+          </div>
+          <!-- flex-initial: content-sized, don't grow -->
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="flex-short-cell flex-initial">
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+            <span class="flex-short-label">initial</span>
+          </div>
+          <!-- flex-none: rigid, no grow/shrink -->
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="flex-short-cell flex-none">
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+            <span class="flex-short-label">none</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Interaction:</strong> Same as existing flex-container diagram selects.
+        <ul>
+          <li>Hover → preview <code>flex-1</code> etc. on the element</li>
+          <li>Click → stage the class change</li>
+          <li>Active = teal border + shadow ring</li>
+          <li><code>flex-none</code> uses a dashed border to hint "rigid"</li>
+        </ul>
+        <br>
+        <strong>Visual metaphors:</strong>
+        <ul>
+          <li><strong>flex-1</strong> — equal bars fill 100% (ignore content size)</li>
+          <li><strong>flex-auto</strong> — different widths fill 100% (respect content)</li>
+          <li><strong>flex-initial</strong> — bars are content-sized, trailing gap</li>
+          <li><strong>flex-none</strong> — bars are fixed, dashed = "locked"</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 2 — ALIGN SELF (diagram picker)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag purple">2</span>
+      <span class="section-title">Align Self — Diagram Picker</span>
+    </div>
+    <p class="section-desc">
+      Reuses the <code>FlexDiagramPicker</code> infrastructure. The <strong>selected item</strong>
+      is highlighted in gold/yellow while sibling items are dimmed teal — making it clear
+      this is a per-item override of the parent's <code>align-items</code>.
+    </p>
+
+    <div class="demo-row">
+      <div>
+        <span class="annotation">align-self (flex-direction: row)</span>
+        <div class="self-grid">
+          <!-- self-auto -->
+          <div class="self-cell">
+            <div class="self-cell-box" style="align-items: stretch;">
+              <div class="sib" style="height: 100%;"></div>
+              <div class="tgt" style="height: 100%;"></div>
+              <div class="sib" style="height: 100%;"></div>
+            </div>
+            <span class="self-cell-label">auto</span>
+          </div>
+          <!-- self-start -->
+          <div class="self-cell selected">
+            <div class="self-cell-box" style="align-items: stretch;">
+              <div class="sib" style="height: 100%;"></div>
+              <div class="tgt" style="height: 18px; align-self: flex-start;"></div>
+              <div class="sib" style="height: 100%;"></div>
+            </div>
+            <span class="self-cell-label">start</span>
+          </div>
+          <!-- self-end -->
+          <div class="self-cell">
+            <div class="self-cell-box" style="align-items: stretch;">
+              <div class="sib" style="height: 100%;"></div>
+              <div class="tgt" style="height: 18px; align-self: flex-end;"></div>
+              <div class="sib" style="height: 100%;"></div>
+            </div>
+            <span class="self-cell-label">end</span>
+          </div>
+          <!-- self-center -->
+          <div class="self-cell">
+            <div class="self-cell-box" style="align-items: stretch;">
+              <div class="sib" style="height: 100%;"></div>
+              <div class="tgt" style="height: 18px; align-self: center;"></div>
+              <div class="sib" style="height: 100%;"></div>
+            </div>
+            <span class="self-cell-label">center</span>
+          </div>
+          <!-- self-stretch -->
+          <div class="self-cell">
+            <div class="self-cell-box" style="align-items: flex-start;">
+              <div class="sib" style="height: 16px;"></div>
+              <div class="tgt" style="height: 100%; align-self: stretch;"></div>
+              <div class="sib" style="height: 24px;"></div>
+            </div>
+            <span class="self-cell-label">stretch</span>
+          </div>
+          <!-- self-baseline -->
+          <div class="self-cell">
+            <div class="self-cell-box" style="align-items: stretch;">
+              <div class="sib" style="height: 100%;"></div>
+              <div class="tgt" style="height: 18px; align-self: center; font-size: 5px; color: rgba(232,185,49,0.8); display: flex; align-items: center; justify-content: center;">t</div>
+              <div class="sib" style="height: 100%;"></div>
+            </div>
+            <span class="self-cell-label">baseline</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Key difference from align-items:</strong> The gold/highlighted bar is the
+        <em>selected element</em>. Sibling bars stay in their parent-set position while
+        the target moves independently.
+        <br><br>
+        <strong>Color coding:</strong>
+        <ul>
+          <li><span style="color: var(--highlight);">■</span> Gold = selected element (the one being edited)</li>
+          <li><span style="color: var(--teal); opacity: 0.4;">■</span> Teal (dim) = sibling items (unaffected)</li>
+        </ul>
+        <br>
+        <strong>Trigger:</strong> 60×60 diagram box (same size as flex container diagram selects).
+        Opens a dropdown grid on click.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3 — GROW / SHRINK (toggle chips)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag green">3</span>
+      <span class="section-title">Grow / Shrink — Toggle Chips</span>
+    </div>
+    <p class="section-desc">
+      Simple on/off toggles. These are secondary to the flex shorthand (which sets grow + shrink together),
+      but useful for fine-grained control. Styled as compact segmented controls.
+    </p>
+
+    <div class="demo-row">
+      <div class="toggle-group">
+        <div class="toggle-pair">
+          <span class="toggle-pair-label">grow</span>
+          <div class="toggle-chips">
+            <button class="toggle-chip active">grow</button>
+            <button class="toggle-chip">grow-0</button>
+          </div>
+        </div>
+        <div class="toggle-pair">
+          <span class="toggle-pair-label">shrink</span>
+          <div class="toggle-chips">
+            <button class="toggle-chip active">shrink</button>
+            <button class="toggle-chip">shrink-0</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>When to use:</strong> These override the grow/shrink set by the flex shorthand.
+        For example, <code>flex-1</code> implies grow=1, shrink=1 — but you can add
+        <code>shrink-0</code> to prevent that item from shrinking.
+        <br><br>
+        Most users will just use the flex shorthand above. These are for power users.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 4 — BASIS & ORDER (scrubber chips)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag amber">4</span>
+      <span class="section-title">Basis & Order — Scrubber Chips</span>
+    </div>
+    <p class="section-desc">
+      <strong>Basis</strong> uses the spacing scale (like gap) — drag to scrub or click for a dropdown
+      with fractional values (<code>1/2</code>, <code>1/3</code>, etc.).<br>
+      <strong>Order</strong> has named values at top (<code>first</code>, <code>last</code>, <code>none</code>)
+      plus numeric 1–12.
+    </p>
+
+    <div class="demo-row">
+      <div class="control-row">
+        <div class="control-col">
+          <span class="sub-label">basis</span>
+          <div class="scrub-chip">
+            <span class="prefix">basis-</span>
+            <span class="value">auto</span>
+            <span class="arrows">▲<br>▼</span>
+          </div>
+        </div>
+        <div class="control-col">
+          <span class="sub-label">order</span>
+          <div class="scrub-chip">
+            <span class="prefix">order-</span>
+            <span class="value">none</span>
+            <span class="arrows">▲<br>▼</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Basis values:</strong>
+        <code>auto</code>, <code>0</code>, <code>1</code>–<code>96</code> (spacing scale),
+        <code>full</code>, <code>1/2</code>, <code>1/3</code>, <code>2/3</code>,
+        <code>1/4</code>, <code>3/4</code>, etc.
+        <br><br>
+        <strong>Order values:</strong>
+        <code>none</code> (0), <code>first</code> (-9999), <code>last</code> (9999),
+        <code>1</code>–<code>12</code>.
+        <br><br>
+        Both reuse the existing <code>ScaleScrubber</code> component.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 5 — FULL PANEL MOCK (combined view)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag blue">5</span>
+      <span class="section-title">Full Panel Mock — Combined View</span>
+    </div>
+    <p class="section-desc">
+      How the flex item controls look assembled together in the panel's Flexbox section.
+      The context badge indicates the element is inside a flex container.
+    </p>
+
+    <div class="demo-row">
+      <!-- Panel mock: flex child selected -->
+      <div class="panel-sim">
+        <div class="panel-header">
+          <span class="comp-name">CardTitle</span>
+          <span class="comp-tag">flex child</span>
+        </div>
+        <div class="panel-body">
+          <div class="prop-section">
+            <div class="prop-section-header">
+              <span class="dot"></span>
+              <span class="label">Flexbox & Grid</span>
+              <button class="add-btn">+</button>
+            </div>
+
+            <div class="context-badge">
+              <svg viewBox="0 0 12 12"><path d="M2 3h8M2 6h8M2 9h8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+              inside flex container
+            </div>
+
+            <div class="panel-flex-item-block">
+              <!-- Row 1: Flex Shorthand + Align Self -->
+              <div class="item-row">
+                <div>
+                  <span class="sub-label">flex</span>
+                  <div class="flex-shorthand-grid">
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-1 selected">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">1</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-auto">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">auto</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-initial">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">initial</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-none">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">none</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <span class="sub-label">align self</span>
+                  <div class="self-diagram-trigger" onclick="this.classList.toggle('open'); this.querySelector('.self-dropdown').classList.toggle('visible');">
+                    <div class="self-diagram-inner" style="align-items: flex-start;">
+                      <div class="sibling" style="width: 10px; height: 100%;"></div>
+                      <div class="target" style="width: 14px; height: 20px; align-self: center;"></div>
+                      <div class="sibling" style="width: 10px; height: 100%;"></div>
+                    </div>
+                    <!-- Dropdown -->
+                    <div class="self-dropdown">
+                      <div class="self-grid">
+                        <div class="self-cell">
+                          <div class="self-cell-box" style="align-items: stretch;">
+                            <div class="sib" style="height: 100%;"></div>
+                            <div class="tgt" style="height: 100%;"></div>
+                            <div class="sib" style="height: 100%;"></div>
+                          </div>
+                          <span class="self-cell-label">auto</span>
+                        </div>
+                        <div class="self-cell">
+                          <div class="self-cell-box" style="align-items: stretch;">
+                            <div class="sib" style="height: 100%;"></div>
+                            <div class="tgt" style="height: 18px; align-self: flex-start;"></div>
+                            <div class="sib" style="height: 100%;"></div>
+                          </div>
+                          <span class="self-cell-label">start</span>
+                        </div>
+                        <div class="self-cell">
+                          <div class="self-cell-box" style="align-items: stretch;">
+                            <div class="sib" style="height: 100%;"></div>
+                            <div class="tgt" style="height: 18px; align-self: flex-end;"></div>
+                            <div class="sib" style="height: 100%;"></div>
+                          </div>
+                          <span class="self-cell-label">end</span>
+                        </div>
+                        <div class="self-cell selected">
+                          <div class="self-cell-box" style="align-items: stretch;">
+                            <div class="sib" style="height: 100%;"></div>
+                            <div class="tgt" style="height: 18px; align-self: center;"></div>
+                            <div class="sib" style="height: 100%;"></div>
+                          </div>
+                          <span class="self-cell-label">center</span>
+                        </div>
+                        <div class="self-cell">
+                          <div class="self-cell-box" style="align-items: flex-start;">
+                            <div class="sib" style="height: 16px;"></div>
+                            <div class="tgt" style="height: 100%;"></div>
+                            <div class="sib" style="height: 24px;"></div>
+                          </div>
+                          <span class="self-cell-label">stretch</span>
+                        </div>
+                        <div class="self-cell">
+                          <div class="self-cell-box" style="align-items: stretch;">
+                            <div class="sib" style="height: 100%;"></div>
+                            <div class="tgt" style="height: 18px; align-self: center; font-size: 5px; color: rgba(232,185,49,0.8); display: flex; align-items: center; justify-content: center;">t</div>
+                            <div class="sib" style="height: 100%;"></div>
+                          </div>
+                          <span class="self-cell-label">baseline</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="divider">
+
+              <!-- Row 2: Grow/Shrink toggles -->
+              <div class="item-row">
+                <div class="toggle-pair">
+                  <span class="toggle-pair-label">grow</span>
+                  <div class="toggle-chips">
+                    <button class="toggle-chip active" onclick="this.classList.add('active'); this.nextElementSibling.classList.remove('active');">grow</button>
+                    <button class="toggle-chip" onclick="this.classList.add('active'); this.previousElementSibling.classList.remove('active');">0</button>
+                  </div>
+                </div>
+                <div class="toggle-pair">
+                  <span class="toggle-pair-label">shrink</span>
+                  <div class="toggle-chips">
+                    <button class="toggle-chip active" onclick="this.classList.add('active'); this.nextElementSibling.classList.remove('active');">shrink</button>
+                    <button class="toggle-chip" onclick="this.classList.add('active'); this.previousElementSibling.classList.remove('active');">0</button>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="divider">
+
+              <!-- Row 3: Basis + Order scrubbers -->
+              <div class="item-row">
+                <div class="control-col">
+                  <span class="sub-label">basis</span>
+                  <div class="scrub-chip">
+                    <span class="prefix">basis-</span>
+                    <span class="value">auto</span>
+                    <span class="arrows">▲<br>▼</span>
+                  </div>
+                </div>
+                <div class="control-col">
+                  <span class="sub-label">order</span>
+                  <div class="scrub-chip">
+                    <span class="prefix">order-</span>
+                    <span class="value">none</span>
+                    <span class="arrows">▲<br>▼</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel mock: NESTED flex (both parent AND child) -->
+      <div class="panel-sim">
+        <div class="panel-header">
+          <span class="comp-name">NavLinks</span>
+          <span class="comp-tag">flex child + parent</span>
+        </div>
+        <div class="panel-body">
+          <div class="prop-section">
+            <div class="prop-section-header">
+              <span class="dot"></span>
+              <span class="label">Flexbox & Grid</span>
+              <button class="add-btn">+</button>
+            </div>
+
+            <!-- PARENT CONTROLS (existing) -->
+            <div class="sub-label" style="margin-bottom: 6px; color: var(--teal);">⬡ as container</div>
+            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+              <!-- Simplified direction boxes -->
+              <div class="flex-short-cell flex-1" style="width: 40px; height: 40px; border-color: var(--teal);">
+                <div class="bar" style="opacity: 0.7;"></div>
+                <div class="bar" style="opacity: 0.7;"></div>
+              </div>
+              <div class="flex-short-cell" style="width: 40px; height: 40px;">
+                <div class="bar"></div>
+                <div class="bar"></div>
+              </div>
+              <div style="flex: 1;"></div>
+              <div class="scrub-chip" style="align-self: center;">
+                <span class="prefix">gap-</span>
+                <span class="value">4</span>
+              </div>
+            </div>
+
+            <hr class="divider">
+
+            <!-- CHILD CONTROLS (new) -->
+            <div class="context-badge">
+              <svg viewBox="0 0 12 12"><path d="M2 3h8M2 6h8M2 9h8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+              inside parent flex
+            </div>
+
+            <div class="panel-flex-item-block">
+              <div class="item-row">
+                <div>
+                  <span class="sub-label">flex</span>
+                  <div class="flex-shorthand-grid">
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-1 selected">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">1</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-auto">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">auto</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-initial">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">initial</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                      <div class="flex-short-cell flex-none">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                      </div>
+                      <span class="flex-short-label">none</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <span class="sub-label">align self</span>
+                  <div class="self-diagram-trigger">
+                    <div class="self-diagram-inner" style="align-items: stretch;">
+                      <div class="sibling" style="width: 10px; height: 100%;"></div>
+                      <div class="target" style="width: 14px; height: 100%;"></div>
+                      <div class="sibling" style="width: 10px; height: 100%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Nested flex:</strong> When an element is both a flex container <em>and</em>
+        a flex child, both control blocks appear:
+        <ul>
+          <li><strong>Top:</strong> Container controls (direction, wrap, justify, align, gap)</li>
+          <li><strong>Divider</strong> with context badge</li>
+          <li><strong>Bottom:</strong> Item controls (flex shorthand, align-self, grow/shrink, basis, order)</li>
+        </ul>
+        <br>
+        <strong>The context badge</strong> ("inside flex container") helps the user understand
+        that these controls affect how the element behaves <em>within its parent</em>.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Interactive: toggle flex shorthand cells
+  document.querySelectorAll('.flex-shorthand-grid').forEach(grid => {
+    grid.querySelectorAll('.flex-short-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        grid.querySelectorAll('.flex-short-cell').forEach(c => c.classList.remove('selected'));
+        cell.classList.add('selected');
+      });
+    });
+  });
+
+  // Interactive: toggle grow/shrink chips
+  document.querySelectorAll('.toggle-chips').forEach(group => {
+    group.querySelectorAll('.toggle-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.toggle-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+  });
+
+  // Interactive: align-self grid cells
+  document.querySelectorAll('.self-grid').forEach(grid => {
+    grid.querySelectorAll('.self-cell').forEach(cell => {
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        grid.querySelectorAll('.self-cell').forEach(c => c.classList.remove('selected'));
+        cell.classList.add('selected');
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

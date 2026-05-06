@@ -4,6 +4,7 @@ import type { DrawingTool, ArmedComponent } from './types';
 import type { CanvasComponent } from '../../../../shared/types';
 import { rasterizeHtml } from './rasterize';
 import { rewriteHostToRoot } from '../../../../shared/css-utils';
+import { isCanvasDragMessage, type CanvasDragEnterMessage } from '../../../../shared/drag-types';
 
 export interface UseFabricCanvasOptions {
   onSubmit: (imageDataUrl: string, width: number, height: number, canvasComponents?: CanvasComponent[]) => void;
@@ -31,6 +32,8 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
   // Ghost position for armed-component preview overlay
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
   const [ghostSize, setGhostSize] = useState<{ width: number; height: number } | null>(null);
+  // Ghost HTML/CSS for drag-drop preview (set when component dragged from panel over canvas)
+  const [dragGhost, setDragGhost] = useState<{ ghostHtml: string; ghostCss: string | null } | null>(null);
 
   // Initialize Fabric.js canvas
   useEffect(() => {
@@ -677,6 +680,143 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
     };
   }, [armedComponent, ghostSize, saveState, onComponentPlaced]);
 
+  // ── Drag-drop from panel via postMessage ────────────────────────────────
+  // Listens for CANVAS_DRAG_* messages relayed by the overlay when the user
+  // drags a component from the panel sidebar onto this design canvas iframe.
+  const dragComponentRef = useRef<CanvasDragEnterMessage | null>(null);
+  const dragGhostSizeRef = useRef<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleMessage = async (event: MessageEvent) => {
+      if (!isCanvasDragMessage(event.data)) return;
+      const msg = event.data;
+
+      switch (msg.type) {
+        case 'CANVAS_DRAG_ENTER': {
+          dragComponentRef.current = msg;
+          // Measure ghost size for preview
+          const measurer = document.createElement('div');
+          measurer.style.cssText =
+            'position:fixed;left:-99999px;top:-99999px;visibility:hidden;pointer-events:none;';
+          if (msg.ghostCss) {
+            const style = document.createElement('style');
+            style.textContent = rewriteHostToRoot(msg.ghostCss);
+            measurer.appendChild(style);
+          }
+          measurer.insertAdjacentHTML('beforeend', msg.ghostHtml);
+          document.body.appendChild(measurer);
+          dragGhostSizeRef.current = {
+            width: measurer.offsetWidth || 100,
+            height: measurer.offsetHeight || 40,
+          };
+          document.body.removeChild(measurer);
+          // Show ghost preview at initial position
+          setGhostSize(dragGhostSizeRef.current);
+          setGhostPos({ x: msg.x, y: msg.y });
+          setDragGhost({ ghostHtml: msg.ghostHtml, ghostCss: msg.ghostCss });
+          break;
+        }
+        case 'CANVAS_DRAG_MOVE': {
+          if (!dragComponentRef.current) break;
+          setGhostPos({ x: msg.x, y: msg.y });
+          break;
+        }
+        case 'CANVAS_DRAG_DROP': {
+          const comp = dragComponentRef.current;
+          if (!comp) break;
+          dragComponentRef.current = null;
+          setGhostPos(null);
+
+          const canvas = fabricRef.current;
+          if (!canvas || !comp.ghostHtml) break;
+
+          const x = msg.x;
+          const y = msg.y;
+
+          try {
+            const { dataUrl, width, height } = await rasterizeHtml(
+              comp.ghostHtml, undefined, undefined, comp.ghostCss ?? undefined,
+            );
+            const img = await FabricImage.fromURL(dataUrl);
+            img.set({
+              left: x - width / 2,
+              top: y - height / 2,
+              scaleX: 1,
+              scaleY: 1,
+            });
+            (img as any)._componentMeta = {
+              componentName: comp.componentName,
+              componentPath: comp.componentPath,
+              storyId: comp.storyId,
+              args: comp.args,
+              ghostHtml: comp.ghostHtml,
+              ghostCss: comp.ghostCss,
+            };
+            canvas.add(img);
+            canvas.setActiveObject(img);
+            canvas.requestRenderAll();
+            saveState();
+            setActiveTool('select');
+          } catch (err) {
+            console.error('[DesignCanvas] Failed to rasterize dropped component:', err);
+            const w = dragGhostSizeRef.current?.width ?? 100;
+            const h = dragGhostSizeRef.current?.height ?? 40;
+            const placeholder = new Rect({
+              left: x - w / 2,
+              top: y - h / 2,
+              width: w,
+              height: h,
+              fill: 'rgba(0, 132, 139, 0.08)',
+              stroke: '#00848B',
+              strokeWidth: 2,
+              strokeDashArray: [4, 4],
+            });
+            (placeholder as any)._componentMeta = {
+              componentName: comp.componentName,
+              componentPath: comp.componentPath,
+              storyId: comp.storyId,
+              args: comp.args,
+              ghostHtml: comp.ghostHtml,
+              ghostCss: comp.ghostCss,
+            };
+            const label = new Textbox(comp.componentName, {
+              left: x - w / 2 + 4,
+              top: y - h / 2 + (h - 14) / 2,
+              fontSize: 12,
+              fill: '#00848B',
+              width: w - 8,
+              selectable: false,
+              evented: false,
+            });
+            canvas.add(placeholder, label);
+            canvas.setActiveObject(placeholder);
+            canvas.requestRenderAll();
+            saveState();
+            setActiveTool('select');
+          }
+
+          dragGhostSizeRef.current = null;
+          setDragGhost(null);
+          onComponentPlaced?.();
+          break;
+        }
+        case 'CANVAS_DRAG_LEAVE': {
+          dragComponentRef.current = null;
+          dragGhostSizeRef.current = null;
+          setGhostPos(null);
+          setDragGhost(null);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [saveState, onComponentPlaced]);
+
   return {
     canvasElRef,
     containerRef,
@@ -695,5 +835,6 @@ export function useFabricCanvas({ onSubmit, backgroundImage, armedComponent, onC
     handleSubmit,
     ghostPos,
     ghostSize,
+    dragGhost,
   };
 }

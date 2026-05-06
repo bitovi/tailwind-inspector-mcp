@@ -47,16 +47,16 @@ export function PropertySection({
 				onClick={() => setCollapsed((c) => !c)}
 			>
 				<svg
-					className={`w-3 h-3 text-bv-muted transition-transform ${collapsed ? "" : "rotate-90"}`}
+					className={`w-3 h-3 text-bit-muted transition-transform ${collapsed ? "" : "rotate-90"}`}
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
 				>
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
 				</svg>
-				<span className="text-[10px] font-semibold text-bv-text">{label}</span>
+				<span className="text-[10px] font-semibold text-bit-text">{label}</span>
 				{collapsed && classCount > 0 && (
-					<span className="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold leading-none bg-bv-teal/20 text-bv-teal tabular-nums">
+					<span className="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold leading-none bg-bit-teal/20 text-bit-teal tabular-nums">
 						{classCount}
 					</span>
 				)}
@@ -67,8 +67,8 @@ export function PropertySection({
 							aria-label={`Add ${label} property`}
 							className={`w-5 h-5 flex items-center justify-center rounded transition-all cursor-pointer border-none ${
 								dropdownOpen
-									? "text-bv-text bg-bv-surface-hi"
-									: "text-bv-muted bg-transparent opacity-75 group-hover/sec:opacity-100 hover:text-bv-text hover:bg-bv-surface-hi"
+									? "text-bit-text bg-bit-surface-hi"
+									: "text-bit-muted bg-transparent opacity-75 group-hover/sec:opacity-100 hover:text-bit-text hover:bg-bit-surface-hi"
 							}`}
 							onClick={(e) => { e.stopPropagation(); setDropdownOpen((o) => !o); }}
 						>
@@ -88,18 +88,18 @@ export function PropertySection({
 						</button>
 						{dropdownOpen && (
 							<FocusTrapContainer
-								className="absolute z-50 top-[calc(100%+2px)] right-0 bg-bv-bg border border-bv-border rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.10)] min-w-[180px] max-w-[calc(100vw-16px)] py-1"
+								className="absolute z-50 top-[calc(100%+2px)] right-0 bg-bit-bg border border-bit-border rounded-md shadow-[0_4px_16px_rgba(0,0,0,0.10)] min-w-[180px] max-w-[calc(100vw-16px)] py-1"
 								onClose={() => setDropdownOpen(false)}
 							>
 								{availableProperties.map((prop) => (
 									<button
 										type="button"
 										key={prop.prefix}
-										className="w-full px-2.5 py-[5px] text-[11px] font-[family-name:var(--font-ui)] text-bv-text-mid flex items-center gap-1.5 transition-colors hover:bg-bv-teal/10 hover:text-bv-teal cursor-pointer border-none bg-transparent text-left whitespace-nowrap"
+										className="w-full px-2.5 py-[5px] text-[11px] font-[family-name:var(--font-ui)] text-bit-text-mid flex items-center gap-1.5 transition-colors hover:bg-bit-teal/10 hover:text-bit-teal cursor-pointer border-none bg-transparent text-left whitespace-nowrap"
 										onClick={() => handleSelect(prop.prefix)}
 									>
 										{prop.name}
-										<span className="font-mono text-[10px] text-bv-muted group-hover:text-bv-teal/60">
+										<span className="font-mono text-[10px] text-bit-muted group-hover:text-bit-teal/60">
 											{prop.prefixHint}
 										</span>
 									</button>
@@ -117,7 +117,7 @@ export function PropertySection({
 				}`}
 			>
 				{isEmpty ? (
-					<div className="text-[10px] text-bv-muted italic mt-2">
+					<div className="text-[10px] text-bit-muted italic mt-2">
 						No {label.toLowerCase()} classes — click + to add
 					</div>
 				) : (

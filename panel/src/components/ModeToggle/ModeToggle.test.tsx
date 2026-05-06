@@ -4,62 +4,57 @@ import { ModeToggle } from './ModeToggle';
 
 describe('ModeToggle', () => {
   it('renders three icon buttons with tooltips', () => {
-    render(<ModeToggle mode="select" onModeChange={() => {}} />);
-    expect(screen.getByTitle('Select an element')).toBeInTheDocument();
-    expect(screen.getByTitle('Insert to add content')).toBeInTheDocument();
+    render(<ModeToggle mode="select" onModeChange={() => {}} isEditMode={true} />);
+    expect(screen.getByTitle('Edit')).toBeInTheDocument();
     expect(screen.getByTitle('Report a bug')).toBeInTheDocument();
+    expect(screen.getByTitle('Theme')).toBeInTheDocument();
   });
 
-  it('marks neither as active when mode is null', () => {
-    render(<ModeToggle mode={null} onModeChange={() => {}} />);
-    expect(screen.getByTitle('Select an element')).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByTitle('Insert to add content')).toHaveAttribute('aria-pressed', 'false');
+  it('marks Edit as active when isEditMode is true', () => {
+    render(<ModeToggle mode="select" onModeChange={() => {}} isEditMode={true} />);
+    expect(screen.getByTitle('Edit')).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByTitle('Report a bug')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTitle('Theme')).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('marks Select as active when mode is select', () => {
-    render(<ModeToggle mode="select" onModeChange={() => {}} />);
-    expect(screen.getByTitle('Select an element')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTitle('Insert to add content')).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  it('marks Insert as active when mode is insert', () => {
-    render(<ModeToggle mode="insert" onModeChange={() => {}} />);
-    expect(screen.getByTitle('Select an element')).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByTitle('Insert to add content')).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('marks Bug Report as active when mode is bug-report', () => {
-    render(<ModeToggle mode="bug-report" onModeChange={() => {}} />);
+  it('marks Edit as inactive when in bug-report mode', () => {
+    render(<ModeToggle mode="bug-report" onModeChange={() => {}} isEditMode={false} />);
+    expect(screen.getByTitle('Edit')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByTitle('Report a bug')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('calls onModeChange with select when Select is clicked', () => {
+  it('marks Theme as active when mode is theme', () => {
+    render(<ModeToggle mode="theme" onModeChange={() => {}} isEditMode={false} />);
+    expect(screen.getByTitle('Theme')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTitle('Edit')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('Edit click from bug-report calls onModeChange with select', () => {
     const onChange = vi.fn();
-    render(<ModeToggle mode="insert" onModeChange={onChange} />);
-    fireEvent.click(screen.getByTitle('Select an element'));
+    render(<ModeToggle mode="bug-report" onModeChange={onChange} isEditMode={false} />);
+    fireEvent.click(screen.getByTitle('Edit'));
     expect(onChange).toHaveBeenCalledWith('select');
   });
 
-  it('calls onModeChange with insert when Insert is clicked', () => {
+  it('Edit click when already in edit mode is a no-op', () => {
     const onChange = vi.fn();
-    render(<ModeToggle mode="select" onModeChange={onChange} />);
-    fireEvent.click(screen.getByTitle('Insert to add content'));
-    expect(onChange).toHaveBeenCalledWith('insert');
+    render(<ModeToggle mode="select" onModeChange={onChange} isEditMode={true} />);
+    fireEvent.click(screen.getByTitle('Edit'));
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('calls onModeChange with bug-report when Bug Report is clicked', () => {
     const onChange = vi.fn();
-    render(<ModeToggle mode="select" onModeChange={onChange} />);
+    render(<ModeToggle mode="select" onModeChange={onChange} isEditMode={true} />);
     fireEvent.click(screen.getByTitle('Report a bug'));
     expect(onChange).toHaveBeenCalledWith('bug-report');
   });
 
-  it('re-clicking active mode passes same mode (toggle handled by parent)', () => {
+  it('calls onModeChange with theme when Theme is clicked', () => {
     const onChange = vi.fn();
-    render(<ModeToggle mode="select" onModeChange={onChange} />);
-    fireEvent.click(screen.getByTitle('Select an element'));
-    expect(onChange).toHaveBeenCalledWith('select');
+    render(<ModeToggle mode="select" onModeChange={onChange} isEditMode={true} />);
+    fireEvent.click(screen.getByTitle('Theme'));
+    expect(onChange).toHaveBeenCalledWith('theme');
   });
 
   // -------------------------------------------------------------------
@@ -67,54 +62,28 @@ describe('ModeToggle', () => {
   // -------------------------------------------------------------------
 
   describe('button color states', () => {
-    it('gray: mode=null → both buttons have inactive style', () => {
-      render(<ModeToggle mode={null} onModeChange={() => {}} />);
-      const selectBtn = screen.getByTitle('Select an element');
-      const insertBtn = screen.getByTitle('Insert to add content');
-      expect(selectBtn.className).toContain('bg-transparent');
-      expect(insertBtn.className).toContain('bg-transparent');
+    it('Edit active has teal background', () => {
+      render(<ModeToggle mode="select" onModeChange={() => {}} isEditMode={true} />);
+      const editBtn = screen.getByTitle('Edit');
+      expect(editBtn.className).toContain('bg-bit-teal-dark');
     });
 
-    it('orange: mode=select + isPicking=true → select button is orange', () => {
-      render(<ModeToggle mode="select" onModeChange={() => {}} isPicking={true} />);
-      const selectBtn = screen.getByTitle('Select an element');
-      expect(selectBtn.className).toContain('F5532D');
+    it('Edit inactive has transparent background', () => {
+      render(<ModeToggle mode="bug-report" onModeChange={() => {}} isEditMode={false} />);
+      const editBtn = screen.getByTitle('Edit');
+      expect(editBtn.className).toContain('bg-transparent');
     });
 
-    it('teal: mode=select + isEngaged=true → select button is teal', () => {
-      render(<ModeToggle mode="select" onModeChange={() => {}} isEngaged={true} />);
-      const selectBtn = screen.getByTitle('Select an element');
-      expect(selectBtn.className).toContain('00464A');
+    it('Bug Report active has teal background', () => {
+      render(<ModeToggle mode="bug-report" onModeChange={() => {}} isEditMode={false} />);
+      const bugBtn = screen.getByTitle('Report a bug');
+      expect(bugBtn.className).toContain('bg-bit-teal-dark');
     });
 
-    it('insert orange: mode=insert + isPicking=true → insert button is orange', () => {
-      render(<ModeToggle mode="insert" onModeChange={() => {}} isPicking={true} />);
-      const insertBtn = screen.getByTitle('Insert to add content');
-      expect(insertBtn.className).toContain('F5532D');
-    });
-
-    it('insert teal: mode=insert + isEngaged=true → insert button is teal', () => {
-      render(<ModeToggle mode="insert" onModeChange={() => {}} isEngaged={true} />);
-      const insertBtn = screen.getByTitle('Insert to add content');
-      expect(insertBtn.className).toContain('00464A');
-    });
-
-    it('resting gray: mode=insert + no picking/engaged → insert button is gray', () => {
-      render(<ModeToggle mode="insert" onModeChange={() => {}} isPicking={false} isEngaged={false} />);
-      const insertBtn = screen.getByTitle('Insert to add content');
-      expect(insertBtn.className).toContain('bg-transparent');
-    });
-
-    it('cross-mode: mode=select → insert button is inactive (gray)', () => {
-      render(<ModeToggle mode="select" onModeChange={() => {}} isPicking={true} />);
-      const insertBtn = screen.getByTitle('Insert to add content');
-      expect(insertBtn.className).toContain('bg-transparent');
-    });
-
-    it('cross-mode: mode=insert → select button is inactive (gray)', () => {
-      render(<ModeToggle mode="insert" onModeChange={() => {}} isPicking={true} />);
-      const selectBtn = screen.getByTitle('Select an element');
-      expect(selectBtn.className).toContain('bg-transparent');
+    it('Theme active has teal background', () => {
+      render(<ModeToggle mode="theme" onModeChange={() => {}} isEditMode={false} />);
+      const themeBtn = screen.getByTitle('Theme');
+      expect(themeBtn.className).toContain('bg-bit-teal-dark');
     });
   });
 });

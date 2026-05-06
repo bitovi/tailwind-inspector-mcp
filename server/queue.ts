@@ -29,6 +29,7 @@ function toSummary(p: Patch): PatchSummary {
     originalHtml: p.originalHtml,
     newHtml: p.newHtml,
     bugDescription: p.bugDescription,
+    target: p.target,
   };
 }
 
@@ -326,14 +327,14 @@ export function attachMessageToPatch(patchId: string, message: string): boolean 
   return true;
 }
 
-export function discardDraftPatch(id: string): boolean {
+export function discardDraftPatch(id: string): Patch | null {
   // Remove ALL patches with this ID (guards against any duplicates that
   // slipped through addPatch before the ID-dedup was in place).
-  const before = draftPatches.length;
+  const discarded = draftPatches.find(p => p.id === id) ?? null;
   const remaining = draftPatches.filter(p => p.id !== id);
   draftPatches.length = 0;
   draftPatches.push(...remaining);
-  return remaining.length < before;
+  return discarded;
 }
 
 /**

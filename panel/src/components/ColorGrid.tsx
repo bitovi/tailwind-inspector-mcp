@@ -18,16 +18,16 @@ interface ColorGridProps {
 export function ColorGrid({ prefix, currentValue, colors, locked, lockedValue, onHover, onLeave, onClick, onRemove, onRemoveHover }: ColorGridProps) {
   return (
     <div
-      className="p-2 bg-bv-surface border border-bv-border rounded-md my-2"
+      className="p-2 bg-bit-surface border border-bit-border rounded-md my-2"
       onMouseLeave={() => { if (!locked) onLeave(); }}
     >
       {/* Special colors: black, white, transparent + optional remove cell */}
       <div className="flex items-center gap-0.5 mb-0.5">
-        <span className="w-[52px] text-[10px] text-bv-muted text-right pr-1.5 shrink-0"></span>
+        <span className="w-[52px] text-[10px] text-bit-muted text-right pr-1.5 shrink-0"></span>
         {onRemove && (
           <div
             title="Remove class"
-            className={`w-5 h-5 rounded cursor-pointer border-2 shrink-0 transition-[border-color,transform] flex items-center justify-center ${currentValue === '' ? 'outline outline-2 outline-offset-2 outline-bv-orange border-transparent' : 'border-transparent hover:border-bv-orange hover:scale-110'}`}
+            className={`w-5 h-5 rounded cursor-pointer border-2 shrink-0 transition-[border-color,transform] flex items-center justify-center ${currentValue === '' ? 'outline outline-2 outline-offset-2 outline-bit-orange border-transparent' : 'border-transparent hover:border-bit-orange hover:scale-110'}`}
             onMouseEnter={() => { if (!locked && onRemoveHover) onRemoveHover(); }}
             onClick={onRemove}
           >
@@ -61,7 +61,7 @@ export function ColorGrid({ prefix, currentValue, colors, locked, lockedValue, o
 
         return (
           <div key={hue} className="flex items-center gap-0.5 mb-0.5">
-            <span className="w-[52px] text-[10px] text-bv-muted text-right pr-1.5 shrink-0">{hue}</span>
+            <span className="w-[52px] text-[10px] text-bit-muted text-right pr-1.5 shrink-0">{hue}</span>
             {SHADE_ORDER.map((shade) =>
               hueColors[shade] !== undefined ? (
                 <ColorCell
@@ -99,10 +99,10 @@ function ColorCell({ prefix, colorName, colorValue, isCurrent, isLocked, locked,
   const fullClass = `${prefix}${colorName}`;
 
   const borderClass = isLocked
-    ? 'outline outline-2 outline-offset-2 outline-bv-teal border-transparent'
+    ? 'outline outline-2 outline-offset-2 outline-bit-teal border-transparent'
     : isCurrent
-    ? 'outline outline-2 outline-offset-2 outline-bv-orange border-transparent'
-    : locked ? 'border-transparent' : 'border-transparent hover:border-bv-text hover:scale-110 hover:z-10';
+    ? 'outline outline-2 outline-offset-2 outline-bit-orange border-transparent'
+    : locked ? 'border-transparent' : 'border-transparent hover:border-bit-text hover:scale-110 hover:z-10';
 
   const style = colorName === 'transparent'
     ? { background: 'repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 8px 8px' }

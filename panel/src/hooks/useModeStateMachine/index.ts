@@ -11,6 +11,7 @@ export type {
 export {
   SELECT_TABS,
   INSERT_TABS,
+  EDIT_TABS,
   getModeButtonColor,
   computeActiveTab,
   computeCurrentTabs,

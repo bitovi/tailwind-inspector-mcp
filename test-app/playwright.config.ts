@@ -53,8 +53,18 @@ export default defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
+  /* Run your local dev server before starting the tests.
+   * Order matters: Playwright starts servers sequentially, so Storybook must
+   * be fully responsive before Express probes for it at startup. */
   webServer: [
+    // Storybook v10 first — Express probes /index.json at boot
+    {
+      command: 'npm run storybook',
+      cwd: '../storybook-test/v10',
+      url: 'http://localhost:6008',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
     {
       command: 'npm run dev',
       url: 'http://localhost:5173',
@@ -70,14 +80,6 @@ export default defineConfig({
         PORT: '3333',
         STORYBOOK_URL: 'http://localhost:6008',
       },
-    },
-    // Storybook v10 — needed for component discovery in flow-a/flow-b tests
-    {
-      command: 'npm run storybook',
-      cwd: '../storybook-test/v10',
-      url: 'http://localhost:6008',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
     },
   ],
 });

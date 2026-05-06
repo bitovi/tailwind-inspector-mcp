@@ -15,6 +15,7 @@ export async function applyPreview(
 ): Promise<void> {
   // Bump generation so any in-flight preview from a previous call is ignored.
   const gen = ++previewGeneration;
+  console.log(`[vybit-patcher] applyPreview START gen=${gen} old="${oldClass}" new="${newClass}" elements=${elements.length}`);
 
   // Save original state on first preview
   if (!previewState) {
@@ -35,13 +36,14 @@ export async function applyPreview(
         body: JSON.stringify({ classes: [newClass] }),
       });
       // If a revert (or newer preview) happened while we were fetching, bail out.
-      if (gen !== previewGeneration) return;
+      if (gen !== previewGeneration) { console.log(`[vybit-patcher] applyPreview STALE after fetch gen=${gen} current=${previewGeneration}`); return; }
       if (!res.ok) {
         const errBody = await res.text();
         console.error('[vybit-patcher] CSS fetch FAILED:', res.status, errBody);
       } else {
         const { css } = await res.json() as { css: string };
-        if (gen !== previewGeneration) return;
+        if (gen !== previewGeneration) { console.log(`[vybit-patcher] applyPreview STALE after parse gen=${gen} current=${previewGeneration}`); return; }
+        console.log(`[vybit-patcher] applyPreview injecting CSS gen=${gen} length=${css.length}`);
         if (!previewStyleEl) {
           previewStyleEl = document.createElement('style');
           previewStyleEl.setAttribute('data-tw-preview', '');
@@ -56,8 +58,9 @@ export async function applyPreview(
   }
 
   // One more staleness check before mutating the DOM.
-  if (gen !== previewGeneration) return;
+  if (gen !== previewGeneration) { console.log(`[vybit-patcher] applyPreview STALE before DOM gen=${gen} current=${previewGeneration}`); return; }
 
+  console.log(`[vybit-patcher] applyPreview applying DOM swap gen=${gen} old="${oldClass}" new="${newClass}"`);
   // Restore original classes before applying new swap to avoid accumulation
   if (previewState) {
     for (let i = 0; i < previewState.elements.length; i++) {
@@ -140,6 +143,7 @@ export async function applyPreviewBatch(
 export function revertPreview(): void {
   // Invalidate any in-flight applyPreview so it won't apply after this revert.
   previewGeneration++;
+  console.log(`[vybit-patcher] revertPreview gen=${previewGeneration} hadPreviewState=${!!previewState}`);
 
   if (previewState) {
     for (let i = 0; i < previewState.elements.length; i++) {
@@ -163,6 +167,7 @@ export function getPreviewState(): { elements: HTMLElement[]; originalClasses: s
  */
 export function commitPreview(): void {
   previewGeneration++;
+  console.log(`[vybit-patcher] commitPreview gen=${previewGeneration} hasPreviewStyle=${!!previewStyleEl} previewCssLen=${previewStyleEl?.textContent?.length ?? 0}`);
   previewState = null;
 
   // Move staged CSS from the transient preview element into the persistent committed bucket.
@@ -178,5 +183,39 @@ export function commitPreview(): void {
     }
     previewStyleEl.remove();
     previewStyleEl = null;
+  }
+}
+
+/**
+ * Ensure CSS is committed for a given class.  When PATCH_STAGE races ahead of
+ * an in-flight PATCH_PREVIEW CSS fetch, the preview CSS is never injected.
+ * This function fetches the CSS independently and appends it to the persistent
+ * committedStyleEl so the class always has styles.
+ */
+export async function ensureCommittedCss(
+  newClass: string,
+  serverOrigin: string,
+): Promise<void> {
+  if (!newClass) return;
+  console.log(`[vybit-patcher] ensureCommittedCss START class="${newClass}"`);
+  try {
+    const res = await fetch(`${serverOrigin}/css`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      credentials: 'include',
+      body: JSON.stringify({ classes: [newClass] }),
+    });
+    if (!res.ok) { console.log(`[vybit-patcher] ensureCommittedCss FAILED status=${res.status}`); return; }
+    const { css } = await res.json() as { css: string };
+    console.log(`[vybit-patcher] ensureCommittedCss OK class="${newClass}" cssLen=${css.length} committedStyleExists=${!!committedStyleEl}`);
+    if (!committedStyleEl) {
+      committedStyleEl = document.createElement('style');
+      committedStyleEl.setAttribute('data-tw-committed', '');
+      document.head.appendChild(committedStyleEl);
+    }
+    committedStyleEl.textContent += css;
+    console.log(`[vybit-patcher] ensureCommittedCss DONE committedCssLen=${committedStyleEl.textContent?.length}`);
+  } catch (err) {
+    console.error(`[vybit-patcher] ensureCommittedCss ERROR`, err);
   }
 }

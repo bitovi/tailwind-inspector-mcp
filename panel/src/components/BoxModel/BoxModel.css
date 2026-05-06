@@ -350,7 +350,7 @@
   margin-top: 0;
   max-height: 200px;
   overflow-y: auto;
-  background: #383838;
+  background: var(--color-bit-surface);
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30);
@@ -390,4 +390,69 @@
 .bm-mini-dropdown-remove:hover {
   background: rgba(245, 83, 45, 0.09);
   color: var(--orange, #F5532D);
+}
+
+/* ─── Light mode overrides ───────────────────────────────── */
+.light .bm-root {
+  /* Layer fills */
+  --m-fill: rgba(0, 0, 0, 0.02);
+  --o-fill: rgba(0, 0, 0, 0.025);
+  --b-fill: rgba(0, 0, 0, 0.03);
+  --p-fill: rgba(0, 0, 0, 0.04);
+
+  /* Layer hover fills */
+  --m-fill-hover: rgba(200, 120, 50, 0.10);
+  --o-fill-hover: rgba(130, 100, 180, 0.10);
+  --b-fill-hover: rgba(60, 130, 210, 0.10);
+  --p-fill-hover: rgba(60, 170, 110, 0.10);
+
+  /* Layer borders */
+  --m-bdr: rgba(0, 0, 0, 0.10);
+  --o-bdr: rgba(0, 0, 0, 0.11);
+  --b-bdr: rgba(0, 0, 0, 0.12);
+  --p-bdr: rgba(0, 0, 0, 0.14);
+
+  /* Layer hover borders */
+  --m-bdr-hover: rgba(200, 120, 50, 0.40);
+  --o-bdr-hover: rgba(130, 100, 180, 0.40);
+  --b-bdr-hover: rgba(60, 130, 210, 0.40);
+  --p-bdr-hover: rgba(60, 170, 110, 0.40);
+
+  /* Layer accents */
+  --m-accent: rgba(0, 0, 0, 0.50);
+  --o-accent: rgba(0, 0, 0, 0.50);
+  --b-accent: rgba(0, 0, 0, 0.50);
+  --p-accent: rgba(0, 0, 0, 0.50);
+
+  /* Layer labels */
+  --m-label: rgba(0, 0, 0, 0.30);
+  --o-label: rgba(0, 0, 0, 0.30);
+  --b-label: rgba(0, 0, 0, 0.30);
+  --p-label: rgba(0, 0, 0, 0.30);
+  --m-label-hover: rgba(200, 120, 50, 0.85);
+  --o-label-hover: rgba(130, 100, 180, 0.85);
+  --b-label-hover: rgba(60, 130, 210, 0.85);
+  --p-label-hover: rgba(60, 170, 110, 0.85);
+
+  /* Content box */
+  --c-fill: rgba(0, 0, 0, 0.04);
+  --c-bdr: rgba(0, 0, 0, 0.15);
+
+  /* Interactive */
+  --text-mid: rgba(0, 0, 0, 0.45);
+}
+
+/* Light mode dropdown overrides */
+.light .bm-mini-dropdown {
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.light .bm-mini-dropdown-item {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.light .bm-mini-dropdown-remove {
+  border-bottom-color: rgba(0, 0, 0, 0.10);
+  color: rgba(0, 0, 0, 0.40);
 }

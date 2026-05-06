@@ -13,7 +13,7 @@ import {
   computeCurrentTabs,
   computeIsPicking,
 } from './types';
-import type { AppMode } from '../../../../shared/types';
+import type { AppMode, EditTool } from '../../../../shared/types';
 
 // ---------------------------------------------------------------------------
 // Initial state
@@ -21,6 +21,7 @@ import type { AppMode } from '../../../../shared/types';
 
 export const INITIAL_STATE: ModeStateMachineState = {
   mode: null,
+  editTool: null,
   tabPreference: 'design',
   selectModeActive: false,
   insertBrowseActive: false,
@@ -61,19 +62,81 @@ export function modeReducer(
 
       // Re-click same mode
       if (newMode === prev.mode) {
-        if (prev.elementData || prev.insertPoint) {
-          // Deselect & re-enter
-          return deselectAndReenter(prev, fromOverlay);
-        }
-        // Check if mode is actively browsing/selecting (orange state).
-        // If so, toggle off. If idle (gray — e.g. after a place/replace),
-        // fall through to re-activate browse/select mode.
-        const isActive = (prev.mode === 'insert' && prev.insertBrowseActive)
-          || (prev.mode === 'select' && prev.selectModeActive);
-        if (isActive) {
+        // ── Select mode three-way toggle ──
+        // Orange + element → Teal (stop selecting, keep element)
+        // Orange + no element → Gray (cancel selecting)
+        // Teal (element, not selecting) → Gray (deselect everything)
+        if (prev.mode === 'select') {
+          if (prev.selectModeActive && prev.elementData) {
+            // Orange with element → Teal: stop selecting, keep element
+            return {
+              state: {
+                ...prev,
+                selectModeActive: false,
+              },
+              effects: fromOverlay ? [] : [
+                { kind: 'sendToOverlay', message: { type: 'TOGGLE_SELECT_MODE', active: false } },
+              ],
+            };
+          }
+          if (prev.selectModeActive && !prev.elementData) {
+            // Orange with no element → Gray: cancel
+            newMode = null;
+          } else if (!prev.selectModeActive && prev.elementData) {
+            // Teal → Orange: clear element and re-enter fresh selecting
+            return {
+              state: {
+                ...prev,
+                selectModeActive: true,
+                elementData: null,
+                selectionId: prev.selectionId + 1,
+              },
+              effects: fromOverlay ? [] : [
+                { kind: 'sendToOverlay', message: { type: 'MODE_CHANGED', mode: 'select' } },
+              ],
+            };
+          }
+          // else: gray select (idle) → fall through to re-activate
+        } else if (prev.mode === 'insert') {
+          // ── Insert mode three-way toggle (mirrors Select) ──
+          // Orange + point → Teal (stop browsing, keep point)
+          // Orange + no point → Gray (cancel browsing)
+          // Teal (point, not browsing) → Orange (clear point, fresh browsing)
+          if (prev.insertBrowseActive && prev.insertPoint) {
+            // Orange with point → Teal: stop browsing, keep point
+            return {
+              state: {
+                ...prev,
+                insertBrowseActive: false,
+              },
+              effects: fromOverlay ? [] : [
+                { kind: 'sendToOverlay', message: { type: 'TOGGLE_INSERT_BROWSE', active: false } },
+              ],
+            };
+          }
+          if (prev.insertBrowseActive && !prev.insertPoint) {
+            // Orange with no point → Gray: cancel
+            newMode = null;
+          } else if (!prev.insertBrowseActive && prev.insertPoint) {
+            // Teal → Orange: clear point and re-enter fresh browsing
+            return {
+              state: {
+                ...prev,
+                insertBrowseActive: true,
+                insertPoint: null,
+              },
+              effects: fromOverlay ? [] : [
+                { kind: 'sendToOverlay', message: { type: 'MODE_CHANGED', mode: 'insert' } },
+              ],
+            };
+          }
+          // else: gray insert (idle) → fall through to re-activate
+        } else {
+          if (prev.elementData || prev.insertPoint) {
+            return deselectAndReenter(prev, fromOverlay);
+          }
           newMode = null;
         }
-        // else: idle gray state → fall through to re-activate
       }
 
       // Clear previous selection
@@ -84,11 +147,16 @@ export function modeReducer(
         textEditing: false,
         insertPoint: null,
         mode: newMode,
+        editTool: newMode === 'select' ? 'select'
+          : newMode === 'insert' ? 'insert'
+          : (newMode === null && (prev.mode === 'select' || prev.mode === 'insert')) ? null
+          : prev.editTool,
       };
 
       if (newMode === null) {
         next.selectModeActive = false;
         next.insertBrowseActive = false;
+        next.editTool = null;
         if (!fromOverlay) {
           effects.push({ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } });
         }
@@ -102,12 +170,9 @@ export function modeReducer(
       } else {
         next.insertBrowseActive = false;
       }
-      // When entering select from any non-select state, reset preference.
-      // Insert mode forces 'component' (no Design tab), and that preference
-      // persists through mode=null (Escape). Always start select on Design.
-      if (newMode === 'select' && prev.mode !== 'select') {
-        next.tabPreference = 'design';
-      }
+      // When entering select, keep the user's current tab preference.
+      // Insert mode forces off 'design' (no Design tab in insert), but
+      // switching to select should not override what the user chose.
 
       if (!fromOverlay) {
         effects.push({ kind: 'sendToOverlay', message: { type: 'MODE_CHANGED', mode: newMode } });
@@ -124,13 +189,54 @@ export function modeReducer(
     case 'TAB_CHANGE': {
       const effects: SideEffect[] = [];
       const next = { ...prev };
-      if (action.tab === 'replace' || action.tab === 'place') {
+      if (action.tab === 'components' || action.tab === 'replace' || action.tab === 'place') {
         next.tabPreference = 'component';
+      } else if (action.tab === 'elements') {
+        next.tabPreference = 'elements';
       } else if (action.tab === 'design') {
         next.tabPreference = 'design';
       }
       if (!action.fromOverlay) {
         effects.push({ kind: 'sendToOverlay', message: { type: 'TAB_CHANGED', tab: action.tab } });
+      }
+      return { state: next, effects };
+    }
+
+    // ------------------------------------------------------------------
+    // EDIT_TOOL_CHANGE — bottom toolbar tool clicked
+    // ------------------------------------------------------------------
+    case 'EDIT_TOOL_CHANGE': {
+      const tool = action.tool;
+      const fromOverlay = !!action.fromOverlay;
+      const effects: SideEffect[] = [];
+
+      // Map tool to internal mode
+      if (tool === 'select') {
+        return modeReducer(prev, { type: 'MODE_CHANGE', mode: 'select', fromOverlay });
+      }
+      if (tool === 'insert') {
+        return modeReducer(prev, { type: 'MODE_CHANGE', mode: 'insert', fromOverlay });
+      }
+      if (tool === 'text') {
+        // Text tool is like select but with text editing intent
+        const result = modeReducer(prev, { type: 'MODE_CHANGE', mode: 'select', fromOverlay });
+        result.state.editTool = 'text';
+        return result;
+      }
+      // tool === null — deselect tool
+      const next: ModeStateMachineState = {
+        ...prev,
+        editTool: null,
+        mode: null,
+        elementData: null,
+        selectionId: prev.selectionId + 1,
+        textEditing: false,
+        insertPoint: null,
+        selectModeActive: false,
+        insertBrowseActive: false,
+      };
+      if (!fromOverlay) {
+        effects.push({ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } });
       }
       return { state: next, effects };
     }
@@ -145,8 +251,113 @@ export function modeReducer(
     // ESCAPE — hierarchical escape behavior
     // ------------------------------------------------------------------
     case 'ESCAPE': {
+      // ── Select mode layered escape ──
+      // Orange + element → Teal (stop selecting, keep element)
+      // Orange + no element → Gray
+      // Teal + element → Gray (deselect)
+      if (prev.mode === 'select') {
+        if (prev.selectModeActive && prev.elementData) {
+          // Orange with element → Teal: stop selecting, keep element
+          return {
+            state: {
+              ...prev,
+              selectModeActive: false,
+            },
+            effects: [
+              { kind: 'sendToOverlay', message: { type: 'TOGGLE_SELECT_MODE', active: false } },
+            ],
+          };
+        }
+        if (!prev.selectModeActive && prev.elementData) {
+          // Teal → Gray: deselect element
+          return {
+            state: {
+              ...prev,
+              mode: null,
+              editTool: null,
+              elementData: null,
+              selectionId: prev.selectionId + 1,
+              selectModeActive: false,
+              textEditing: false,
+            },
+            effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+          };
+        }
+        // Orange with no element or gray → cancel mode
+        return {
+          state: {
+            ...prev,
+            mode: null,
+            editTool: null,
+            selectModeActive: false,
+            insertBrowseActive: false,
+            insertPoint: null,
+          },
+          effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+        };
+      }
+
+      // ── Insert mode layered escape (mirrors Select) ──
+      // Orange + point → Teal (stop browsing, keep point)
+      // Orange + no point → Gray
+      // Teal + point → Gray (clear point)
+      if (prev.mode === 'insert') {
+        if (prev.insertBrowseActive && prev.insertPoint) {
+          // Orange with point → Teal: stop browsing, keep point
+          return {
+            state: {
+              ...prev,
+              insertBrowseActive: false,
+            },
+            effects: [
+              { kind: 'sendToOverlay', message: { type: 'TOGGLE_INSERT_BROWSE', active: false } },
+            ],
+          };
+        }
+        if (!prev.insertBrowseActive && prev.insertPoint) {
+          // Teal → Gray: clear point
+          return {
+            state: {
+              ...prev,
+              mode: null,
+              editTool: null,
+              insertPoint: null,
+              insertBrowseActive: false,
+            },
+            effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+          };
+        }
+        // Orange with no point or gray → cancel mode
+        return {
+          state: {
+            ...prev,
+            mode: null,
+            editTool: null,
+            selectModeActive: false,
+            insertBrowseActive: false,
+            insertPoint: null,
+          },
+          effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+        };
+      }
+
+      // ── Other modes: existing behavior ──
       if (prev.elementData || prev.insertPoint) {
         return deselectAndReenter(prev, false);
+      }
+      // If a tool is active but no selection, deselect the tool (go to edit with no tool)
+      if (prev.editTool !== null && prev.mode !== 'bug-report' && prev.mode !== 'theme') {
+        return {
+          state: {
+            ...prev,
+            mode: null,
+            editTool: null,
+            selectModeActive: false,
+            insertBrowseActive: false,
+            insertPoint: null,
+          },
+          effects: [{ kind: 'sendToOverlay', message: { type: 'CANCEL_MODE' } }],
+        };
       }
       if (prev.mode !== null) {
         // No selection — cancel mode entirely
@@ -154,6 +365,7 @@ export function modeReducer(
           state: {
             ...prev,
             mode: null,
+            editTool: null,
             selectModeActive: false,
             insertBrowseActive: false,
             insertPoint: null,
@@ -180,6 +392,7 @@ export function modeReducer(
           selectModeActive: false,
           insertBrowseActive: false,
           mode: null,
+          editTool: null,
         },
         effects: [],
       };
@@ -198,19 +411,27 @@ export function modeReducer(
           ...prev,
           elementData: action.elementData,
           selectionId: prev.selectionId + 1,
-          selectModeActive: false,
+          // Persistent select: keep selectModeActive so user can re-select
+          selectModeActive: prev.selectModeActive,
           mode: prev.mode ?? 'select',
         },
         effects: [],
       };
 
     case 'WS_SELECT_MODE_CHANGED':
+      console.log(`[paste-debug] panel WS_SELECT_MODE_CHANGED: active=${action.active}, mode=${prev.mode}, elementData=${!!prev.elementData}, selectModeActive=${prev.selectModeActive}`);
       // Ignore stale select-mode updates while theme or bug-report mode is active
       if (prev.mode === 'theme' || prev.mode === 'bug-report') {
         return { state: prev, effects: [] };
       }
       return {
         state: { ...prev, selectModeActive: action.active },
+        effects: [],
+      };
+
+    case 'WS_INSERT_BROWSE_CHANGED':
+      return {
+        state: { ...prev, insertBrowseActive: action.active },
         effects: [],
       };
 
@@ -223,6 +444,9 @@ export function modeReducer(
     case 'WS_TAB_CHANGED':
       return modeReducer(prev, { type: 'TAB_CHANGE', tab: action.tab, fromOverlay: true });
 
+    case 'WS_EDIT_TOOL_CHANGED':
+      return modeReducer(prev, { type: 'EDIT_TOOL_CHANGE', tool: action.tool, fromOverlay: true });
+
     case 'WS_TEXT_EDIT_ACTIVE':
       return { state: { ...prev, textEditing: true }, effects: [] };
 
@@ -234,12 +458,13 @@ export function modeReducer(
         state: {
           ...prev,
           insertPoint: { position: action.position, targetName: action.targetName },
-          insertBrowseActive: false,
+          // Keep insertBrowseActive as-is (persistent browse mode)
         },
         effects: [],
       };
 
     case 'WS_COMPONENT_DISARMED':
+      console.log(`[paste-debug] panel WS_COMPONENT_DISARMED: mode=${prev.mode}, elementData=${!!prev.elementData}, selectModeActive=${prev.selectModeActive}`);
       // Component was placed or replaced — keep mode & tab, clear selection
       return {
         state: {
@@ -371,6 +596,14 @@ export function useModeStateMachine(): ModeStateMachine {
     [dispatch],
   );
 
+  // Public API: handleEditToolChange
+  const handleEditToolChange = useCallback(
+    (tool: EditTool, fromOverlay = false) => {
+      dispatch({ type: 'EDIT_TOOL_CHANGE', tool, fromOverlay });
+    },
+    [dispatch],
+  );
+
   // Public API: handleTabChange
   const handleTabChange = useCallback(
     (tabId: string, fromOverlay = false) => {
@@ -406,8 +639,14 @@ export function useModeStateMachine(): ModeStateMachine {
         case 'SELECT_MODE_CHANGED':
           dispatch({ type: 'WS_SELECT_MODE_CHANGED', active: !!msg.active });
           return true;
+        case 'INSERT_BROWSE_CHANGED':
+          dispatch({ type: 'WS_INSERT_BROWSE_CHANGED', active: !!msg.active });
+          return true;
         case 'MODE_CHANGED':
           dispatch({ type: 'WS_MODE_CHANGED', mode: msg.mode });
+          return true;
+        case 'EDIT_TOOL_CHANGED':
+          dispatch({ type: 'WS_EDIT_TOOL_CHANGED', tool: msg.tool });
           return true;
         case 'TAB_CHANGED':
           dispatch({ type: 'WS_TAB_CHANGED', tab: msg.tab });
@@ -442,8 +681,12 @@ export function useModeStateMachine(): ModeStateMachine {
     [state.mode, state.selectModeActive, state.insertPoint, state.insertBrowseActive],
   );
 
+  // Edit mode is active when we're in select/insert/null (not bug-report/theme)
+  const isEditMode = state.mode === 'select' || state.mode === 'insert' || state.mode === null;
+
   return {
     mode: state.mode,
+    editTool: state.editTool,
     elementData: state.elementData,
     selectionId: state.selectionId,
     insertPoint: state.insertPoint,
@@ -453,7 +696,9 @@ export function useModeStateMachine(): ModeStateMachine {
     currentTabs,
     activeTab,
     isPicking,
+    isEditMode,
     handleModeChange,
+    handleEditToolChange,
     handleTabChange,
     handleWsMessage,
   };

@@ -59,49 +59,26 @@ export async function waitForPanelReady(frame: Frame): Promise<void> {
 export async function clickSelectElementButton(frame: Frame): Promise<void> {
   const page = frame.page();
 
-  // Retry a few times — UI may be briefly transitioning
+  // The Select button lives on the overlay's bottom toolbar (inside the shadow DOM).
+  // Try the bottom toolbar's Select button first (primary location).
   for (let attempt = 0; attempt < 10; attempt++) {
-    // Try the panel's empty-state "Select an element" button
-    const foundContentBtn = await frame.evaluate(() => {
-      const btn =
-        document.querySelector('button[title*="Select an element"]') as HTMLButtonElement | null ??
-        Array.from(document.querySelectorAll('button')).find(b =>
-          b.textContent?.includes('Select an element'),
-        ) as HTMLButtonElement | null;
-      if (btn) { btn.click(); return true; }
-      return false;
-    }).catch(() => false);
-
-    if (foundContentBtn) return;
-
-    // Try ModeToggle's "Select" button (aria-pressed, title-based match for icon-only buttons)
-    const foundModeToggle = await frame.evaluate(() => {
-      const btns = document.querySelectorAll('button[aria-pressed]');
-      for (const b of btns) {
-        if (b.textContent?.trim() === 'Select' || b.getAttribute('title')?.includes('Select')) {
-          (b as HTMLButtonElement).click();
-          return true;
-        }
-      }
-      return false;
-    }).catch(() => false);
-
-    if (foundModeToggle) return;
-
-    // Try overlay toolbar's Select button
-    const foundInOverlay = await page.evaluate(() => {
+    const found = await page.evaluate(() => {
       const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-      const btn = host?.shadowRoot?.querySelector('.tb-select') as HTMLButtonElement | null;
+      const sr = host?.shadowRoot;
+      // Bottom toolbar Select button
+      const btn = sr?.querySelector('.bt-combo[data-tool="select"]') as HTMLButtonElement | null;
       if (btn) { btn.click(); return true; }
+      // Legacy: old overlay toolbar class
+      const legacy = sr?.querySelector('.tb-select') as HTMLButtonElement | null;
+      if (legacy) { legacy.click(); return true; }
       return false;
     }).catch(() => false);
 
-    if (foundInOverlay) return;
-
+    if (found) return;
     await page.waitForTimeout(500);
   }
 
-  throw new Error('No select button found in panel or overlay after retries');
+  throw new Error('No select button found in overlay toolbar after retries');
 }
 
 /**
@@ -206,12 +183,23 @@ type ButtonColor = 'gray' | 'orange' | 'teal';
 
 /** Click the Insert mode button on the panel. */
 export async function clickInsert(frame: Frame): Promise<void> {
-  await frame.evaluate(() => {
-    const btn = document.querySelector('button[title="Insert to add content"]') as HTMLButtonElement;
-    if (!btn) throw new Error('Insert button not found');
-    btn.click();
-  });
-  await frame.page().waitForTimeout(500);
+  const page = frame.page();
+
+  // Insert button lives on the overlay's bottom toolbar (inside the shadow DOM)
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const found = await page.evaluate(() => {
+      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+      const sr = host?.shadowRoot;
+      const btn = sr?.querySelector('.bt-combo[data-tool="insert"]') as HTMLButtonElement | null;
+      if (btn) { btn.click(); return true; }
+      return false;
+    }).catch(() => false);
+
+    if (found) return;
+    await page.waitForTimeout(500);
+  }
+
+  throw new Error('No insert button found in overlay toolbar after retries');
 }
 
 /** Click a placement site on the page (the "Monthly Signups" heading). */
@@ -259,6 +247,38 @@ export async function clickComponentPlace(frame: Frame): Promise<void> {
 
 /** Returns the color of a panel mode button by inspecting its Tailwind classes. */
 export async function getPanelButtonColor(frame: Frame, title: string): Promise<ButtonColor> {
+  const page = frame.page();
+
+  // Select button lives on the overlay bottom toolbar, not the panel.
+  // Classes (picking/engaged) are on the .bt-group parent, not the button itself.
+  if (title === 'Select an element') {
+    return page.evaluate(() => {
+      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+      const sr = host?.shadowRoot;
+      const group = sr?.querySelector('.bt-group') as HTMLElement | null;
+      if (!group) return 'gray' as const;
+      const cls = group.className;
+      if (cls.includes('picking')) return 'orange' as const;
+      if (cls.includes('engaged')) return 'teal' as const;
+      return 'gray' as const;
+    });
+  }
+
+  // Insert button lives on the overlay bottom toolbar (standalone .bt-combo).
+  // Classes (picking/engaged) are directly on the button element.
+  if (title === 'Insert to add content') {
+    return page.evaluate(() => {
+      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+      const sr = host?.shadowRoot;
+      const btn = sr?.querySelector('.bt-combo[data-tool="insert"]') as HTMLElement | null;
+      if (!btn) return 'gray' as const;
+      const cls = btn.className;
+      if (cls.includes('picking')) return 'orange' as const;
+      if (cls.includes('engaged')) return 'teal' as const;
+      return 'gray' as const;
+    });
+  }
+
   return frame.evaluate((t) => {
     const btn = document.querySelector(`button[title="${t}"]`) as HTMLElement;
     if (!btn) return 'gray' as const;
@@ -280,8 +300,8 @@ export async function getComponentButtonColors(frame: Frame): Promise<ButtonColo
     });
     return placeButtons.map(btn => {
       const cls = btn.className;
-      if (cls.includes('bg-bv-orange') && !cls.includes('bg-bv-orange/10')) return 'orange' as const;
-      if (cls.includes('border-bv-teal') || cls.includes('bg-bv-teal')) return 'teal' as const;
+      if ((cls.includes('bg-bit-orange') || cls.includes('bg-bv-orange')) && !cls.includes('bg-bit-orange/10') && !cls.includes('bg-bv-orange/10')) return 'orange' as const;
+      if (cls.includes('border-bit-teal') || cls.includes('bg-bit-teal') || cls.includes('border-bv-teal') || cls.includes('bg-bv-teal')) return 'teal' as const;
       return 'gray' as const;
     });
   });
@@ -317,7 +337,7 @@ export async function placeOnPage(page: Page): Promise<void> {
 export interface FlowTableRow {
   step: number;
   action: string;
-  tab: string | null;
+  tab?: string | null;
   panelInsert?: ButtonColor;
   panelSelect?: ButtonColor;
   overlay: 'no-toolbar' | 'toolbar';
@@ -338,10 +358,12 @@ export async function verifyFlowRow(
   const label = `Step ${row.step}`;
 
   // Tab — poll since WS messages may still be propagating
-  await expect.poll(
-    () => getPanelActiveTab(frame),
-    { message: `${label}: tab`, timeout: 5000 },
-  ).toBe(row.tab);
+  if (row.tab !== undefined) {
+    await expect.poll(
+      () => getPanelActiveTab(frame),
+      { message: `${label}: tab`, timeout: 5000 },
+    ).toBe(row.tab);
+  }
 
   // Panel mode buttons — poll for color transitions
   if (row.panelInsert) {

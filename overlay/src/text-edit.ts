@@ -3,7 +3,8 @@
  * Produces `text-change` patches that flow through the commit/queue/MCP pipeline.
  */
 import { computePosition, flip, offset, autoUpdate } from "@floating-ui/dom";
-
+import { clearGrabCursor, setGrabCursor, state } from './overlay-state';
+import { dispatch } from './overlay-state-machine';
 interface TextEditDeps {
   sendTo: (role: string, msg: any) => void;
   send: (msg: any) => void;
@@ -15,6 +16,8 @@ interface TextEditDeps {
   repositionHighlights: () => void;
   shadowRoot: ShadowRoot;
   onDone?: () => void;
+  /** If true, suppress the floating action bar (caller manages commit/discard UI) */
+  suppressActionBar?: boolean;
 }
 
 let isEditing = false;
@@ -56,7 +59,7 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
 
   // Make element editable
   targetEl.contentEditable = 'true';
-  targetEl.style.outline = '2px dashed #00848B';
+  targetEl.style.outline = '2px dashed var(--ov-teal)';
   targetEl.style.outlineOffset = '2px';
   targetEl.focus();
 
@@ -69,8 +72,10 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
     selection.addRange(range);
   }
 
-  // Show floating action bar
-  showActionBar();
+  // Show floating action bar (unless caller manages commit/discard UI)
+  if (!injectedDeps.suppressActionBar) {
+    showActionBar();
+  }
 
   // Register listeners
   keydownHandler = (e: KeyboardEvent) => {
@@ -86,13 +91,18 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
   };
   targetEl.addEventListener('keydown', keydownHandler);
 
-  blurHandler = () => {
-    // Delay to allow action bar click to fire first
-    blurTimer = window.setTimeout(() => {
-      if (isEditing) endTextEdit(true);
-    }, 200);
-  };
-  targetEl.addEventListener('blur', blurHandler);
+  // Only auto-confirm on blur when the action bar is shown (not suppressed).
+  // When suppressActionBar is true, the caller (element drawer) manages
+  // commit/discard via its own buttons and blur should not auto-commit.
+  if (!injectedDeps.suppressActionBar) {
+    blurHandler = () => {
+      // Delay to allow action bar click to fire first
+      blurTimer = window.setTimeout(() => {
+        if (isEditing) endTextEdit(true);
+      }, 200);
+    };
+    targetEl.addEventListener('blur', blurHandler);
+  }
 
   // Reposition highlights + action bar as text content changes element size
   inputHandler = () => {
@@ -103,6 +113,12 @@ export function startTextEdit(targetEl: HTMLElement, injectedDeps: TextEditDeps)
 
   // Notify panel
   deps.sendTo('panel', { type: 'TEXT_EDIT_ACTIVE' });
+
+  // Remove grab cursor during text editing
+  clearGrabCursor();
+
+  // Mark exclusive interaction via SM (also disables toolbar buttons via set-text-editing-lock effect)
+  dispatch({ type: 'TEXT_EDIT_START', targetEl });
 }
 
 export function endTextEdit(confirm: boolean): void {
@@ -143,6 +159,12 @@ export function endTextEdit(confirm: boolean): void {
   editTarget.removeAttribute('contentEditable');
   editTarget.style.outline = '';
   editTarget.style.outlineOffset = '';
+
+  // Restore grab cursor
+  setGrabCursor();
+
+  // Clear exclusive interaction via SM (also re-enables toolbar buttons via set-text-editing-lock effect)
+  dispatch({ type: 'TEXT_EDIT_END' });
 
   // Remove listeners
   if (keydownHandler) {

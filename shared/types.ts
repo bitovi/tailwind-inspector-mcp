@@ -37,7 +37,7 @@ export interface CanvasComponent {
   height: number;
 }
 
-export type PatchKind = 'class-change' | 'message' | 'design' | 'component-drop' | 'text-change' | 'bug-report';
+export type PatchKind = 'class-change' | 'message' | 'design' | 'component-drop' | 'text-change' | 'bug-report' | 'delete-element' | 'move-element';
 
 export type PatchStatus = 'staged' | 'committed' | 'implementing' | 'implemented' | 'error';
 
@@ -124,6 +124,8 @@ export interface PatchSummary {
   newHtml?: string;
   // Bug-report display fields:
   bugDescription?: string;
+  // Delete/move display fields:
+  target?: { tag: string; classes: string; innerText: string };
 }
 
 export interface CommitSummary {
@@ -405,9 +407,11 @@ export interface GhostUpdateMessage {
 // ---------------------------------------------------------------------------
 
 export type AppMode = 'select' | 'insert' | 'bug-report' | 'theme' | null;
+export type EditTool = 'select' | 'text' | 'insert' | null;
 export type SelectTab = 'design' | 'replace';
 export type InsertTab = 'place';
-export type PanelTab = SelectTab | InsertTab;
+export type EditTab = 'design' | 'components';
+export type PanelTab = SelectTab | InsertTab | EditTab;
 
 /** Bidirectional: panel ↔ overlay mode change */
 export interface ModeChangedMessage {
@@ -454,6 +458,13 @@ export interface ComponentDroppedMessage {
   patch: Patch;
 }
 
+/** Panel → Overlay: color scheme (dark/light) changed */
+export interface ColorSchemeChangedMessage {
+  type: 'COLOR_SCHEME_CHANGED';
+  to: 'overlay';
+  colorScheme: 'dark' | 'light';
+}
+
 // ---------------------------------------------------------------------------
 // Union types
 // ---------------------------------------------------------------------------
@@ -473,7 +484,8 @@ export type PanelToOverlay =
   | ComponentDisarmMessage
   | ModeChangedMessage
   | TabChangedMessage
-  | RequestThemeVarsMessage;
+  | RequestThemeVarsMessage
+  | ColorSchemeChangedMessage;
 export type OverlayToServer = PatchStagedMessage | ComponentDroppedMessage | ResetSelectionMessage;
 export type PanelToServer = PatchCommitMessage | MessageStageMessage;
 export type ClientToServer =
@@ -527,6 +539,7 @@ export type AnyMessage =
   | TextEditDoneMessage
   | ThemeVarsMessage
   | RequestThemeVarsMessage
+  | ColorSchemeChangedMessage
   | PingMessage
   | PongMessage
   | RecordingGetHistoryMessage

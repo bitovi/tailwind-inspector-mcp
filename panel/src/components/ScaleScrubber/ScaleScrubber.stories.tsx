@@ -38,20 +38,20 @@ function InteractiveScrubber({ initialValue, values }: { initialValue: string; v
       {staged && (
         <>
           <button
-            className="px-2 py-0.5 text-[11px] rounded bg-bv-teal text-white cursor-pointer font-sans"
+            className="px-2 py-0.5 text-[11px] rounded bg-bit-teal text-white cursor-pointer font-sans"
             onClick={() => { setCurrent(staged); setStaged(null); }}
           >
             Queue Change
           </button>
           <button
-            className="px-2 py-0.5 text-[11px] rounded border border-bv-border text-bv-text-mid cursor-pointer font-sans"
+            className="px-2 py-0.5 text-[11px] rounded border border-bit-border text-bit-text-mid cursor-pointer font-sans"
             onClick={() => setStaged(null)}
           >
             Discard
           </button>
         </>
       )}
-      <span className="text-[10px] text-bv-muted font-mono ml-auto">
+      <span className="text-[10px] text-bit-muted font-mono ml-auto">
         {preview ?? staged ?? current}
       </span>
     </div>
@@ -60,19 +60,19 @@ function InteractiveScrubber({ initialValue, values }: { initialValue: string; v
 
 function MultiScrubberDemo() {
   return (
-    <div className="p-4 flex flex-col gap-1 bg-bv-bg min-w-[300px]">
-      <div className="text-[9px] uppercase tracking-widest text-bv-text-mid font-semibold mb-1">
+    <div className="p-4 flex flex-col gap-1 bg-bit-bg min-w-[300px]">
+      <div className="text-[9px] uppercase tracking-widest text-bit-text-mid font-semibold mb-1">
         Spacing
       </div>
       <div className="flex flex-wrap gap-1">
         <InteractiveScrubber initialValue="px-4" values={SPACING_VALUES} />
         <InteractiveScrubber initialValue="px-2" values={SPACING_VALUES.map(v => v.replace('px-', 'py-'))} />
       </div>
-      <div className="text-[9px] uppercase tracking-widest text-bv-text-mid font-semibold mt-3 mb-1">
+      <div className="text-[9px] uppercase tracking-widest text-bit-text-mid font-semibold mt-3 mb-1">
         Typography
       </div>
       <InteractiveScrubber initialValue="text-base" values={FONT_SIZE_VALUES} />
-      <div className="text-[9px] uppercase tracking-widest text-bv-text-mid font-semibold mt-3 mb-1">
+      <div className="text-[9px] uppercase tracking-widest text-bit-text-mid font-semibold mt-3 mb-1">
         Borders
       </div>
       <InteractiveScrubber initialValue="rounded-md" values={BORDER_RADIUS_VALUES} />

@@ -23,7 +23,7 @@ import { TutorialProgressService } from './services/tutorial-progress.service';
 export class App {
   constructor(public progress: TutorialProgressService) {}
 
-  readonly totalSteps = 11;
+  readonly totalSteps = 14;
 
   get completedCount(): number {
     return this.progress.completedCount();

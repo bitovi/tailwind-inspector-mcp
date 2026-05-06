@@ -83,7 +83,7 @@ function PentagonHandle({ stop, isEndpoint, isSelected, onDragStart, onClick, on
       {/* Remove button — only for via stops */}
       {!isEndpoint && (
         <div
-          className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-bv-orange text-white text-[9px] leading-3.5 text-center cursor-pointer z-40 hidden group-hover/handle:block hover:block!"
+          className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-bit-orange text-white text-[9px] leading-3.5 text-center cursor-pointer z-40 hidden group-hover/handle:block hover:block!"
           style={{ display: undefined }}
           onClick={handleRemove}
           onMouseDown={(e) => e.stopPropagation()}

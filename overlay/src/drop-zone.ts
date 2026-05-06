@@ -5,12 +5,20 @@
 // independent boolean flags, making invalid state combinations impossible.
 
 import { send, sendTo } from './ws';
-import { buildContext } from './context';
 import { getFiber, findOwningComponent } from './react/fiber';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
+import { createDropPreview, type DropPreviewHandle } from './drop-preview';
+import { buildComponentDropPatch } from './patch-builder';
+import { dom as overlayDom } from './overlay-dom';
+import { clearSelectionState } from './overlay-state';
+import { clearHighlights } from './element-highlight';
+import { revertPreview } from './patcher';
+import { dispatch } from './overlay-state-machine';
 
-type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
+export { type DropPosition, getAxis, computeDropPosition, adjustForEdgeChild } from '../../shared/drop-geometry';
+import type { DropPosition } from '../../shared/drop-geometry';
+import { getAxis, computeDropPosition, adjustForEdgeChild } from '../../shared/drop-geometry';
 
 type InsertCallback = (target: HTMLElement, position: DropPosition) => void;
 type ElementSelectCallback = (target: HTMLElement) => void;
@@ -57,6 +65,9 @@ const dom: DropZoneDOM = {
   currentTarget: null,
   currentPosition: null,
 };
+
+/** Hover-to-preview handle for the current component-insert mode. */
+let dropPreview: DropPreviewHandle | null = null;
 
 interface LockedState {
   target: HTMLElement | null;
@@ -122,53 +133,22 @@ export function placeAtLockedInsert(
 
   if (msg.ghostCss) injectGhostCss(msg.componentName, msg.ghostCss);
 
-  const targetSelector = buildSelector(target);
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? `Place "${msg.componentName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: msg.componentName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : { tag: target.tagName.toLowerCase(), classes: target.className, innerText: target.innerText.slice(0, 100) },
+  const patch = buildComponentDropPatch({
+    target,
+    position,
+    componentName: msg.componentName,
+    storyId: msg.storyId,
     ghostHtml: msg.ghostHtml,
-    ghostCss: msg.ghostCss || undefined,
-    componentStoryId: msg.storyId,
-    componentPath: msg.componentPath || undefined,
-    componentArgs: Object.keys(msg.args ?? {}).length > 0 ? msg.args : undefined,
-    parentComponent,
-    insertMode: position,
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+    ghostCss: msg.ghostCss,
+    componentPath: msg.componentPath,
+    componentArgs: msg.args,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
   send({ type: 'COMPONENT_DROPPED', patch });
-  sendTo('panel', { type: 'COMPONENT_DISARMED' });
+  // Note: COMPONENT_DISARMED is sent by the caller via dispatch({ type: 'COMPONENT_PLACED' })
+  // which also restarts browse mode for rapid placement.
 
   clearLockedInsert();
   return true;
@@ -196,53 +176,16 @@ export function replaceElement(
     injectGhostCss(msg.componentName, msg.ghostCss);
   }
 
-  const targetSelector = buildSelector(target);
-
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? `Replace the <${effectiveGhostName} /> component (pending insertion from an earlier drop) with "${msg.componentName}"`
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: msg.componentName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : {
-          tag: target.tagName.toLowerCase(),
-          classes: target.className,
-          innerText: target.innerText.slice(0, 100),
-        },
+  const patch = buildComponentDropPatch({
+    target,
+    position: 'replace',
+    componentName: msg.componentName,
+    storyId: msg.storyId,
     ghostHtml: msg.ghostHtml,
-    ghostCss: msg.ghostCss || undefined,
-    componentStoryId: msg.storyId,
-    componentPath: msg.componentPath || undefined,
-    componentArgs: Object.keys(msg.args ?? {}).length > 0 ? msg.args : undefined,
-    parentComponent,
-    insertMode: 'replace',
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+    ghostCss: msg.ghostCss,
+    componentPath: msg.componentPath,
+    componentArgs: msg.args,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
@@ -277,7 +220,7 @@ export function startBrowse(
   onLocked?: (target: HTMLElement, position: DropPosition) => void,
 ): void {
   clearLockedInsert();
-  arm({ kind: 'browse', onLocked: onLocked ?? null }, shadowHost, 'Pick insertion point');
+  arm({ kind: 'browse', onLocked: onLocked ?? null }, shadowHost);
 }
 
 export function getLockedInsert(): { target: HTMLElement; position: DropPosition } | null {
@@ -315,17 +258,19 @@ export function repositionOnScroll(): void {
 
 // ── Shared arming logic ──────────────────────────────────────────────────
 
-function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label: string): void {
+function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label?: string): void {
   if (mode.kind !== 'idle') cleanup();
   mode = newMode;
   dom.overlayHost = shadowHost;
 
   document.documentElement.style.cursor = 'crosshair';
 
-  dom.cursorLabel = document.createElement('div');
-  dom.cursorLabel.style.cssText = css(CURSOR_LABEL);
-  dom.cursorLabel.textContent = label;
-  document.body.appendChild(dom.cursorLabel);
+  if (label) {
+    dom.cursorLabel = document.createElement('div');
+    dom.cursorLabel.style.cssText = css(CURSOR_LABEL);
+    dom.cursorLabel.textContent = label;
+    document.body.appendChild(dom.cursorLabel);
+  }
 
   if (newMode.kind === 'element-select') {
     dom.outlineEl = document.createElement('div');
@@ -341,44 +286,28 @@ function arm(newMode: DropZoneMode, shadowHost: HTMLElement, label: string): voi
   document.documentElement.addEventListener('mouseleave', onMouseLeave);
   document.addEventListener('click', onClick, true);
   document.addEventListener('keydown', onKeyDown);
-}
 
-// ── Drop position computation ────────────────────────────────────────────
-
-function getAxis(el: Element): 'vertical' | 'horizontal' {
-  const style = getComputedStyle(el);
-  if (style.display.includes('flex')) {
-    return style.flexDirection.startsWith('row') ? 'horizontal' : 'vertical';
+  // Initialize hover-to-preview for component-insert mode
+  if (newMode.kind === 'component-insert') {
+    dropPreview = createDropPreview(() => hideDropIndicator());
   }
-  if (style.display.includes('grid')) {
-    return style.gridAutoFlow.startsWith('column') ? 'horizontal' : 'vertical';
-  }
-  return 'vertical';
 }
 
-function computeDropPosition(
-  cursor: { x: number; y: number },
-  rect: DOMRect,
-  axis: 'vertical' | 'horizontal',
-): DropPosition {
-  const ratio =
-    axis === 'horizontal'
-      ? (cursor.x - rect.left) / rect.width
-      : (cursor.y - rect.top) / rect.height;
-  if (ratio < 0.25) return 'before';
-  if (ratio < 0.5) return 'first-child';
-  if (ratio < 0.75) return 'last-child';
-  return 'after';
-}
+// ── Drop position computation (re-exported from shared/drop-geometry.ts) ──
 
 // ── Hit-test ─────────────────────────────────────────────────────────────
 
-function findTarget(x: number, y: number): HTMLElement | null {
+export function findTarget(x: number, y: number): HTMLElement | null {
   if (dom.indicator) dom.indicator.style.display = 'none';
   const el = document.elementFromPoint(x, y);
   if (dom.indicator) dom.indicator.style.display = '';
   if (!el || el === document.documentElement || el === document.body) return null;
-  if (dom.overlayHost && (el === dom.overlayHost || dom.overlayHost.contains(el))) return null;
+  // Filter out the overlay host (and anything it contains in the light DOM).
+  // Use the shared overlayDom.shadowHost as fallback — dom.overlayHost is only
+  // set when arm() has been called (click-to-place), but drag-drop/drag-move
+  // also use findTarget without arming.
+  const host = dom.overlayHost ?? overlayDom.shadowHost;
+  if (host && (el === host || host.contains(el))) return null;
   if (dom.indicator && (el === dom.indicator || dom.indicator.contains(el))) return null;
   return el as HTMLElement;
 }
@@ -400,13 +329,13 @@ function ensurePulseStyle(): void {
 
 // ── Shared indicator rendering ───────────────────────────────────────────
 
-interface RenderIndicatorOpts {
+export interface RenderIndicatorOpts {
   zIndex: number;
   bgTint?: string;
   animate?: boolean;
 }
 
-function renderIndicator(
+export function renderIndicator(
   container: HTMLElement,
   position: DropPosition,
   axis: 'vertical' | 'horizontal',
@@ -598,10 +527,64 @@ function updateCursorLabel(e: MouseEvent): void {
   }
 }
 
+/**
+ * When the cursor lands on a container element, check whether it is actually
+ * sitting inside a CSS gap between two adjacent children. If so, return the
+ * child that precedes the gap (the drop should be 'after' that child).
+ * Returns null if the cursor is not in any inter-child gap.
+ */
+function findChildInGap(
+  container: HTMLElement,
+  cx: number,
+  cy: number,
+): { child: HTMLElement; position: 'before' | 'after' } | null {
+  const children = Array.from(container.children) as HTMLElement[];
+  if (children.length === 0) return null;
+  const axis = getAxis(container);
+  const containerRect = container.getBoundingClientRect();
+
+  // Leading padding: cursor is before the first child
+  const first = children[0].getBoundingClientRect();
+  const beforeFirst =
+    axis === 'vertical'
+      ? cy >= containerRect.top && cy < first.top
+      : cx >= containerRect.left && cx < first.left;
+  if (beforeFirst) return { child: children[0], position: 'before' };
+
+  // Gaps between adjacent children
+  for (let i = 0; i < children.length - 1; i++) {
+    const a = children[i].getBoundingClientRect();
+    const b = children[i + 1].getBoundingClientRect();
+    const inGap =
+      axis === 'vertical'
+        ? cy > a.bottom && cy < b.top
+        : cx > a.right && cx < b.left;
+    if (inGap) return { child: children[i], position: 'after' };
+  }
+
+  // Trailing padding: cursor is past the last child but still within the container
+  const last = children[children.length - 1];
+  const lastRect = last.getBoundingClientRect();
+  const pastLast =
+    axis === 'vertical'
+      ? cy > lastRect.bottom && cy <= containerRect.bottom
+      : cx > lastRect.right && cx <= containerRect.right;
+  if (pastLast) return { child: last, position: 'after' };
+
+  return null;
+}
+
 function onMouseMove(e: MouseEvent): void {
   if (mode.kind === 'idle') return;
 
   updateCursorLabel(e);
+
+  // If a drop preview is active and cursor is still inside the pre-reflow rect,
+  // skip hit-testing — the live preview holds stable.
+  if (dropPreview?.isInsideLockedRect(e.clientX, e.clientY)) {
+    return;
+  }
+
   const target = findTarget(e.clientX, e.clientY);
 
   if (mode.kind === 'element-select') {
@@ -618,16 +601,34 @@ function onMouseMove(e: MouseEvent): void {
   // component-insert, generic-insert, browse
   if (!target) {
     hideDropIndicator();
+    dropPreview?.clear();
     return;
   }
 
-  const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
-  const rect = target.getBoundingClientRect();
-  const position = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  // Gap/padding detection: if the cursor landed on a container, check whether
+  // it is in a CSS gap between two children, in the leading padding (before the
+  // first child), or in the trailing padding (after the last child). In those
+  // cases bypass the 4-zone position heuristic and use the adjacent child
+  // directly so we always stay inside the right container.
+  const gapResult = findChildInGap(target, e.clientX, e.clientY);
+  const resolvedTarget = gapResult ? gapResult.child : target;
 
-  dom.currentTarget = target;
-  dom.currentPosition = position;
-  showDropIndicator(target, position, parentAxis);
+  const parentAxis = resolvedTarget.parentElement ? getAxis(resolvedTarget.parentElement) : 'vertical';
+  const rect = resolvedTarget.getBoundingClientRect();
+  const rawPosition = gapResult
+    ? gapResult.position
+    : computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+  const adjusted = adjustForEdgeChild(resolvedTarget, rawPosition);
+
+  dom.currentTarget = adjusted.target;
+  dom.currentPosition = adjusted.position;
+  const indicatorAxis = adjusted.target.parentElement ? getAxis(adjusted.target.parentElement) : 'vertical';
+  showDropIndicator(adjusted.target, adjusted.position, indicatorAxis);
+
+  // Start/update hover-to-preview timer (component-insert mode only)
+  if (dropPreview && mode.kind === 'component-insert') {
+    dropPreview.update(adjusted.target, adjusted.position, mode.ghostHtml, mode.ghostCss || null, e.clientX, e.clientY);
+  }
 }
 
 function onMouseLeave(): void {
@@ -636,6 +637,7 @@ function onMouseLeave(): void {
     dom.currentTarget = null;
   } else {
     hideDropIndicator();
+    dropPreview?.clear();
   }
   if (dom.cursorLabel) dom.cursorLabel.style.opacity = '0';
 }
@@ -653,6 +655,12 @@ function onClick(e: MouseEvent): void {
 
 function onKeyDown(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
+    if (mode.kind === 'browse' && locked.target) {
+      // Persistent browse with a locked point — just stop browsing, keep point
+      // Panel Escape handler will send TOGGLE_INSERT_BROWSE or CANCEL_MODE
+      cleanup();
+      return;
+    }
     sendTo('panel', { type: 'COMPONENT_DISARMED' });
     cleanup();
   }
@@ -680,6 +688,9 @@ function handleBrowseClick(e: MouseEvent): void {
   locked.target = dom.currentTarget;
   locked.position = dom.currentPosition;
 
+  // Sync SM so ESCAPE and toolbar three-way toggle see the locked point
+  dispatch({ type: 'INSERT_POINT_LOCKED', target: dom.currentTarget, position: dom.currentPosition });
+
   const parentAxis = dom.currentTarget.parentElement ? getAxis(dom.currentTarget.parentElement) : 'vertical';
   locked.indicator = document.createElement('div');
   locked.indicator.style.cssText = css({ ...FIXED_OVERLAY, zIndex: Z_LOCKED });
@@ -697,14 +708,26 @@ function handleBrowseClick(e: MouseEvent): void {
     targetTag: dom.currentTarget.tagName.toLowerCase(),
   });
 
-  const lockedEl = dom.currentTarget;
-  const lockedPos = dom.currentPosition;
+  // Persistent browse: keep mode active, just notify via callback
   const cb = mode.kind === 'browse' ? mode.onLocked : null;
-  cleanup();
-  if (cb) cb(lockedEl, lockedPos);
+  if (cb) cb(dom.currentTarget, dom.currentPosition);
 }
 
 function handleGenericInsertClick(e: MouseEvent): void {
+  // If no target was set by mousemove (e.g. user clicked without moving the
+  // mouse after arming), do a hit-test at the click position.
+  if (!dom.currentTarget || !dom.currentPosition) {
+    const hitTarget = findTarget(e.clientX, e.clientY);
+    if (hitTarget) {
+      const parentAxis = hitTarget.parentElement ? getAxis(hitTarget.parentElement) : 'vertical';
+      const rect = hitTarget.getBoundingClientRect();
+      const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+      const adjusted = adjustForEdgeChild(hitTarget, rawPosition);
+      dom.currentTarget = adjusted.target;
+      dom.currentPosition = adjusted.position;
+    }
+  }
+
   if (!dom.currentTarget || !dom.currentPosition) {
     cleanup();
     sendTo('panel', { type: 'COMPONENT_DISARMED' });
@@ -721,6 +744,20 @@ function handleGenericInsertClick(e: MouseEvent): void {
 }
 
 function handleComponentInsertClick(e: MouseEvent): void {
+  // If no target was set by mousemove (e.g. user clicked without moving the
+  // mouse after arming), do a hit-test at the click position.
+  if (!dom.currentTarget || !dom.currentPosition) {
+    const hitTarget = findTarget(e.clientX, e.clientY);
+    if (hitTarget) {
+      const parentAxis = hitTarget.parentElement ? getAxis(hitTarget.parentElement) : 'vertical';
+      const rect = hitTarget.getBoundingClientRect();
+      const rawPosition = computeDropPosition({ x: e.clientX, y: e.clientY }, rect, parentAxis);
+      const adjusted = adjustForEdgeChild(hitTarget, rawPosition);
+      dom.currentTarget = adjusted.target;
+      dom.currentPosition = adjusted.position;
+    }
+  }
+
   if (!dom.currentTarget || !dom.currentPosition) {
     cleanup();
     sendTo('panel', { type: 'COMPONENT_DISARMED' });
@@ -733,93 +770,81 @@ function handleComponentInsertClick(e: MouseEvent): void {
 
   const { componentName: cName, storyId: sId, ghostHtml: gHtml, ghostCss: gCss, componentPath: cPath, componentArgs: cArgs } = mode;
 
-  const template = document.createElement('template');
-  template.innerHTML = gHtml.trim();
-  const inserted = template.content.firstElementChild as HTMLElement | null;
-  if (!inserted) {
-    cleanup();
-    sendTo('panel', { type: 'COMPONENT_DISARMED' });
-    return;
-  }
-  inserted.dataset.twDroppedComponent = cName;
+  // If hover-to-preview is active, finalize it — the element is already in the DOM.
+  const finalizeResult = dropPreview?.isActive() ? dropPreview.finalize() : null;
 
-  const target = dom.currentTarget;
-  const position = dom.currentPosition;
+  let inserted: HTMLElement;
+  let finalizedTarget: HTMLElement | null = null;
+  let finalizedPosition: DropPosition | 'replace' | null = null;
 
-  switch (position) {
-    case 'before':
-      target.insertAdjacentElement('beforebegin', inserted);
-      break;
-    case 'after':
-      target.insertAdjacentElement('afterend', inserted);
-      break;
-    case 'first-child':
-      target.insertAdjacentElement('afterbegin', inserted);
-      break;
-    case 'last-child':
-      target.appendChild(inserted);
-      break;
+  if (finalizeResult) {
+    inserted = finalizeResult.element;
+    finalizedTarget = finalizeResult.target;
+    finalizedPosition = finalizeResult.position;
+    inserted.dataset.twDroppedComponent = cName;
+  } else {
+    dropPreview?.clear();
+
+    const template = document.createElement('template');
+    template.innerHTML = gHtml.trim();
+    const el = template.content.firstElementChild as HTMLElement | null;
+    if (!el) {
+      cleanup();
+      sendTo('panel', { type: 'COMPONENT_DISARMED' });
+      return;
+    }
+    inserted = el;
+    inserted.dataset.twDroppedComponent = cName;
+
+    switch (dom.currentPosition) {
+      case 'before':
+        dom.currentTarget.insertAdjacentElement('beforebegin', inserted);
+        break;
+      case 'after':
+        dom.currentTarget.insertAdjacentElement('afterend', inserted);
+        break;
+      case 'first-child':
+        dom.currentTarget.insertAdjacentElement('afterbegin', inserted);
+        break;
+      case 'last-child':
+        dom.currentTarget.appendChild(inserted);
+        break;
+    }
   }
+
+  const target = finalizedTarget ?? dom.currentTarget;
+  const position = finalizedPosition ?? dom.currentPosition;
 
   // Inject ghost CSS into the page so all classes resolve
   if (gCss) {
     injectGhostCss(cName, gCss);
   }
 
-  const targetSelector = buildSelector(target);
-
-  const isGhostTarget = !!target.dataset.twDroppedComponent;
-  const ghostTargetPatchId = target.dataset.twDroppedPatchId;
-  const ghostTargetName = target.dataset.twDroppedComponent;
-  const ghostAncestor = !isGhostTarget ? findGhostAncestor(target) : null;
-  const effectiveGhostName = isGhostTarget ? ghostTargetName : ghostAncestor?.dataset.twDroppedComponent;
-  const effectiveGhostPatchId = isGhostTarget ? ghostTargetPatchId : ghostAncestor?.dataset.twDroppedPatchId;
-
-  const context = effectiveGhostName
-    ? `Place "${cName}" ${position} the <${effectiveGhostName} /> component (pending insertion from an earlier drop)`
-    : buildContext(target, '', '', new Map());
-
-  let parentComponent: { name: string } | undefined;
-  const fiber = getFiber(target);
-  if (fiber) {
-    const boundary = findOwningComponent(fiber);
-    if (boundary) parentComponent = { name: boundary.componentName };
-  }
-
-  const patch: Patch = {
-    id: crypto.randomUUID(),
-    kind: 'component-drop',
-    elementKey: targetSelector,
-    status: 'staged',
-    originalClass: '',
-    newClass: '',
-    property: 'component-drop',
-    timestamp: new Date().toISOString(),
-    component: { name: cName },
-    target: isGhostTarget
-      ? { tag: ghostTargetName?.toLowerCase() ?? 'unknown', classes: '', innerText: '' }
-      : {
-          tag: target.tagName.toLowerCase(),
-          classes: target.className,
-          innerText: target.innerText.slice(0, 100),
-        },
+  const patch = buildComponentDropPatch({
+    target,
+    position: position!,
+    componentName: cName,
+    storyId: sId,
     ghostHtml: gHtml,
-    ghostCss: gCss || undefined,
-    componentStoryId: sId,
-    componentPath: cPath || undefined,
-    componentArgs: Object.keys(cArgs).length > 0 ? cArgs : undefined,
-    parentComponent,
-    insertMode: position,
-    context,
-    ...(effectiveGhostPatchId ? { targetPatchId: effectiveGhostPatchId, targetComponentName: effectiveGhostName } : {}),
-  };
+    ghostCss: gCss,
+    componentPath: cPath,
+    componentArgs: cArgs,
+  });
 
   inserted.dataset.twDroppedPatchId = patch.id;
 
   send({ type: 'COMPONENT_DROPPED', patch });
-  sendTo('panel', { type: 'COMPONENT_DISARMED' });
+
+  // Clear stale selection state from the element that was selected before paste
+  revertPreview();
+  clearHighlights();
+  clearSelectionState();
 
   cleanup();
+
+  // Dispatch COMPONENT_PLACED to restart browse mode for rapid placement.
+  // This sends COMPONENT_DISARMED to the panel and triggers start-browse.
+  dispatch({ type: 'COMPONENT_PLACED' });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -833,7 +858,7 @@ export function findGhostAncestor(el: HTMLElement): HTMLElement | null {
   return null;
 }
 
-function buildSelector(el: HTMLElement): string {
+export function buildSelector(el: HTMLElement): string {
   const tag = el.tagName.toLowerCase();
   if (el.id) return `#${el.id}`;
   const classes = Array.from(el.classList).slice(0, 3).join('.');
@@ -858,6 +883,12 @@ function cleanup(): void {
   dom.arrowRight = null;
   dom.currentTarget = null;
   dom.currentPosition = null;
+
+  // Clean up hover-to-preview
+  if (dropPreview) {
+    dropPreview.destroy();
+    dropPreview = null;
+  }
 }
 
 // ── Ghost CSS injection ──────────────────────────────────────────────────
@@ -867,7 +898,7 @@ function cleanup(): void {
  * Ensures all Tailwind utilities and component library CSS resolve for the
  * dropped ghost element, even if the target app's own build doesn't include them.
  */
-function injectGhostCss(componentName: string, css: string): void {
+export function injectGhostCss(componentName: string, css: string): void {
   const id = `vybit-ghost-css-${componentName}`;
   // Remove any existing ghost CSS for this component (refreshes on re-drop)
   const existing = document.getElementById(id);

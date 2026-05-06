@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>052 · 005 — Two-Button Drawer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #2c2c2c;
+      --surface:      #383838;
+      --surface-hi:   #404040;
+      --border:       #3a3a3a;
+      --text:         #e5e5e5;
+      --text-mid:     #b3b3b3;
+      --muted:        #999999;
+      --orange:       #F5532D;
+      --orange-light: #ff7b5c;
+      --orange-bg:    rgba(245, 83, 45, 0.12);
+      --teal:         #00848B;
+      --teal-light:   #5fd4da;
+      --teal-dark:    #00464A;
+      --teal-deep:    #003D40;
+      --teal-surface: #005357;
+      --teal-dim:     rgba(0, 132, 139, 0.12);
+      --teal-glow:    rgba(0, 132, 139, 0.5);
+      --orange-glow:  rgba(245, 83, 45, 0.5);
+      --green:        #2E7229;
+      --font-display: 'Poppins', sans-serif;
+      --font-ui:      'Inter', sans-serif;
+      --font-mono:    'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1e1e1e; font-family: var(--font-ui); font-size: 12px; color: var(--text); padding: 40px; }
+
+    .page-header { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 36px; line-height: 1.6; max-width: 900px; }
+    .page-subtitle strong { color: var(--text-mid); }
+    .section-divider { width: 100%; border: none; border-top: 1px solid #333; margin: 40px 0 20px; }
+    .section-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--teal); margin-bottom: 4px; }
+    .section-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; max-width: 700px; }
+    .variations { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .col-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; font-family: var(--font-mono); color: var(--muted); max-width: 500px; }
+    .annotation { display: inline-block; font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; }
+    .annotation.teal { color: var(--teal); background: var(--teal-dim); }
+    .annotation.orange { color: var(--orange); background: var(--orange-bg); }
+    .annotation.green { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
+    .annotation.gray { color: var(--muted); background: rgba(153,153,153,0.12); }
+
+    /* ── Mock card ── */
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      padding: 16px 18px;
+      border-radius: 12px;
+      font-family: var(--font-ui);
+      width: 400px;
+    }
+    .card-title { font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 2px; }
+    .card-value { font-size: 32px; font-weight: 800; color: #0f172a; line-height: 1.1; margin-bottom: 2px; }
+    .card-trend { font-size: 12px; font-weight: 600; color: var(--teal); }
+
+    /* ── Selection outlines ── */
+    .sel-teal {
+      position: absolute;
+      border: 2px solid var(--teal);
+      border-radius: 2px;
+      pointer-events: none;
+      animation: highlight-pulse 2s ease-in-out infinite;
+    }
+    @keyframes highlight-pulse {
+      0%, 100% { border-color: #00848B; box-shadow: 0 0 6px var(--teal-glow); }
+      50%       { border-color: #F5532D; box-shadow: 0 0 6px var(--orange-glow); }
+    }
+    .sel-orange {
+      position: absolute;
+      border: 2px solid var(--orange);
+      border-radius: 2px;
+      pointer-events: none;
+      box-shadow: 0 0 6px var(--orange-glow);
+    }
+
+    /* ── Tags ── */
+    .comp-tag {
+      position: absolute; top: -20px; right: -2px;
+      background: var(--teal); color: white;
+      font-size: 10px; font-weight: 600; padding: 2px 8px;
+      border-radius: 4px 4px 0 0; font-family: var(--font-mono); line-height: 1.4;
+    }
+    .value-tag {
+      position: absolute; top: -2px; right: -2px;
+      background: var(--orange); color: white;
+      font-size: 9px; font-weight: 700; padding: 2px 6px;
+      border-radius: 0 2px 0 4px; font-family: var(--font-mono); line-height: 1.2;
+    }
+
+    /* ── Resize handles ── */
+    .resize-frame { position: absolute; pointer-events: none; }
+    .rh { position: absolute; background: var(--teal); border: 1.5px solid white; pointer-events: auto; z-index: 5; }
+    .rh.br { bottom: -4px; right: -4px; width: 8px; height: 8px; border-radius: 2px; cursor: se-resize; }
+    .rh.r  { right: -4px; top: 50%; transform: translateY(-50%); width: 6px; height: 20px; border-radius: 3px; cursor: e-resize; }
+    .rh.b  { bottom: -4px; left: 50%; transform: translateX(-50%); width: 20px; height: 6px; border-radius: 3px; cursor: s-resize; }
+
+    /* ── Teal drawer ── */
+    .drawer {
+      background: var(--teal-deep);
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,132,139,0.2);
+      overflow: hidden;
+      width: fit-content;
+    }
+    .drawer-header {
+      display: flex; align-items: center; padding: 10px 10px; gap: 6px;
+    }
+
+    /* ── Two-button row ── */
+    .btn-pair {
+      display: flex; align-items: center; gap: 6px; padding: 10px 10px;
+    }
+    .action-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 8px; border: none;
+      font-size: 12px; font-weight: 600; font-family: var(--font-ui);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .action-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .action-btn.edit-text {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    .action-btn.edit-text:hover { background: rgba(255,255,255,0.15); }
+    .action-btn.describe {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    .action-btn.describe:hover { background: rgba(255,255,255,0.15); }
+
+    /* Active state pills */
+    .action-btn.active-orange {
+      background: rgba(245, 83, 45, 0.2);
+      border: 1px solid rgba(245, 83, 45, 0.35);
+      color: var(--orange-light);
+    }
+    .action-btn.active-teal {
+      background: rgba(0, 132, 139, 0.25);
+      border: 1px solid rgba(0, 132, 139, 0.4);
+      color: var(--teal-light);
+    }
+
+    /* ── Drawer action buttons ── */
+    .drawer-act {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: none; border: none;
+      color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;
+      cursor: pointer; padding: 4px 8px; border-radius: 4px; font-family: var(--font-ui);
+    }
+    .drawer-act:hover { background: rgba(255,255,255,0.1); color: white; }
+    .drawer-act.done { color: white; font-weight: 600; }
+
+    /* ── Msg row inside drawer ── */
+    .drawer-body { padding: 6px 10px 10px; }
+    .drawer-msg { display: flex; align-items: flex-end; gap: 6px; width: 100%; }
+    .drawer-msg textarea {
+      flex: 1; border: none; background: rgba(0,0,0,0.25); color: #e5e5e5;
+      font-family: 'Inter', system-ui, sans-serif; font-size: 13px; line-height: 1.4;
+      padding: 8px 12px; border-radius: 8px; outline: none; resize: none;
+      overflow: hidden; height: 36px; box-sizing: border-box;
+    }
+    .drawer-msg textarea::placeholder { color: rgba(255,255,255,0.35); }
+    .drawer-mic {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: transparent; color: rgba(255,255,255,0.4);
+      display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+    }
+    .drawer-mic svg { width: 16px; height: 16px; }
+    .drawer-send {
+      width: 36px; height: 36px; border-radius: 8px; border: none;
+      background: var(--teal-surface); color: rgba(255,255,255,0.8);
+      display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+    }
+    .drawer-send svg { width: 14px; height: 14px; }
+    .queue-btn {
+      padding: 6px 14px; border-radius: 8px; border: none;
+      background: var(--teal); color: white;
+      font-size: 12px; font-weight: 600; font-family: var(--font-ui);
+      cursor: pointer; flex-shrink: 0; white-space: nowrap;
+    }
+
+    /* ── Back button ── */
+    .back-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: none; border: none; color: rgba(255,255,255,0.5);
+      font-size: 11px; font-weight: 500; cursor: pointer; padding: 4px 6px;
+      border-radius: 4px; font-family: var(--font-ui);
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+    .back-btn svg { width: 12px; height: 12px; }
+
+    /* ── Text node highlight ── */
+    .text-hl {
+      background: #fff3e0; outline: 2px solid var(--orange); outline-offset: 1px;
+      border-radius: 2px; padding: 0 2px; position: relative;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 class="page-header">052 · 005 — Two-Button Drawer</h1>
+  <p class="page-subtitle">
+    On element select, a teal drawer appears with two buttons: <strong>[Edit text]</strong> and <strong>[Describe change]</strong>.
+    Clicking either activates that mode. Each mode transforms the drawer. Both have a way to go back.
+  </p>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATE A — SELECTED (two buttons)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">State A — Selected (two buttons)</div>
+  <p class="section-subtitle">
+    Pulsing teal outline + resize handles. Drawer shows two equal buttons. No msg row yet — clean starting point.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">ELEMENT SELECTED — CHOOSE ACTION</span>
+
+      <div style="position: relative; width: 400px;">
+        <div class="card">
+          <div class="card-title">Active tasks</div>
+          <div class="card-value">12</div>
+          <div class="card-trend">↑ 3 this week</div>
+        </div>
+        <div class="sel-teal" style="inset: -4px;"></div>
+        <div class="comp-tag">stat-card</div>
+        <div class="resize-frame" style="inset: -5px;">
+          <div class="rh r"></div><div class="rh b"></div><div class="rh br"></div>
+        </div>
+      </div>
+
+      <div class="drawer" style="margin-top: 6px;">
+        <div class="btn-pair">
+          <button class="action-btn describe">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
+            Describe change
+          </button>
+          <button class="action-btn edit-text">
+            <svg viewBox="0 0 16 16" fill="none"><text x="0" y="12" font-family="Inter, sans-serif" font-size="11" font-weight="800" fill="currentColor">Aa</text></svg>
+            Edit text
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Clean starting state — just two choices</span>
+    <span class="annotation gray">No msg row until needed — less visual noise</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATE B — "DESCRIBE CHANGE" ACTIVE
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">State B — Describe Change</div>
+  <p class="section-subtitle">
+    User clicked "Describe change". Drawer becomes a single inline row: ← back, focused input, mic, submit.
+    No header row — everything in one compact bar. Outline stays teal (pulsing).
+  </p>
+
+  <div class="variations">
+    <!-- Empty, focused — starts at 3-4 lines tall -->
+    <div class="col">
+      <span class="col-label">"DESCRIBE CHANGE" — EMPTY (focused)</span>
+
+      <div style="position: relative; width: 400px;">
+        <div class="card">
+          <div class="card-title">Active tasks</div>
+          <div class="card-value">12</div>
+          <div class="card-trend">↑ 3 this week</div>
+        </div>
+        <div class="sel-teal" style="inset: -4px;"></div>
+        <div class="comp-tag">stat-card</div>
+        <div class="resize-frame" style="inset: -5px;">
+          <div class="rh r"></div><div class="rh b"></div><div class="rh br"></div>
+        </div>
+      </div>
+
+      <div class="drawer" style="margin-top: 6px;">
+        <div style="padding:8px 10px;">
+          <textarea autofocus placeholder="describe change" style="width:100%;min-width:400px;border:none;background:rgba(0,0,0,0.25);color:#e5e5e5;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.4;padding:8px 12px;border-radius:8px;outline:none;resize:none;overflow:hidden;height:80px;box-sizing:border-box;"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <button class="back-btn">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>
+            </button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="drawer-mic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+              <button class="queue-btn">Queue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- With text typed — textarea taller -->
+    <div class="col">
+      <span class="col-label">"DESCRIBE CHANGE" — WITH TEXT (auto-expanded)</span>
+
+      <div style="position: relative; width: 400px;">
+        <div class="card">
+          <div class="card-title">Active tasks</div>
+          <div class="card-value">12</div>
+          <div class="card-trend">↑ 3 this week</div>
+        </div>
+        <div class="sel-teal" style="inset: -4px;"></div>
+        <div class="comp-tag">stat-card</div>
+        <div class="resize-frame" style="inset: -5px;">
+          <div class="rh r"></div><div class="rh b"></div><div class="rh br"></div>
+        </div>
+      </div>
+
+      <div class="drawer" style="margin-top: 6px;">
+        <div style="padding:8px 10px;">
+          <textarea style="width:100%;min-width:400px;border:none;background:rgba(0,0,0,0.25);color:#e5e5e5;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.4;padding:8px 12px;border-radius:8px;outline:none;resize:none;overflow:hidden;height:100px;box-sizing:border-box;">Change the number from 12 to show the actual count from the API. Also update the trend text to say "5 this week" and make the trend color green when positive, red when negative.</textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <button class="back-btn">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>
+            </button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="drawer-mic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+              <button class="queue-btn">Queue</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation teal">Starts at 3-4 lines tall — room to write</span>
+    <span class="annotation green">Mic + Queue right-aligned below textarea</span>
+    <span class="annotation gray">Textarea auto-grows as you type</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STATE C — "EDIT TEXT" ACTIVE
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">State C — Edit Text (inline editing)</div>
+  <p class="section-subtitle">
+    User clicked "Edit text". Outline turns solid orange. Text node highlighted.
+    Drawer shows just: ← back + orange "Editing text" pill + Discard + Done. No msg row — the user is typing directly in the element.
+  </p>
+
+  <div class="variations">
+    <div class="col">
+      <span class="col-label">"EDIT TEXT" ACTIVE — INLINE EDITING</span>
+
+      <div style="position: relative; width: 400px;">
+        <div class="card">
+          <div class="card-title">Active tasks</div>
+          <div class="card-value">
+            <span class="text-hl">12<span class="value-tag">value</span></span>
+          </div>
+          <div class="card-trend">↑ 3 this week</div>
+        </div>
+        <div class="sel-orange" style="inset: -4px;"></div>
+        <div class="resize-frame" style="inset: -5px;">
+          <div class="rh r" style="opacity:0.25;"></div><div class="rh b" style="opacity:0.25;"></div><div class="rh br" style="opacity:0.25;"></div>
+        </div>
+      </div>
+
+      <div class="drawer" style="margin-top: 6px;">
+        <div class="drawer-header" style="gap: 8px;">
+          <button class="back-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>
+          </button>
+          <span class="action-btn active-orange" style="cursor:default; padding: 5px 12px; font-size: 11px;">
+            <svg viewBox="0 0 16 16" fill="currentColor" style="width:12px;height:12px;"><path d="M12.1.5a1.7 1.7 0 0 1 2.4 0l1 1a1.7 1.7 0 0 1 0 2.4L5.2 14.2a.5.5 0 0 1-.2.1l-3.5 1a.5.5 0 0 1-.6-.6l1-3.5a.5.5 0 0 1 .1-.2L12.1.5z"/></svg>
+            Editing text
+          </span>
+          <div style="flex:1;"></div>
+          <button class="drawer-act" style="color:rgba(255,255,255,0.5);">✕ Discard</button>
+          <button class="queue-btn">Queue</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span class="annotation orange">Outline goes orange, "Editing text" pill in orange</span>
+    <span class="annotation teal">← back discards and returns to two-button state</span>
+    <span class="annotation green">No msg row — user types directly in the element</span>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       ALL THREE SIDE BY SIDE
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">All States — Side by Side (drawers only)</div>
+  <p class="section-subtitle">
+    Drawer transforms between three shapes. Same width, same position. Back arrow is the universal escape.
+  </p>
+
+  <div class="variations" style="align-items: flex-start;">
+
+    <!-- A: Two buttons -->
+    <div class="col">
+      <span class="col-label">A — SELECTED</span>
+      <div class="drawer">
+        <div class="btn-pair">
+          <button class="action-btn describe">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h8M2 12h10"/></svg>
+            Describe change
+          </button>
+          <button class="action-btn edit-text">
+            <svg viewBox="0 0 16 16" fill="none"><text x="0" y="12" font-family="Inter, sans-serif" font-size="11" font-weight="800" fill="currentColor">Aa</text></svg>
+            Edit text
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: Describe -->
+    <div class="col">
+      <span class="col-label">B — DESCRIBE CHANGE</span>
+      <div class="drawer">
+        <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;">
+          <button class="back-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>
+          </button>
+          <textarea placeholder="describe change" style="width:400px;border:none;background:rgba(0,0,0,0.25);color:#e5e5e5;font-family:'Inter',system-ui,sans-serif;font-size:13px;line-height:1.4;padding:8px 12px;border-radius:8px;outline:none;resize:none;overflow:hidden;height:36px;box-sizing:border-box;\"></textarea>
+          <button class="drawer-mic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v7a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6 11a1 1 0 0 1 1 1 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A7 7 0 0 1 5 12a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="queue-btn">Queue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- C: Edit text -->
+    <div class="col">
+      <span class="col-label">C — EDITING TEXT</span>
+      <div class="drawer">
+        <div class="drawer-header" style="gap: 8px;">
+          <button class="back-btn">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>
+          </button>
+          <span class="action-btn active-orange" style="cursor:default; padding: 5px 12px; font-size: 11px;">
+            <svg viewBox="0 0 16 16" fill="currentColor" style="width:12px;height:12px;"><path d="M12.1.5a1.7 1.7 0 0 1 2.4 0l1 1a1.7 1.7 0 0 1 0 2.4L5.2 14.2a.5.5 0 0 1-.2.1l-3.5 1a.5.5 0 0 1-.6-.6l1-3.5a.5.5 0 0 1 .1-.2L12.1.5z"/></svg>
+            Editing text
+          </span>
+          <div style="flex:1;"></div>
+          <button class="drawer-act" style="color:rgba(255,255,255,0.5);">✕ Discard</button>
+          <button class="queue-btn">Queue</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FLOW + NOTES
+       ═══════════════════════════════════════════════════════════ -->
+  <hr class="section-divider" />
+  <div class="section-title">Interaction Flow</div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:600px;font-size:11px;color:var(--text-mid);line-height:1.6;">
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">1. Click element</strong> → State A: teal outline + drawer with [Edit text] [Describe change]
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--teal);">
+      <strong style="color:var(--text);">2a. Click "Describe change"</strong> → State B: msg row appears, type description, send. ← back returns to A.
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--orange);">
+      <strong style="color:var(--text);">2b. Click "Edit text"</strong> → State C: outline→orange, text node highlighted, inline editing. Discard/Done in header. ← back = discard + return to A.
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--green);">
+      <strong style="color:var(--text);">3. "Queue"</strong> → Change queued. Returns to State A.
+    </div>
+    <div style="padding:8px 12px;background:var(--surface);border-radius:6px;border-left:3px solid var(--muted);">
+      <strong style="color:var(--text);">Escape / ← back</strong> → Always returns to previous state (C→A, B→A, A→deselect).
+    </div>
+  </div>
+
+  <hr class="section-divider" />
+  <div class="section-title">vs. Mock 004 (single "Edit text" + msg row)</div>
+
+  <table style="border-collapse:collapse;font-size:11px;color:var(--text-mid);max-width:550px;">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #444;">
+        <th style="padding:6px 10px;color:var(--text);">Aspect</th>
+        <th style="padding:6px 10px;color:var(--teal);">004: Edit text + msg</th>
+        <th style="padding:6px 10px;color:var(--teal);">005: Two buttons</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 10px;">Initial state</td><td style="padding:6px 10px;">Msg row always visible</td><td style="padding:6px 10px;">Just two buttons — cleaner</td></tr>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 10px;">Describe a change</td><td style="padding:6px 10px;">Immediately available</td><td style="padding:6px 10px;">One click to reveal form</td></tr>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 10px;">Drawer height (idle)</td><td style="padding:6px 10px;">Taller (header + msg row)</td><td style="padding:6px 10px;">Shorter (just buttons)</td></tr>
+      <tr style="border-bottom:1px solid #333;"><td style="padding:6px 10px;">Clarity of options</td><td style="padding:6px 10px;">Edit text is a button, describe is implicit</td><td style="padding:6px 10px;">Both actions equally prominent</td></tr>
+      <tr><td style="padding:6px 10px;">Back/cancel</td><td style="padding:6px 10px;">✕ close button</td><td style="padding:6px 10px;">← back arrow (hierarchical)</td></tr>
+    </tbody>
+  </table>
+
+</body>
+</html>

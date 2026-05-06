@@ -7,11 +7,13 @@ import { highlightElement, clearHighlights, removeDrawButton } from "./element-h
 import { computeNearGroups, findSamePathElements } from "./grouping";
 import type { PathMatchResult } from "./grouping";
 import { state, resolveTab, clearSelectionState } from "./overlay-state";
+import { dom } from "./overlay-dom";
 import { revertPreview } from "./patcher";
 import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
 import { buildContext, buildInsertContext, buildTextContext } from "./context";
 import { send, sendTo } from "./ws";
+import { showElementDrawer, removeElementDrawer, repositionDrawer } from "./element-drawer";
 
 // Detect Web Speech API (Chrome/Edge: webkitSpeechRecognition, Safari: SpeechRecognition)
 const SpeechRecognitionAPI: (new () => any) | null =
@@ -55,7 +57,7 @@ function showMicBanner(message: string): void {
 	});
 	banner.appendChild(dismiss);
 
-	state.shadowRoot.appendChild(banner);
+	dom.shadowRoot.appendChild(banner);
 	activeBanner = banner;
 
 	requestAnimationFrame(() => banner.classList.add("visible"));
@@ -84,16 +86,16 @@ function setupToolbarDrag(handle: HTMLElement, toolbar: HTMLElement): void {
 		toolbar.style.left = `${startLeft + dx}px`;
 		toolbar.style.top = `${startTop + dy}px`;
 		// Snap message row directly below toolbar
-		if (state.msgRowEl) {
+		if (dom.msgRowEl) {
 			const tRect = toolbar.getBoundingClientRect();
-			state.msgRowEl.style.left = `${tRect.left}px`;
-			state.msgRowEl.style.top = `${tRect.bottom + 4}px`;
+			dom.msgRowEl.style.left = `${tRect.left}px`;
+			dom.msgRowEl.style.top = `${tRect.bottom + 4}px`;
 		}
 		// Reposition picker if open
-		if (state.pickerEl) {
+		if (dom.pickerEl) {
 			const addGroupBtn = toolbar.querySelector('.tb-adjunct') as HTMLElement | null;
 			if (addGroupBtn) {
-				positionWithFlip(addGroupBtn, state.pickerEl, 'bottom-start');
+				positionWithFlip(addGroupBtn, dom.pickerEl, 'bottom-start');
 			}
 		}
 	};
@@ -183,198 +185,18 @@ export { positionWithFlip };
 
 /** Reposition toolbar + message row at fresh coordinates (call on scroll/resize). */
 export function repositionToolbar(): void {
-	if (!state.toolbarEl || !state.currentTargetEl || isToolbarDragged()) return;
-	positionBothMenus(state.currentTargetEl, state.toolbarEl, state.msgRowEl);
+	if (dom.toolbarEl && state.currentTargetEl && !isToolbarDragged()) {
+		positionBothMenus(state.currentTargetEl, dom.toolbarEl, dom.msgRowEl);
+	}
+	repositionDrawer();
 }
 
 export function showDrawButton(targetEl: HTMLElement): void {
 	removeDrawButton();
 	toolbarDragged = false;
 
-	const instanceCount = state.currentEquivalentNodes.length;
-
-	// ── Build 3f unified toolbar ──────────────────────────────
-	const toolbar = document.createElement("div");
-	toolbar.className = "el-toolbar";
-	toolbar.style.left = "0px";
-	toolbar.style.top = "0px";
-	state.shadowRoot.appendChild(toolbar);
-	state.toolbarEl = toolbar;
-
-	// ── Drag handle ──
-	const dragHandle = document.createElement("div");
-	dragHandle.className = "drag-handle";
-	dragHandle.title = "Drag to move toolbar";
-	dragHandle.innerHTML = DRAG_GRIP_SVG;
-	toolbar.appendChild(dragHandle);
-	setupToolbarDrag(dragHandle, toolbar);
-
-	// ── Select mode group (ring when active) or standalone Select button ──
-	if (state.currentMode === 'select') {
-		// Full group: Select + separator + N+
-		const selectGroup = document.createElement("div");
-		selectGroup.className = 'mode-group ring';
-
-		const selectBtn = document.createElement("button");
-		selectBtn.className = 'tb tb-combo tb-select';
-		selectBtn.innerHTML = `${SELECT_SVG} Select`;
-		selectBtn.style.cssText = 'color: #5fd4da; border-radius: 0;';
-		selectBtn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			cancelInsert();
-			clearLockedInsert();
-			revertPreview();
-			clearHighlights();
-			clearSelectionState();
-			// Deselect element, stay in select mode so user can pick another
-			setSelectMode(true);
-			sendTo("panel", { type: "DESELECT_ELEMENT" });
-		});
-		selectGroup.appendChild(selectBtn);
-
-		const innerSep = document.createElement("div");
-		innerSep.className = "mode-sep";
-		selectGroup.appendChild(innerSep);
-
-		const addGroupBtn = document.createElement("button");
-		addGroupBtn.className = "tb tb-adjunct";
-		addGroupBtn.innerHTML = `${instanceCount} <span style="font-size:9px;margin-left:1px;opacity:0.6;">+</span>`;
-		addGroupBtn.style.cssText = 'color: #5fd4da; border-radius: 0;';
-		addGroupBtn.title = `${instanceCount} matching element${instanceCount !== 1 ? "s" : ""} selected — click to add similar`;
-		addGroupBtn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			if (state.pickerEl) {
-				state.pickerEl.remove();
-				state.pickerEl = null;
-			} else {
-				showGroupPicker(
-					addGroupBtn,
-					() => {},
-					(totalCount) => {
-						addGroupBtn.innerHTML = `${totalCount} <span style="font-size:9px;margin-left:1px;opacity:0.6;">+</span>`;
-						addGroupBtn.title = `${totalCount} matching element${totalCount !== 1 ? "s" : ""} selected — click to add similar`;
-					},
-				);
-			}
-		});
-		selectGroup.appendChild(addGroupBtn);
-		toolbar.appendChild(selectGroup);
-	} else {
-		// Insert mode: standalone Select button (no N+ group)
-		const selectBtn = document.createElement("button");
-		selectBtn.className = 'tb tb-combo tb-select';
-		selectBtn.innerHTML = `${SELECT_SVG} Select`;
-		selectBtn.style.cssText = 'opacity: 0.4;';
-		selectBtn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			cancelInsert();
-			clearLockedInsert();
-			revertPreview();
-			clearHighlights();
-			clearSelectionState();
-			state.currentMode = 'select';
-			state.currentTab = resolveTab();
-			sendTo("panel", { type: "MODE_CHANGED", mode: "select" });
-			setSelectMode(true);
-		});
-		toolbar.appendChild(selectBtn);
-	}
-
-	// ── Insert button (separate, ring when active) ──
-	const insertBtn = document.createElement("button");
-	insertBtn.className = `tb tb-combo`;
-	insertBtn.innerHTML = `${INSERT_SVG} Insert`;
-	if (state.currentMode === 'insert') {
-		insertBtn.style.cssText = `box-shadow: inset 0 0 0 1.5px #00848B; color: #5fd4da;`;
-	} else {
-		insertBtn.style.cssText = `opacity: 0.4;`;
-	}
-	insertBtn.addEventListener("click", (e) => {
-		e.stopPropagation();
-		cancelInsert();
-		clearLockedInsert();
-		revertPreview();
-		clearHighlights();
-		setSelectMode(false);
-		clearSelectionState();
-		if (state.currentMode === 'insert') {
-			// Already in insert mode — deselect element, re-enter browse mode
-			sendTo("panel", { type: "DESELECT_ELEMENT" });
-			startBrowse(state.shadowHost, onBrowseLocked);
-			return;
-		}
-		state.currentMode = 'insert';
-		if (state.tabPreference === 'design') state.tabPreference = 'component';
-		state.currentTab = resolveTab();
-		sendTo("panel", { type: "MODE_CHANGED", mode: "insert" });
-		startBrowse(state.shadowHost, onBrowseLocked);
-	});
-	toolbar.appendChild(insertBtn);
-
-	// ── Separator ──
-	const sep = document.createElement("div");
-	sep.className = "tb-sep";
-	toolbar.appendChild(sep);
-
-	// ── Action buttons (mode-dependent) ──
-	if (state.currentMode === 'select') {
-		const actions = [
-			{ id: 'design', label: 'Design', svg: DESIGN_SVG },
-			{ id: 'text', label: 'Text', svg: TEXT_SVG },
-			{ id: 'replace', label: 'Replace', svg: REPLACE_SVG },
-		];
-		for (const action of actions) {
-			const btn = document.createElement("button");
-			btn.className = `tb tb-combo ${state.currentTab === action.id ? 'active' : ''}`;
-			btn.innerHTML = `${action.svg} ${action.label}`;
-			btn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				if (action.id === 'text') {
-					startTextEdit(targetEl, {
-						sendTo,
-						send,
-						currentBoundary: state.currentBoundary,
-						currentTargetEl: targetEl,
-						currentEquivalentNodes: state.currentEquivalentNodes,
-						buildTextContext,
-						positionToolbar: () => positionWithFlip(targetEl, toolbar),
-						repositionHighlights: () => {
-							clearHighlights();
-							state.currentEquivalentNodes.forEach((n) => highlightElement(n));
-						},
-						shadowRoot: state.shadowRoot,
-						onDone: () => showDrawButton(targetEl),
-					});
-					removeDrawButton();
-					return;
-				}
-				state.currentTab = action.id;
-				state.tabPreference = (action.id === 'replace' || action.id === 'place') ? 'component' : 'design';
-				state.replaceDirection = action.id === 'replace' ? 'element-first' : null;
-				sendTo("panel", { type: "TAB_CHANGED", tab: action.id as any });
-				showDrawButton(targetEl);
-			});
-			toolbar.appendChild(btn);
-		}
-	} else {
-		const placeBtn = document.createElement("button");
-		placeBtn.className = "tb tb-combo active";
-		placeBtn.innerHTML = `Place`;
-		toolbar.appendChild(placeBtn);
-	}
-
-	// Position toolbar using @floating-ui/dom (msgRow added after creation below)
-
-	// ── Message row (below element) ──
-	let msgRow: HTMLElement;
-	msgRow = createMsgRow(state.currentBoundary, () => {
-		if (!toolbarDragged) positionBothMenus(targetEl, toolbar, msgRow);
-	});
-	state.shadowRoot.appendChild(msgRow);
-	state.msgRowEl = msgRow;
-
-	// Position both toolbar and message row, handling flip overlap
-	positionBothMenus(targetEl, toolbar, msgRow);
+	// Use the new element drawer (State A: two buttons)
+	showElementDrawer(targetEl);
 }
 
 export function getCanvasMessageText(): string {
@@ -577,23 +399,23 @@ function positionCanvasMsgRow(
 	});
 }
 
-function showGroupPicker(
+export function showGroupPicker(
 	anchorBtn: HTMLElement,
 	onClose: () => void,
 	onCountChange: (totalCount: number) => void,
 ): void {
-	if (state.pickerCloseHandler) {
-		document.removeEventListener("click", state.pickerCloseHandler, {
+	if (dom.pickerCloseHandler) {
+		document.removeEventListener("click", dom.pickerCloseHandler, {
 			capture: true,
 		});
-		state.pickerCloseHandler = null;
+		dom.pickerCloseHandler = null;
 	}
-	state.pickerEl?.remove();
+	dom.pickerEl?.remove();
 
 	// Lazily compute near-groups on first open
 	if (!state.cachedNearGroups && state.currentTargetEl) {
 		const exactSet = new Set(state.currentEquivalentNodes);
-		state.cachedNearGroups = computeNearGroups(state.currentTargetEl, exactSet, state.shadowHost);
+		state.cachedNearGroups = computeNearGroups(state.currentTargetEl, exactSet, dom.shadowHost);
 	}
 	const groups = state.cachedNearGroups ?? [];
 
@@ -607,8 +429,8 @@ function showGroupPicker(
 	picker.className = "el-picker";
 	picker.style.left = "0px";
 	picker.style.top = "0px";
-	state.shadowRoot.appendChild(picker);
-	state.pickerEl = picker;
+	dom.shadowRoot.appendChild(picker);
+	dom.pickerEl = picker;
 
 	// Current selection summary
 	const exactRow = document.createElement("div");
@@ -633,12 +455,12 @@ function showGroupPicker(
 		if (active) {
 			addBtn.textContent = "Stop adding";
 			addBtn.style.color = "#fff";
-			addBtn.style.background = "#00848B";
+			addBtn.style.background = "var(--ov-teal)";
 			addBtn.style.borderRadius = "4px";
 			addBtn.style.textAlign = "center";
 		} else {
 			addBtn.textContent = "Add more";
-			addBtn.style.color = "#00848B";
+			addBtn.style.color = "var(--ov-teal)";
 			addBtn.style.background = "";
 			addBtn.style.borderRadius = "";
 			addBtn.style.textAlign = "";
@@ -659,7 +481,7 @@ function showGroupPicker(
 	let pathMatchChecked = false;
 
 	function clearPreviewHighlights() {
-		state.shadowRoot
+		dom.shadowRoot
 			.querySelectorAll(".highlight-preview")
 			.forEach((el) => el.remove());
 	}
@@ -695,7 +517,7 @@ function showGroupPicker(
 		}
 
 		state.currentEquivalentNodes = allNodes;
-		state.shadowRoot
+		dom.shadowRoot
 			.querySelectorAll(".highlight-overlay")
 			.forEach((el) => el.remove());
 		state.currentEquivalentNodes.forEach((n) => highlightElement(n));
@@ -713,7 +535,7 @@ function showGroupPicker(
 					typeof state.currentTargetEl.className === "string"
 						? state.currentTargetEl.className
 						: "",
-				tailwindConfig: state.tailwindConfigCache,
+				tailwindConfig: dom.tailwindConfigCache,
 			});
 		}
 	}
@@ -721,7 +543,7 @@ function showGroupPicker(
 	const checkedGroups = new Set<number>();
 
 	// Allow external code (add-mode click handler) to refresh the picker
-	state.pickerRefreshCallback = updateSelection;
+	dom.pickerRefreshCallback = updateSelection;
 
 	// ── "All exact matches (N)" row ──
 	const exactMatches = state.cachedExactMatches ?? [];
@@ -757,7 +579,7 @@ function showGroupPicker(
 				preview.style.left = `${rect.left - 3}px`;
 				preview.style.width = `${rect.width + 6}px`;
 				preview.style.height = `${rect.height + 6}px`;
-				state.shadowRoot.appendChild(preview);
+				dom.shadowRoot.appendChild(preview);
 			}
 		});
 		row.addEventListener("mouseleave", () => clearPreviewHighlights());
@@ -799,7 +621,7 @@ function showGroupPicker(
 				preview.style.left = `${rect.left - 3}px`;
 				preview.style.width = `${rect.width + 6}px`;
 				preview.style.height = `${rect.height + 6}px`;
-				state.shadowRoot.appendChild(preview);
+				dom.shadowRoot.appendChild(preview);
 			}
 		});
 		row.addEventListener("mouseleave", () => clearPreviewHighlights());
@@ -846,7 +668,7 @@ function showGroupPicker(
 				preview.style.left = `${rect.left - 3}px`;
 				preview.style.width = `${rect.width + 6}px`;
 				preview.style.height = `${rect.height + 6}px`;
-				state.shadowRoot.appendChild(preview);
+				dom.shadowRoot.appendChild(preview);
 			}
 		});
 
@@ -864,22 +686,22 @@ function showGroupPicker(
 		if (state.addMode) {
 			setAddMode(false);
 		}
-		state.pickerRefreshCallback = null;
-		state.shadowRoot
+		dom.pickerRefreshCallback = null;
+		dom.shadowRoot
 			.querySelectorAll(".highlight-preview")
 			.forEach((el) => el.remove());
-		if (state.pickerCloseHandler) {
-			document.removeEventListener("click", state.pickerCloseHandler, {
+		if (dom.pickerCloseHandler) {
+			document.removeEventListener("click", dom.pickerCloseHandler, {
 				capture: true,
 			});
-			state.pickerCloseHandler = null;
+			dom.pickerCloseHandler = null;
 		}
-		state.pickerEl?.remove();
-		state.pickerEl = null;
+		dom.pickerEl?.remove();
+		dom.pickerEl = null;
 	};
 
 	setTimeout(() => {
-		state.pickerCloseHandler = (e: MouseEvent) => {
+		dom.pickerCloseHandler = (e: MouseEvent) => {
 			// Don't close the picker while add-mode is active — clicks go to clickHandler
 			if (state.addMode) return;
 			const path = e.composedPath();
@@ -888,6 +710,6 @@ function showGroupPicker(
 				onClose();
 			}
 		};
-		document.addEventListener("click", state.pickerCloseHandler, { capture: true });
+		document.addEventListener("click", dom.pickerCloseHandler, { capture: true });
 	}, 0);
 }

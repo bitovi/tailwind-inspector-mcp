@@ -115,16 +115,16 @@ export function ScaleScrubber({
 	const isScrubbing = scrubIndex !== null;
 
 	const chipStyle = isScrubbing
-		? "bg-bv-teal/9 text-bv-teal ring-1 ring-bv-teal"
+		? "bg-bit-teal/9 text-bit-teal ring-1 ring-bit-teal"
 		: isThisLocked
-			? "bg-bv-surface-hi text-bv-text ring-1 ring-bv-border hover:bg-bv-teal/9 hover:text-bv-teal hover:ring-bv-teal"
+			? "bg-bit-surface-hi text-bit-text ring-1 ring-bit-border hover:bg-bit-teal/9 hover:text-bit-teal hover:ring-bit-teal"
 			: open
-				? "bg-bv-surface-hi text-bv-text ring-1 ring-bv-border"
+				? "bg-bit-surface-hi text-bit-text ring-1 ring-bit-border"
 				: foreignLocked
-					? "bg-bv-surface text-bv-text-mid"
+					? "bg-bit-surface text-bit-text-mid"
 					: ghost
-						? "border border-dashed border-bv-border text-bv-muted bg-transparent hover:border-bv-teal hover:text-bv-teal"
-						: "bg-bv-surface text-bv-text-mid hover:bg-bv-surface-hi hover:text-bv-text";
+						? "border border-dashed border-bit-border text-bit-muted bg-transparent hover:border-bit-teal hover:text-bit-teal"
+						: "bg-bit-surface text-bit-text-mid hover:bg-bit-surface-hi hover:text-bit-text";
 
 	return (
 		<div ref={containerRef} className="relative inline-block">
@@ -157,7 +157,7 @@ export function ScaleScrubber({
 					<FocusTrapContainer
 						ref={refs.setFloating}
 						style={floatingStyles}
-						className="z-50 max-h-52 overflow-y-auto bg-bv-bg border border-bv-border rounded-md shadow-md min-w-[5rem]"
+						className="z-50 max-h-52 overflow-y-auto bg-bit-bg border border-bit-border rounded-md shadow-md min-w-[5rem]"
 						onPointerDown={e => e.stopPropagation()}
 						onMouseLeave={onLeave}
 						onClose={() => {
@@ -167,9 +167,9 @@ export function ScaleScrubber({
 					>
 						{onRemove && (
 							<div
-								className={`flex items-center gap-1.5 px-2.5 py-[3px] text-[11px] font-mono cursor-pointer border-b border-bv-border text-bv-muted hover:text-red-400 ${
+								className={`flex items-center gap-1.5 px-2.5 py-[3px] text-[11px] font-mono cursor-pointer border-b border-bit-border text-bit-muted hover:text-red-400 ${
 									currentValue === "" || lockedValue === ""
-										? "text-bv-orange"
+										? "text-bit-orange"
 										: ""
 								}`}
 								onMouseEnter={onRemoveHover}
@@ -190,8 +190,8 @@ export function ScaleScrubber({
 						{values.map((val) => {
 							const isActive = val === (lockedValue ?? currentValue);
 							const itemStyle = isActive
-								? "bg-bv-teal/9 text-bv-teal"
-								: "text-bv-text-mid hover:bg-bv-surface hover:text-bv-text";
+								? "bg-bit-teal/9 text-bit-teal"
+								: "text-bit-text-mid hover:bg-bit-surface hover:text-bit-text";
 							return (
 								<div
 									key={val}

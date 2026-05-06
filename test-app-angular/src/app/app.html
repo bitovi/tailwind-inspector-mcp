@@ -199,12 +199,113 @@
       </div>
     </app-tutorial-section>
 
-    <!-- Section 8: Place a Component -->
+    <!-- Section 8: Move Elements -->
     <app-tutorial-section
       [step]="8"
-      title="Place a Component"
+      title="Move Elements"
       [completed]="progress.completedSteps.has(8)"
       (markComplete)="progress.completeStep(8)"
+    >
+      <div instructions>
+        <p>Elements you've placed — or any existing element — can be dragged to a new position. The same teal drop-zone indicators that guided you during placement will show you exactly where it will land.</p>
+        <p class="mt-3">The priority queue below has a <strong>Critical</strong> issue at the bottom when it should be first. Let's fix that.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Click the <strong>Select</strong> button at the bottom of the page</li>
+          <li>Click the <strong>Critical — Fix payment gateway timeout</strong> row to select it</li>
+          <li>Drag it to the top of the list — drop-zone indicators will show you where it will land</li>
+          <li>Release to move it — the change is staged as a draft</li>
+        </ol>
+        <p class="mt-3 text-sm text-gray-500">Tip: Press <strong>Escape</strong> while dragging to cancel and return the element to its original position.</p>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Issue Priority Queue</h3>
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+            <app-badge color="yellow">Medium</app-badge>
+            <span class="text-sm text-gray-700">Improve dashboard load time</span>
+          </div>
+          <div class="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+            <app-badge color="blue">Low</app-badge>
+            <span class="text-sm text-gray-700">Update onboarding copy</span>
+          </div>
+          <div class="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200">
+            <app-badge color="red">Critical</app-badge>
+            <span class="text-sm text-gray-700">Fix payment gateway timeout</span>
+          </div>
+        </div>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 9: Delete Elements -->
+    <app-tutorial-section
+      [step]="9"
+      title="Delete Elements"
+      [completed]="progress.completedSteps.has(9)"
+      (markComplete)="progress.completeStep(9)"
+    >
+      <div instructions>
+        <p>Removing an element is a single keypress. VyBit hides it on the page and queues a delete change for your agent — nothing is permanently removed until the agent writes the code.</p>
+        <p class="mt-3">The resolved issue card below is stale and should be cleaned up.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Click the <strong>Select</strong> button at the bottom of the page</li>
+          <li>Click the <strong>Resolved</strong> card below to select it</li>
+          <li>Press <strong>Delete</strong> or <strong>Backspace</strong> — the card disappears and a delete change is staged in your drafts</li>
+        </ol>
+      </div>
+      <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 opacity-60">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-medium text-gray-500 line-through">Migrate to new auth provider</span>
+          <app-badge color="green">Resolved</app-badge>
+        </div>
+        <p class="text-xs text-gray-400">Closed 14 days ago · No longer relevant</p>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 10: Copy and Paste -->
+    <app-tutorial-section
+      [step]="10"
+      title="Copy and Paste"
+      [completed]="progress.completedSteps.has(10)"
+      (markComplete)="progress.completeStep(10)"
+    >
+      <div instructions>
+        <p>VyBit lets you copy any element and paste it anywhere on the page. <strong>Cmd+D</strong> gives you an instant duplicate right after the original — no placement flow needed.</p>
+        <p class="mt-3">The team roster below has two members. Let's add a third slot.</p>
+        <ol class="list-decimal pl-5 mt-2 space-y-1">
+          <li>Click the <strong>Select</strong> button at the bottom of the page</li>
+          <li>Click one of the team member cards to select it</li>
+          <li>Press <strong>Cmd+D</strong> to instantly duplicate it right after itself</li>
+          <li>Or: press <strong>Cmd+C</strong> to copy, then <strong>Cmd+V</strong> — the drop-zone placement flow activates so you can drop the copy anywhere on the page</li>
+          <li>Your agent will fill in the new member's details</li>
+        </ol>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Project Team</h3>
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-3 p-2 bg-gray-50 rounded">
+            <div class="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold">AL</div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">Alice Lim</p>
+              <p class="text-xs text-gray-500">Engineering Lead</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 p-2 bg-gray-50 rounded">
+            <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">MR</div>
+            <div>
+              <p class="text-sm font-medium text-gray-900">Marco Reyes</p>
+              <p class="text-xs text-gray-500">Product Designer</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-tutorial-section>
+
+    <!-- Section 11: Place a Component -->
+    <app-tutorial-section
+      [step]="11"
+      title="Place a Component"
+      [completed]="progress.completedSteps.has(11)"
+      (markComplete)="progress.completeStep(11)"
     >
       <div instructions>
         <p>VyBit can browse your component library and place components directly onto the page.</p>
@@ -223,12 +324,12 @@
       </div>
     </app-tutorial-section>
 
-    <!-- Section 9: Build with Nested Components -->
+    <!-- Section 12: Build with Nested Components -->
     <app-tutorial-section
-      [step]="9"
+      [step]="12"
       title="Build with Nested Components"
-      [completed]="progress.completedSteps.has(9)"
-      (markComplete)="progress.completeStep(9)"
+      [completed]="progress.completedSteps.has(12)"
+      (markComplete)="progress.completeStep(12)"
     >
       <div instructions>
         <p>Some components accept other components as props. For example, the <strong>Button</strong> has <strong>leftIcon</strong> and <strong>rightIcon</strong> slots that accept an Icon component.</p>
@@ -246,12 +347,12 @@
       </div>
     </app-tutorial-section>
 
-    <!-- Section 10: Fine-Tune the Design -->
+    <!-- Section 13: Fine-Tune the Design -->
     <app-tutorial-section
-      [step]="10"
+      [step]="13"
       title="Fine-Tune the Design"
-      [completed]="progress.completedSteps.has(10)"
-      (markComplete)="progress.completeStep(10)"
+      [completed]="progress.completedSteps.has(13)"
+      (markComplete)="progress.completeStep(13)"
       playgroundClassName="bg-indigo-600 text-white rounded-2xl p-12 text-center shadow-xl ring-4 ring-indigo-300"
     >
       <div instructions>
@@ -267,12 +368,12 @@
       <p class="text-indigo-200">Your hub for issues, roadmaps, and team collaboration.</p>
     </app-tutorial-section>
 
-    <!-- Section 11: Report a Bug -->
+    <!-- Section 14: Report a Bug -->
     <app-tutorial-section
-      [step]="11"
+      [step]="14"
       title="Report a Bug"
-      [completed]="progress.completedSteps.has(11)"
-      (markComplete)="progress.completeStep(11)"
+      [completed]="progress.completedSteps.has(14)"
+      (markComplete)="progress.completeStep(14)"
     >
       <div instructions>
         <p>Found something broken? VyBit's Bug Report mode captures element context, console errors, network failures, and a visual timeline.</p>
@@ -330,6 +431,9 @@
             <li>✓ Inline text editing</li>
             <li>✓ Describing new content to insert</li>
             <li>✓ Sketching layouts</li>
+            <li>✓ Moving and rearranging elements</li>
+            <li>✓ Deleting elements</li>
+            <li>✓ Copying and pasting elements</li>
             <li>✓ Placing design system components</li>
             <li>✓ Composing nested components</li>
             <li>✓ Fine-tuning Tailwind styles</li>
@@ -369,10 +473,10 @@
 
     <!-- Bonus: Explore Your Theme -->
     <app-tutorial-section
-      [step]="12"
+      [step]="15"
       title="Explore Your Theme"
-      [completed]="progress.completedSteps.has(12)"
-      (markComplete)="progress.completeStep(12)"
+      [completed]="progress.completedSteps.has(15)"
+      (markComplete)="progress.completeStep(15)"
     >
       <div instructions>
         <p>VyBit can edit your project's Tailwind theme — not just individual elements. Click the <strong>Theme</strong> button in the panel to open the Theme editor.</p>

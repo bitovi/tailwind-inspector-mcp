@@ -8,7 +8,7 @@ const meta: Meta<typeof ArgsForm> = {
   parameters: { layout: 'padded' },
   decorators: [
     (Story) => (
-      <div style={{ maxWidth: 300, background: 'var(--color-bv-surface)', padding: 12, borderRadius: 8 }}>
+      <div style={{ maxWidth: 300, background: 'var(--color-bit-surface)', padding: 12, borderRadius: 8 }}>
         <Story />
       </div>
     ),

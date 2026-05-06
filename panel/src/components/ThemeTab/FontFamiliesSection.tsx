@@ -20,12 +20,12 @@ function FamilyRow({ name, value, editedValue, onEdit }: {
   const variable = `--font-${name}`;
 
   return (
-    <div className={`flex items-start gap-2 px-3 py-1.5 ${isEdited ? 'bg-bv-orange/5' : ''}`}>
+    <div className={`flex items-start gap-2 px-3 py-1.5 ${isEdited ? 'bg-bit-orange/5' : ''}`}>
       {isEdited && (
-        <div className="w-1.5 h-1.5 rounded-full bg-bv-orange shrink-0 mt-1.5" />
+        <div className="w-1.5 h-1.5 rounded-full bg-bit-orange shrink-0 mt-1.5" />
       )}
       <span
-        className="text-[11px] text-bv-text-mid w-20 shrink-0 font-mono pt-0.5"
+        className="text-[11px] text-bit-text-mid w-20 shrink-0 font-mono pt-0.5"
         title={variable}
       >
         font-{name}
@@ -34,7 +34,7 @@ function FamilyRow({ name, value, editedValue, onEdit }: {
         value={displayValue}
         onChange={(e) => onEdit(tokenKey, { variable, value: e.target.value })}
         rows={2}
-        className="flex-1 min-w-0 bg-transparent text-[10px] text-bv-text font-mono border border-bv-border rounded px-1.5 py-0.5 focus:border-bv-teal focus:outline-none resize-none"
+        className="flex-1 min-w-0 bg-transparent text-[10px] text-bit-text font-mono border border-bit-border rounded px-1.5 py-0.5 focus:border-bit-teal focus:outline-none resize-none"
         spellCheck={false}
         title={variable}
       />

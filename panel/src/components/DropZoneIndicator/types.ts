@@ -1,4 +1,5 @@
-export type DropPosition = 'before' | 'after' | 'first-child' | 'last-child';
+export type { DropPosition } from '../../../../shared/drop-geometry';
+import type { DropPosition } from '../../../../shared/drop-geometry';
 
 export type IndicatorVariant = 'teal' | 'blue';
 

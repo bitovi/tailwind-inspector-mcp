@@ -153,7 +153,7 @@ export function ContainerSwitcher() {
 			<button
 				title="Change container"
 				onClick={() => setOpen((o) => !o)}
-				className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-bv-text-mid bg-transparent cursor-pointer transition-colors hover:bg-bv-surface hover:border-bv-border hover:text-bv-text"
+				className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-bit-text-mid bg-transparent cursor-pointer transition-colors hover:bg-bit-surface hover:border-bit-border hover:text-bit-text"
 			>
 				<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
 					<rect x=".5" y="1.5" width="15" height="13" rx="1.5" ry="1.5" />
@@ -165,8 +165,8 @@ export function ContainerSwitcher() {
 			</button>
 
 			{open && (
-				<div className="absolute top-[calc(100%+4px)] right-0 bg-bv-surface border border-[#4f4f4f] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.25)] p-1.5 flex flex-col gap-px min-w-[148px] z-50">
-					<div className="text-[9px] font-semibold uppercase tracking-[0.8px] text-bv-muted px-2 pt-1 pb-1.5">
+				<div className="absolute top-[calc(100%+4px)] right-0 bg-bit-surface border border-[#4f4f4f] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.25)] p-1.5 flex flex-col gap-px min-w-[148px] z-50">
+					<div className="text-[9px] font-semibold uppercase tracking-[0.8px] text-bit-muted px-2 pt-1 pb-1.5">
 						Container
 					</div>
 					{CONTAINERS.map((c) => (
@@ -175,8 +175,8 @@ export function ContainerSwitcher() {
 							onClick={() => handleSwitch(c.name)}
 							className={`flex items-center gap-2 px-2 py-1.5 rounded text-[12px] cursor-pointer border-none w-full text-left transition-colors ${
 								c.name === active
-									? "bg-bv-teal/9 text-bv-teal"
-									: "bg-transparent text-bv-text-mid hover:bg-bv-surface hover:text-bv-text"
+									? "bg-bit-teal/9 text-bit-teal"
+									: "bg-transparent text-bit-text-mid hover:bg-bit-surface hover:text-bit-text"
 							}`}
 						>
 							{c.icon}

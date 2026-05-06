@@ -3,7 +3,7 @@
 // this module shows a small popup so the user can pick which element they meant.
 
 import { computePosition, offset, flip, shift } from "@floating-ui/dom";
-import { state } from "./overlay-state";
+import { dom } from "./overlay-dom";
 import { detectComponent } from "./framework-detect";
 
 const RECT_THRESHOLD = 2; // px tolerance for "same rect"
@@ -40,7 +40,7 @@ export function getSameRectCandidates(target: HTMLElement): DepthCandidate[] {
   let el: HTMLElement | null = target.parentElement;
   while (el) {
     if (
-      el === state.shadowHost ||
+      el === dom.shadowHost ||
       el === document.body ||
       el === document.documentElement
     ) {
@@ -147,7 +147,7 @@ export function showDepthPicker(
         width: ${rect.width + 6}px;
         height: ${rect.height + 6}px;
       `;
-      state.shadowRoot.appendChild(previewEl);
+      dom.shadowRoot.appendChild(previewEl);
     });
 
     row.addEventListener("mouseleave", () => {
@@ -175,8 +175,8 @@ export function showDepthPicker(
   hint.appendChild(document.createTextNode(" to dismiss"));
   picker.appendChild(hint);
 
-  state.shadowRoot.appendChild(picker);
-  state.depthPickerEl = picker;
+  dom.shadowRoot.appendChild(picker);
+  dom.depthPickerEl = picker;
 
   // Position with floating-ui
   computePosition(anchorEl, picker, {
@@ -226,10 +226,10 @@ export function showDepthPicker(
 
 /** Remove the depth picker if open. */
 export function dismissDepthPicker(): void {
-  if (state.depthPickerEl) {
-    const cleanup = (state.depthPickerEl as any).__depthPickerCleanup;
+  if (dom.depthPickerEl) {
+    const cleanup = (dom.depthPickerEl as any).__depthPickerCleanup;
     if (typeof cleanup === "function") cleanup();
-    state.depthPickerEl.remove();
-    state.depthPickerEl = null;
+    dom.depthPickerEl.remove();
+    dom.depthPickerEl = null;
   }
 }

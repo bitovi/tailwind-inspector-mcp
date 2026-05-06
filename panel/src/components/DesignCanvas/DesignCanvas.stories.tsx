@@ -19,11 +19,11 @@ function DesignCanvasDemo() {
 
   if (closed) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[var(--bv-bg)] text-[var(--bv-text)]">
+      <div className="flex items-center justify-center h-screen bg-[var(--bit-bg)] text-[var(--bit-text)]">
         <div className="text-center">
-          <p className="mb-4 text-[var(--bv-text-mid)]">Canvas closed.</p>
+          <p className="mb-4 text-[var(--bit-text-mid)]">Canvas closed.</p>
           <button
-            className="px-4 py-2 bg-[var(--bv-teal)] text-white rounded"
+            className="px-4 py-2 bg-[var(--bit-teal)] text-white rounded"
             onClick={() => setClosed(false)}
           >
             Reopen
@@ -35,13 +35,13 @@ function DesignCanvasDemo() {
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 h-screen bg-[var(--bv-bg)] p-8">
-        <p className="text-[var(--bv-text)]">
+      <div className="flex flex-col items-center justify-center gap-4 h-screen bg-[var(--bit-bg)] p-8">
+        <p className="text-[var(--bit-text)]">
           Submitted! ({submitted.width}×{submitted.height}px)
         </p>
-        <img src={submitted.dataUrl} alt="Drawing result" className="border border-[var(--bv-border)] max-w-full" />
+        <img src={submitted.dataUrl} alt="Drawing result" className="border border-[var(--bit-border)] max-w-full" />
         <button
-          className="px-4 py-2 bg-[var(--bv-teal)] text-white rounded"
+          className="px-4 py-2 bg-[var(--bit-teal)] text-white rounded"
           onClick={() => setSubmitted(null)}
         >
           Draw again

@@ -119,14 +119,14 @@ export function FlexJustifySelect({
             {...getFloatingProps()}
           >
             <FocusTrapContainer
-              className="bg-bv-bg border border-bv-border rounded-lg shadow-lg p-2 flex flex-col gap-1"
+              className="bg-bit-bg border border-bit-border rounded-lg shadow-lg p-2 flex flex-col gap-1"
               onMouseLeave={onLeave}
               onClose={close}
             >
               {/* Remove row */}
               {onRemove && (
                 <div
-                  className="flex items-center gap-1.5 px-1.5 py-1 text-[10px] font-mono text-bv-muted border-b border-bv-border mb-1 pb-1.5 cursor-pointer transition-colors duration-150 hover:text-bv-orange"
+                  className="flex items-center gap-1.5 px-1.5 py-1 text-[10px] font-mono text-bit-muted border-b border-bit-border mb-1 pb-1.5 cursor-pointer transition-colors duration-150 hover:text-bit-orange"
                   onMouseEnter={onRemoveHover}
                   onMouseLeave={onLeave}
                   onClick={() => { onRemove(); close(); }}

@@ -47,11 +47,11 @@ const meta: Meta<typeof GradientEditor> = {
   tags: ['autodocs'],
   decorators: [
     (Story) => (
-      <div className="bg-bv-bg p-4" style={{ width: 398 }}>
-        <div className="bg-white border border-bv-border rounded-lg p-3 shadow-sm">
+      <div className="bg-bit-bg p-4" style={{ width: 398 }}>
+        <div className="bg-white border border-bit-border rounded-lg p-3 shadow-sm">
           <div className="flex items-center gap-[5px] mb-2.5">
-            <span className="w-[5px] h-[5px] rounded-full bg-bv-teal opacity-50" />
-            <span className="text-[9px] font-semibold uppercase tracking-[1px] text-bv-text-mid">
+            <span className="w-[5px] h-[5px] rounded-full bg-bit-teal opacity-50" />
+            <span className="text-[9px] font-semibold uppercase tracking-[1px] text-bit-text-mid">
               Backgrounds
             </span>
           </div>

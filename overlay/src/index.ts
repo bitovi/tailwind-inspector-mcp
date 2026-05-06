@@ -1,4 +1,4 @@
-import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone } from "./drop-zone";
+import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone, injectGhostCss, buildSelector } from "./drop-zone";
 import { isTextEditing, handleTextEditingClick, endTextEdit } from "./text-edit";
 import { debugLog } from "../../shared/vybit-env";
 import type { ContainerName } from "./containers/IContainer";
@@ -6,13 +6,15 @@ import { ModalContainer } from "./containers/ModalContainer";
 import { PopoverContainer } from "./containers/PopoverContainer";
 import { PopupContainer } from "./containers/PopupContainer";
 import { SidebarContainer } from "./containers/SidebarContainer";
-import { buildContext } from "./context";
+import { buildContext, buildDeleteContext } from "./context";
 import { detectComponent } from "./framework-detect";
 import './design-canvas/index';
 import { css, SHADOW_HOST, OVERLAY_CSS } from './styles';
 import { VYBIT_LOGO_SVG } from './svg-icons';
 import { saveScrollRatio } from './preserve-scroll';
 import { findExactMatches } from "./grouping";
+import { initDragDrop } from "./drag-drop";
+import { initDragMove, revertMove } from "./drag-move";
 import { getFiber, findOwningComponent, extractComponentProps } from "./react/fiber";
 import { isAngularElement, findOwningComponent as findAngularOwningComponent, extractAngularComponentProps } from "./angular/detect";
 import type { InsertMode } from "./messages";
@@ -20,17 +22,27 @@ import {
 	applyPreview,
 	applyPreviewBatch,
 	commitPreview,
+	ensureCommittedCss,
 	getPreviewState,
 	revertPreview,
 } from "./patcher";
 import { connect, onMessage, send, sendTo } from "./ws";
 import { state, resolveTab, clearSelectionState } from "./overlay-state";
+import { dom } from "./overlay-dom";
 import { highlightElement, clearHighlights, clearHoverPreview, mouseMoveHandler, repositionHighlights } from "./element-highlight";
-import { showDrawButton, initToolbar, repositionToolbar } from "./element-toolbar";
+import { showDrawButton, initToolbar, repositionToolbar, showGroupPicker } from "./element-toolbar";
+import { initElementDrawer, removeElementDrawer } from "./element-drawer";
 import { injectDesignCanvas, handleCaptureScreenshot, handleDesignSubmitted, handleDesignClose, initDesignCanvasManager, removeAllDesignCanvases } from "./design-canvas-manager";
 import { RecordingEngine } from "./recording/recording-engine";
 import { getSameRectCandidates, showDepthPicker, dismissDepthPicker } from "./depth-picker";
+import { showBottomToolbar, hideBottomToolbar, initBottomToolbar, updateToolState, updateInstanceCount, repositionBottomToolbar, getPageCenterX, setToolOverrides, clearToolOverrides, resetToolbar, setTextEditingLock } from "./bottom-toolbar";
 import type { BugReportElement } from "../../shared/types";
+import { setClipboard, getClipboard, extractGhostCssForElement } from "./clipboard";
+import { initStateMachine, dispatch, getState, subscribe, type EffectDeps } from './overlay-state-machine';
+import type { ToolbarVisual, ToolButtonVisual } from './overlay-state-machine/types';
+import type { EditTool } from '../../shared/types';
+import { createKeydownHandler } from './keyboard-handler';
+import { createWsMessageHandler } from './ws-handler';
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
 function onBrowseLocked(target: HTMLElement): void {
@@ -41,7 +53,13 @@ function onBrowseLocked(target: HTMLElement): void {
 		? { componentName: boundary.componentName }
 		: { componentName: target.tagName.toLowerCase() };
 	state.cachedNearGroups = null;
+	// Don't dispatch ELEMENT_SELECTED — that would show selection highlights.
+	// The drop-zone already dispatched INSERT_POINT_LOCKED to the SM and
+	// sent INSERT_POINT_LOCKED to the panel. We just need the element drawer.
 	showDrawButton(target);
+	// Persistent browse: stay orange (picking) — browse continues
+	updateToolState('insert', true, false);
+	updateInstanceCount(state.currentEquivalentNodes.length);
 }
 
 const THEME_PREVIEW_STYLE_ID = "vybit-theme-preview";
@@ -162,13 +180,13 @@ debugLog('tw-overlay', `Script tags with "overlay.js":`, Array.from(document.que
 const insideStorybook = !!(window as any).__STORYBOOK_PREVIEW__;
 
 async function fetchTailwindConfig(): Promise<any> {
-	if (state.tailwindConfigCache) {
-		return state.tailwindConfigCache;
+	if (dom.tailwindConfigCache) {
+		return dom.tailwindConfigCache;
 	}
 	try {
 		const res = await fetch(`${SERVER_ORIGIN}/tailwind-config`, { credentials: 'include' });
-		state.tailwindConfigCache = await res.json();
-		return state.tailwindConfigCache;
+		dom.tailwindConfigCache = await res.json();
+		return dom.tailwindConfigCache;
 	} catch (err) {
 		console.error("[tw-overlay] Failed to fetch tailwind config:", err);
 		return {};
@@ -239,10 +257,13 @@ function normalizeToHex(cssColor: string): string | null {
 async function clickHandler(e: MouseEvent): Promise<void> {
 	// Ignore clicks on our own shadow DOM UI
 	const composed = e.composedPath();
-	if (composed.some((el) => el === state.shadowHost)) { return; }
+	if (composed.some((el) => el === dom.shadowHost)) { return; }
 
 	// While text editing, suppress page click handlers (buttons, links, etc.)
 	if (handleTextEditingClick(e)) return;
+
+	// Ignore clicks during any exclusive interaction (drag-move, component-drag, text-editing)
+	if (getState().interaction.kind !== 'none') return;
 
 	// Ignore clicks while the drop-zone is handling element-select (e.g. replace mode)
 	if (isDropZoneActive()) return;
@@ -259,6 +280,15 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 	// When select mode is off, only intercept shift+clicks or add-mode clicks
 	if (!state.selectModeOn && !state.addMode && !e.shiftKey) return;
 
+	// ── Persistent select: clicks inside the selected element pass through ──
+	// Don't preventDefault, don't intercept — let the page handle the click normally.
+	const clickTarget = e.target as HTMLElement;
+	if (state.selectModeOn && state.currentTargetEl && !state.addMode && !e.shiftKey) {
+		if (state.currentTargetEl === clickTarget || state.currentTargetEl.contains(clickTarget)) {
+			return;
+		}
+	}
+
 	e.preventDefault();
 	e.stopPropagation();
 
@@ -269,6 +299,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 
 	// ── Add-mode: toggle element in/out of selection ──
 	if (state.addMode) {
+		// TODO: dispatch to state machine (add-mode modifies equivalentNodes incrementally)
 		if (state.manuallyAddedNodes.has(targetEl)) {
 			state.manuallyAddedNodes.delete(targetEl);
 		} else {
@@ -282,7 +313,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 		}
 		state.currentEquivalentNodes = allNodes;
 		// Remove only highlight overlays — NOT the toolbar/picker
-		state.shadowRoot
+		dom.shadowRoot
 			.querySelectorAll(".highlight-overlay")
 			.forEach((el) => el.remove());
 		for (const n of allNodes) {
@@ -297,16 +328,17 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 					typeof state.currentTargetEl.className === "string"
 						? state.currentTargetEl.className
 						: "",
-				tailwindConfig: state.tailwindConfigCache,
+				tailwindConfig: dom.tailwindConfigCache,
 			});
 		}
 		// Refresh picker UI (count chip, etc.) if open
-		state.pickerRefreshCallback?.();
+		dom.pickerRefreshCallback?.();
 		return;
 	}
 
 	// ── Shift+click: toggle element in/out of current selection ──
 	if (e.shiftKey && state.currentTargetEl) {
+		// TODO: dispatch to state machine (shift+click modifies equivalentNodes incrementally)
 		const idx = state.currentEquivalentNodes.indexOf(targetEl);
 		if (idx !== -1) {
 			state.currentEquivalentNodes.splice(idx, 1);
@@ -328,7 +360,7 @@ async function clickHandler(e: MouseEvent): Promise<void> {
 					typeof state.currentTargetEl.className === "string"
 						? state.currentTargetEl.className
 						: "",
-				tailwindConfig: state.tailwindConfigCache,
+				tailwindConfig: dom.tailwindConfigCache,
 			});
 		}
 		return;
@@ -363,7 +395,7 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	const classString =
 		typeof targetEl.className === "string" ? targetEl.className : "";
 
-	const result = findExactMatches(targetEl, state.shadowHost);
+	const result = findExactMatches(targetEl, dom.shadowHost);
 	let componentName = result.componentName ?? targetEl.tagName.toLowerCase();
 
 	// ── Ghost element detection ──
@@ -376,12 +408,9 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 		componentName = ghostComponentName;
 	}
 
-	clearHighlights();
-	highlightElement(targetEl);
-
 	const config = await fetchTailwindConfig();
 
-	// Store selection state
+	// Store DOM caches/infrastructure (not tracked by SM)
 	state.currentEquivalentNodes = [targetEl];
 	state.currentTargetEl = targetEl;
 	state.currentBoundary = { componentName };
@@ -389,21 +418,26 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 	state.cachedExactMatches = result.exactMatch;
 	state.manuallyAddedNodes = new Set<HTMLElement>();
 
-	state.currentInstances = [{
+	dom.currentInstances = [{
 		index: 0,
 		label: (targetEl.innerText || "").trim().slice(0, 40) || `#1`,
 		parent: targetEl.parentElement?.tagName.toLowerCase() ?? "",
 	}];
 
-	clearHoverPreview();
-	setSelectMode(false);
+	// Dispatch to SM — handles highlights, draw button, grab cursor, toolbar
+	dispatch({
+		type: 'ELEMENT_SELECTED',
+		el: targetEl,
+		equivalentNodes: [targetEl],
+		boundary: { componentName },
+	});
 
-	showDrawButton(targetEl);
+	updateInstanceCount(state.currentEquivalentNodes.length);
 
 	if (!insideStorybook) {
 		const panelUrl = `${SERVER_ORIGIN}/panel`;
-		if (!state.activeContainer.isOpen()) {
-			state.activeContainer.open(panelUrl);
+		if (!dom.activeContainer.isOpen()) {
+			dom.activeContainer.open(panelUrl);
 		}
 	}
 
@@ -417,9 +451,6 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 		if (boundary) {
 			componentProps = extractComponentProps(boundary.componentFiber) ?? undefined;
 			componentName = boundary.componentName;
-			// NOTE: We intentionally do NOT override classString with the component
-			// root element's classes. The user selected this specific element (possibly
-			// via the depth picker), so we send its own classes.
 		}
 	}
 
@@ -431,11 +462,8 @@ async function finalizeSelection(targetEl: HTMLElement): Promise<void> {
 			let hostEl: Element;
 
 			if (instance instanceof Element) {
-				// Prod fallback: componentFiber IS the host element
 				hostEl = instance;
 			} else {
-				// Dev mode: componentFiber is the live component instance.
-				// Find the host element via its tag selector.
 				const selector = instance.constructor?.ɵcmp?.selectors?.[0]?.[0];
 				hostEl = (selector ? targetEl.closest(selector) : null) ?? targetEl;
 			}
@@ -481,7 +509,7 @@ function rebuildSelectionFromSources(): void {
 				typeof state.currentTargetEl.className === "string"
 					? state.currentTargetEl.className
 					: "",
-			tailwindConfig: state.tailwindConfigCache,
+			tailwindConfig: dom.tailwindConfigCache,
 		});
 	}
 }
@@ -489,6 +517,7 @@ function rebuildSelectionFromSources(): void {
 export { rebuildSelectionFromSources };
 
 function setSelectMode(on: boolean): void {
+	console.log(`[paste-debug] setSelectMode(${on}) — currentTargetEl=${!!state.currentTargetEl}`);
 	state.selectModeOn = on;
 	if (on) {
 		document.documentElement.style.cursor = "crosshair";
@@ -529,8 +558,10 @@ function setAddMode(on: boolean): void {
 const PANEL_OPEN_KEY = "tw-inspector-panel-open";
 
 function toggleInspect(btn: HTMLButtonElement): void {
-	state.active = !state.active;
-	if (state.active) {
+	const wasActive = state.active;
+	console.log('[toggle-debug] toggleInspect called, wasActive=', wasActive, 'insideStorybook=', insideStorybook, 'activeContainer=', dom.activeContainer?.name);
+	if (!wasActive) {
+		dispatch({ type: 'ACTIVATE' });
 		btn.classList.add("active");
 		sessionStorage.setItem(PANEL_OPEN_KEY, "1");
 		if (insideStorybook) {
@@ -539,19 +570,23 @@ function toggleInspect(btn: HTMLButtonElement): void {
 		} else {
 			// Open the container — select mode is activated via the panel's SelectElementButton
 			const panelUrl = `${SERVER_ORIGIN}/panel`;
-			if (!state.activeContainer.isOpen()) {
-				state.activeContainer.open(panelUrl);
+			console.log('[toggle-debug] Opening container, isOpen=', dom.activeContainer.isOpen(), 'panelUrl=', panelUrl);
+			if (!dom.activeContainer.isOpen()) {
+				dom.activeContainer.open(panelUrl);
+				console.log('[toggle-debug] Container opened, checking iframe...');
+				setTimeout(() => {
+					const iframe = dom.shadowRoot.querySelector('iframe');
+					console.log('[toggle-debug] iframe found=', !!iframe, 'src=', iframe?.src);
+				}, 500);
 			}
 		}
 	} else {
+		dispatch({ type: 'DEACTIVATE' });
 		btn.classList.remove("active");
 		sessionStorage.removeItem(PANEL_OPEN_KEY);
-		setSelectMode(false);
 		if (!insideStorybook) {
-			state.activeContainer.close();
+			dom.activeContainer.close();
 		}
-		revertPreview();
-		clearHighlights();
 	}
 }
 
@@ -559,7 +594,8 @@ export function showToast(message: string, duration: number = 3000): void {
 	const toast = document.createElement("div");
 	toast.className = "toast";
 	toast.textContent = message;
-	state.shadowRoot.appendChild(toast);
+	toast.style.left = `${getPageCenterX()}px`;
+	dom.shadowRoot.appendChild(toast);
 	requestAnimationFrame(() => toast.classList.add("visible"));
 	setTimeout(() => {
 		toast.classList.remove("visible");
@@ -579,16 +615,9 @@ export function showToast(message: string, duration: number = 3000): void {
  */
 function resetOnNavigation(): void {
 	if (isTextEditing()) endTextEdit(false);
-	revertPreview();
-	clearHighlights();
 	dismissDepthPicker();
-	cancelInsert();
-	clearLockedInsert();
 	removeAllDesignCanvases();
-	clearSelectionState();
-	setSelectMode(false);
-	sendTo("panel", { type: "RESET_SELECTION" });
-	sendTo("panel", { type: "COMPONENT_DISARMED" });
+	dispatch({ type: 'NAVIGATION_RESET' });
 }
 
 function getDefaultContainer(): ContainerName {
@@ -620,29 +649,181 @@ function init(): void {
 	const params = new URLSearchParams(location.search);
 	if (params.get('vybit-ghost') === '1') return;
 
-	state.shadowHost = document.createElement("div");
-	state.shadowHost.id = "tw-visual-editor-host";
-	state.shadowHost.style.cssText = css(SHADOW_HOST);
-	document.body.appendChild(state.shadowHost);
+	dom.shadowHost = document.createElement("div");
+	dom.shadowHost.id = "tw-visual-editor-host";
+	dom.shadowHost.style.cssText = css(SHADOW_HOST);
+	// Restore color scheme preference
+	try {
+		const scheme = localStorage.getItem('vybit-color-scheme');
+		if (scheme === 'light') dom.shadowHost.classList.add('light');
+	} catch { /* ignore */ }
+	document.body.appendChild(dom.shadowHost);
 
-	state.shadowRoot = state.shadowHost.attachShadow({ mode: "open" });
+	dom.shadowRoot = dom.shadowHost.attachShadow({ mode: "open" });
 
 	const style = document.createElement("style");
 	style.textContent = OVERLAY_CSS;
-	state.shadowRoot.appendChild(style);
+	dom.shadowRoot.appendChild(style);
 
 	// Wire up toolbar callbacks (avoids circular deps)
 	initToolbar({ setSelectMode, showToast, onBrowseLocked, rebuildSelectionFromSources, setAddMode });
+	initElementDrawer({
+		showToast,
+		deactivateSelectMode: () => {
+			if (state.selectModeOn) {
+				dispatch({ type: 'CMD_TOGGLE_SELECT_MODE', active: false });
+			}
+			if (isDropZoneActive()) {
+				cancelInsert();
+				dispatch({ type: 'CMD_TOGGLE_INSERT_BROWSE', active: false });
+			}
+		},
+	});
+	initBottomToolbar({
+		onToolChange: (tool) => {
+			dispatch({ type: 'TOOLBAR_TOOL_CLICK', tool });
+		},
+		onAdjunctClick: () => {
+			// Toggle group picker from the bottom toolbar's 1+ button
+			if (dom.pickerEl) {
+				dom.pickerEl.remove();
+				dom.pickerEl = null;
+			} else if (state.currentTargetEl) {
+				// Use a dummy anchor positioned near the bottom toolbar
+				const anchor = dom.shadowRoot.querySelector('.bt-adjunct') as HTMLElement;
+				if (anchor) {
+					showGroupPicker(
+						anchor,
+						() => {},
+						(totalCount) => {
+							updateInstanceCount(totalCount);
+						},
+					);
+				}
+			}
+		},
+	});
 	initDesignCanvasManager({ serverOrigin: SERVER_ORIGIN, showToast });
 
+	// ── Initialize overlay state machine ─────────────────────────────────
+	// The state machine provides a pure reducer for all mode/interaction
+	// transitions. Effects are executed via the deps interface below.
+	// A subscriber keeps the legacy overlay-state.ts in sync during migration.
+
+	const smEffectDeps: EffectDeps = {
+		revertPreview: () => revertPreview(),
+		clearHighlights: () => clearHighlights(),
+		clearHoverPreview: () => clearHoverPreview(),
+		clearSelectionState: () => clearSelectionState(),
+		highlightElement: (el) => highlightElement(el),
+		showDrawButton: (el) => showDrawButton(el),
+		removeDrawButton: () => removeElementDrawer(),
+		setGrabCursor: (el) => { el.style.cursor = 'grab'; },
+		clearGrabCursor: (el) => { el.style.cursor = ''; },
+		startBrowse: () => startBrowse(dom.shadowHost, onBrowseLocked),
+		cancelInsert: () => cancelInsert(),
+		clearLockedInsert: () => clearLockedInsert(),
+		showToolbar: () => showBottomToolbar(),
+		hideToolbar: () => hideBottomToolbar(),
+		updateToolbar: (visual: ToolbarVisual) => {
+			// Bridge from ToolbarVisual to existing updateToolState API.
+			// Handle override states (completed = paste flow)
+			if (visual.select === 'completed' || visual.insert === 'completed') {
+				const overrides: Record<string, string> = {};
+				for (const [key, val] of Object.entries(visual)) {
+					if (val !== 'gray') overrides[key] = val;
+				}
+				setToolOverrides(overrides as any);
+				return;
+			}
+			// Normal case: find active tool and its state
+			const tool: EditTool =
+				(visual.select !== 'gray') ? 'select'
+				: (visual.text !== 'gray') ? 'text'
+				: (visual.insert !== 'gray') ? 'insert'
+				: null;
+			const picking = tool ? visual[tool as keyof ToolbarVisual] === 'picking' : false;
+			const engaged = tool ? visual[tool as keyof ToolbarVisual] === 'engaged' : false;
+			updateToolState(tool, picking, engaged);
+		},
+		sendToPanel: (msg) => sendTo('panel', msg),
+		setSelectMode: (on) => setSelectMode(on),
+		openPanel: () => {
+			if (!insideStorybook) {
+				const panelUrl = `${SERVER_ORIGIN}/panel`;
+				if (!dom.activeContainer.isOpen()) dom.activeContainer.open(panelUrl);
+			}
+		},
+		setTextEditingLock: (locked) => setTextEditingLock(locked),
+	};
+
+	initStateMachine(smEffectDeps);
+
+	// Sync state machine → legacy overlay-state.ts so modules that still
+	// read the old `state` object (click handlers, drag-move, etc.) see
+	// consistent values. This bridge is temporary — modules will be
+	// migrated to read from getState() directly.
+	subscribe((newState) => {
+		(state as any).currentMode = newState.mode;
+		state.selectModeOn = newState.selectPhase === 'picking';
+		state.currentTab = newState.currentTab;
+		state.tabPreference = newState.tabPreference;
+		state.active = newState.active;
+		state.currentTargetEl = newState.selectedEl;
+		state.currentEquivalentNodes = newState.equivalentNodes;
+		state.currentBoundary = newState.boundary;
+		state.exclusiveInteraction =
+			newState.interaction.kind === 'drag-moving' ? 'drag-moving'
+			: newState.interaction.kind === 'component-drag' ? 'component-drag'
+			: newState.interaction.kind === 'text-editing' ? 'text-editing'
+			: null;
+	});
+
 	// Initialize containers
-	state.containers = {
-		popover: new PopoverContainer(state.shadowRoot),
-		modal: new ModalContainer(state.shadowRoot),
-		sidebar: new SidebarContainer(state.shadowRoot),
+	dom.containers = {
+		popover: new PopoverContainer(dom.shadowRoot),
+		modal: new ModalContainer(dom.shadowRoot),
+		sidebar: new SidebarContainer(dom.shadowRoot),
 		popup: new PopupContainer(),
 	};
-	state.activeContainer = state.containers[getDefaultContainer()];
+	dom.activeContainer = dom.containers[getDefaultContainer()];
+
+	// Initialize drag-drop placement (listens for postMessage from panel)
+	initDragDrop(
+		dom.shadowHost,
+		// onDragStart: determine drag mode from current button state, preserve mode
+		() => {
+			// Clear visual clutter but NOT mode state
+			cancelInsert();
+			clearLockedInsert();
+			clearHighlights();
+			clearSelectionState();
+
+			if (state.selectModeOn) {
+				// Select is active → drag will replace
+				return 'replace';
+			}
+
+			// Insert active or both gray → drag will insert.
+			// If both are gray, activate insert mode so the button turns orange.
+			if (state.currentMode !== 'insert') {
+				state.currentMode = 'insert';
+				setSelectMode(false);
+				sendTo("panel", { type: "MODE_CHANGED", mode: "insert" });
+			}
+			return 'insert';
+		},
+		// onDrop: in replace mode, select the dropped element; in insert mode, stay in insert
+		(el: HTMLElement, mode) => {
+			if (mode === 'replace') {
+				finalizeSelection(el);
+			}
+			// insert mode: don't select — stay in insert mode for subsequent drags
+		},
+	);
+
+	// Initialize drag-to-move (mousedown on selected element to reorder/reparent)
+	initDragMove(dom.shadowHost);
 
 	const btn = document.createElement("button");
 	btn.className = "toggle-btn";
@@ -652,7 +833,7 @@ function init(): void {
 	if (insideStorybook) {
 		btn.style.display = 'none';
 	}
-	state.shadowRoot.appendChild(btn);
+	dom.shadowRoot.appendChild(btn);
 
 	// Storybook story change — reset all interaction state and return to select mode
 	window.addEventListener('message', (event) => {
@@ -663,41 +844,48 @@ function init(): void {
 		}
 	});
 
-	// Escape key — exit add-mode, deselect element (keep mode), or deactivate mode
+	// Escape key — layered escape for select and insert modes
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") {
-			// Exit add-mode first if active
+			// Exit add-mode first if active (SM doesn't handle add-mode yet)
 			if (state.addMode) {
 				setAddMode(false);
 				return;
 			}
+
+			// Dispatch through the state machine — it handles:
+			// - Insert: browsing+locked → locked, locked → off, browsing → off
+			// - Select: picking+element → engaged, engaged → off, picking → off
+			const prevState = getState();
+			dispatch({ type: 'ESCAPE' });
+			const newState = getState();
+
+			// If the SM handled it (state changed), we're done
+			if (prevState !== newState) return;
+
+			// Fallback: non-select/insert mode with a selected element
+			// (e.g. element selected while in a mode that was cancelled)
 			if (state.currentTargetEl) {
-				// Deselect element, stay in current mode
 				revertPreview();
 				clearHighlights();
 				clearSelectionState();
-				// Re-enter selection/browse mode (don't send RESET_SELECTION — that nukes the panel to landing)
-				if (state.currentMode === 'select') {
-					setSelectMode(true);
+				resetToolbar();
+				if (state.currentMode === 'insert') {
 					sendTo("panel", { type: "DESELECT_ELEMENT" });
-				} else if (state.currentMode === 'insert') {
-					sendTo("panel", { type: "DESELECT_ELEMENT" });
-					startBrowse(state.shadowHost, onBrowseLocked);
+					startBrowse(dom.shadowHost, onBrowseLocked);
 				} else {
 					sendTo("panel", { type: "RESET_SELECTION" });
 				}
-			} else if (state.selectModeOn) {
-				// No element, deactivate select mode → go to landing
-				setSelectMode(false);
-				sendTo("panel", { type: "MODE_CHANGED", mode: null });
-			} else if (isDropZoneActive()) {
-				// No element, cancel insert mode → go to landing
-				cancelInsert();
-				clearLockedInsert();
-				sendTo("panel", { type: "MODE_CHANGED", mode: null });
 			}
 		}
 	});
+
+	// ── Delete / Copy / Paste / Cut / Duplicate ─────────────────────────────
+	document.addEventListener("keydown", createKeydownHandler({
+		serverOrigin: SERVER_ORIGIN,
+		showToast,
+		setSelectMode,
+	}));
 
 	// WebSocket connection — derive WS URL from script src
 	// In proxy mode (overlay served from same origin), use /__vybit_ws path
@@ -710,337 +898,17 @@ function init(): void {
 	connect(wsUrl, SERVER_ORIGIN);
 
 	// Handle messages from Panel via WS
-	onMessage((msg: any) => {
-		if (msg.type === "TOGGLE_SELECT_MODE") {
-			if (msg.active) {
-				state.active = true;
-				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
-				setSelectMode(true);
-				// Ensure panel is open (skip in Storybook — panel lives in addon tab)
-				if (!insideStorybook) {
-					const panelUrl = `${SERVER_ORIGIN}/panel`;
-					if (!state.activeContainer.isOpen()) state.activeContainer.open(panelUrl);
-				}
-			} else {
-				setSelectMode(false);
-			}
-		} else if (msg.type === "MODE_CHANGED") {
-			// Mark VyBit as active when any mode is engaged
-			if (msg.mode) {
-				state.active = true;
-				sessionStorage.setItem(PANEL_OPEN_KEY, "1");
-			}
-			// Clear current selection and toolbar
-			revertPreview();
-			clearHighlights();
-			cancelInsert();
-			clearLockedInsert();
-			clearSelectionState();
-
-			state.currentMode = msg.mode;
-			if (msg.mode === 'insert') {
-				setSelectMode(false);
-				if (state.tabPreference === 'design') state.tabPreference = 'component';
-				state.currentTab = resolveTab();
-				startBrowse(state.shadowHost, onBrowseLocked);
-			} else if (msg.mode === 'select') {
-				state.currentTab = resolveTab();
-				setSelectMode(true);
-			} else {
-				// bug-report or null — no element selection
-				setSelectMode(false);
-			}
-		} else if (msg.type === "TAB_CHANGED") {
-			state.currentTab = msg.tab;
-			state.tabPreference = (msg.tab === 'replace' || msg.tab === 'place') ? 'component' : 'design';
-			state.replaceDirection = (msg.tab === 'replace' && state.currentTargetEl) ? 'element-first' : null;
-			// Rebuild toolbar to highlight the correct action button
-			if (state.currentTargetEl) showDrawButton(state.currentTargetEl);
-		} else if (msg.type === "CANCEL_MODE") {
-			// Panel sent Escape — deactivate select/insert mode
-			setSelectMode(false);
-			cancelInsert();
-			clearLockedInsert();
-		} else if (
-			msg.type === "PATCH_PREVIEW" &&
-			state.currentEquivalentNodes.length > 0 &&
-			!isTextEditing()
-		) {
-			applyPreview(
-				state.currentEquivalentNodes,
-				msg.oldClass,
-				msg.newClass,
-				SERVER_ORIGIN,
-			);
-		} else if (
-			msg.type === "PATCH_PREVIEW_BATCH" &&
-			state.currentEquivalentNodes.length > 0 &&
-			!isTextEditing()
-		) {
-			applyPreviewBatch(state.currentEquivalentNodes, msg.pairs, SERVER_ORIGIN);
-		} else if (msg.type === "PATCH_REVERT" && !isTextEditing()) {
-			revertPreview();
-		} else if (msg.type === "PATCH_REVERT_STAGED" && state.currentEquivalentNodes.length > 0) {
-			// Undo a previously committed staged change: apply the reverse swap to the DOM
-			// and commit it as the new baseline without telling the server.
-			applyPreview(state.currentEquivalentNodes, msg.oldClass, msg.newClass, SERVER_ORIGIN)
-				.then(() => commitPreview());
-		} else if (msg.type === "GHOST_UPDATE" && msg.patchId) {
-			// Update a ghost element's HTML/CSS in the page DOM
-			const ghostEl = document.querySelector(`[data-tw-dropped-patch-id="${msg.patchId}"]`) as HTMLElement | null;
-			if (ghostEl) {
-				const template = document.createElement('template');
-				template.innerHTML = msg.ghostHtml.trim();
-				const newContent = template.content.firstElementChild as HTMLElement | null;
-				if (newContent) {
-					// Preserve ghost tracking attributes on the replacement
-					newContent.dataset.twDroppedPatchId = msg.patchId;
-					newContent.dataset.twDroppedComponent = msg.componentName ?? ghostEl.dataset.twDroppedComponent ?? '';
-					ghostEl.replaceWith(newContent);
-					// Update current selection if we were pointing at this ghost
-					if (state.currentTargetEl === ghostEl) {
-						state.currentTargetEl = newContent;
-						state.currentEquivalentNodes = [newContent];
-						clearHighlights();
-						highlightElement(newContent);
-						showDrawButton(newContent);
-					}
-				}
-				// Update injected CSS
-				if (msg.ghostCss) {
-					const compName = msg.componentName ?? ghostEl.dataset.twDroppedComponent ?? 'unknown';
-					const styleId = `vybit-ghost-css-${compName}`;
-					let styleEl = document.getElementById(styleId);
-					if (!styleEl) {
-						styleEl = document.createElement('style');
-						styleEl.id = styleId;
-						document.head.appendChild(styleEl);
-					}
-					styleEl.textContent = msg.ghostCss;
-				}
-			}
-		} else if (
-			msg.type === "PATCH_STAGE" &&
-			state.currentTargetEl &&
-			state.currentBoundary &&
-			!isTextEditing()
-		) {
-			// Build context and send PATCH_STAGED to server
-			const previewState = getPreviewState();
-			const originalClassMap = new Map<HTMLElement, string>();
-			if (previewState) {
-				for (let i = 0; i < previewState.elements.length; i++) {
-					originalClassMap.set(previewState.elements[i], previewState.originalClasses[i]);
-				}
-			}
-
-			const targetElIndex = state.currentEquivalentNodes.indexOf(state.currentTargetEl);
-			const originalClassString =
-				previewState && targetElIndex !== -1
-					? previewState.originalClasses[targetElIndex]
-					: state.currentTargetEl.className;
-
-			const context = buildContext(
-				state.currentTargetEl,
-				msg.oldClass,
-				msg.newClass,
-				originalClassMap,
-			);
-
-			send({
-				type: "PATCH_STAGED",
-				patch: {
-					id: msg.id,
-					elementKey: state.currentBoundary.componentName,
-					status: "staged",
-					originalClass: msg.oldClass,
-					newClass: msg.newClass,
-					property: msg.property,
-					timestamp: new Date().toISOString(),
-					pageUrl: window.location.href,
-					component: { name: state.currentBoundary.componentName },
-					target: {
-						tag: state.currentTargetEl.tagName.toLowerCase(),
-						classes: originalClassString,
-						innerText: (state.currentTargetEl.innerText || "").trim().slice(0, 60),
-					},
-					context,
-				},
-			});
-
-			showToast("Change staged");
-
-			// The staged change is now the baseline — clear preview tracking so the
-			// next preview captures the current DOM state (with the staged class).
-			// Special case: if this is an "add" (oldClass = '') with no prior preview,
-			// the new class was never applied to the DOM. Apply it now, then commit
-			// once the CSS is injected so the class renders immediately.
-			if (!previewState && !msg.oldClass && msg.newClass) {
-				applyPreview(state.currentEquivalentNodes, '', msg.newClass, SERVER_ORIGIN)
-					.then(() => commitPreview());
-			} else {
-				commitPreview();
-			}
-		} else if (msg.type === "CLEAR_HIGHLIGHTS") {
-			revertPreview();
-			clearHighlights();
-			cancelInsert();
-			clearLockedInsert();
-			if (msg.deselect) {
-				state.currentEquivalentNodes = [];
-				state.currentTargetEl = null;
-				state.currentBoundary = null;
-				state.cachedNearGroups = null;
-			}
-		} else if (msg.type === "SWITCH_CONTAINER") {
-			const newName = msg.container as ContainerName;
-			if (state.containers[newName] && newName !== state.activeContainer.name) {
-				if (!insideStorybook) {
-					const wasOpen = state.activeContainer.isOpen();
-					state.activeContainer.close();
-					state.activeContainer = state.containers[newName];
-					if (wasOpen) {
-						state.activeContainer.open(`${SERVER_ORIGIN}/panel`);
-					}
-				} else {
-					state.activeContainer = state.containers[newName];
-				}
-			}
-		} else if (msg.type === "INSERT_DESIGN_CANVAS") {
-			if (msg.insertMode === 'replace') {
-				if (state.currentTargetEl) {
-					// Element already selected — capture screenshot and replace
-					handleCaptureScreenshot();
-				} else {
-					// No element selected — arm element-select mode
-					armElementSelect('Replace: Canvas', state.shadowHost, (target) => {
-						const result = findExactMatches(target, state.shadowHost);
-						const componentName = result.componentName ?? target.tagName.toLowerCase();
-						state.currentTargetEl = target;
-						state.currentBoundary = { componentName };
-						state.currentEquivalentNodes = result.exactMatch;
-						handleCaptureScreenshot();
-					});
-				}
-			} else {
-				// Check for a locked insertion point from browse mode
-				const locked = getLockedInsert();
-				console.log('[tw-debug] INSERT_DESIGN_CANVAS else branch, locked=', locked, 'currentTargetEl=', state.currentTargetEl);
-				if (locked) {
-					// Use the locked position
-					state.currentTargetEl = locked.target;
-					const boundary = detectComponent(locked.target);
-					state.currentBoundary = boundary
-						? { componentName: boundary.componentName }
-						: { componentName: locked.target.tagName.toLowerCase() };
-					state.currentEquivalentNodes = [locked.target];
-					clearLockedInsert();
-					console.log('[tw-debug] locked path — calling injectDesignCanvas, position=', locked.position, 'boundary=', state.currentBoundary);
-					injectDesignCanvas(locked.position as InsertMode);
-				} else {
-					// No locked position — arm canvas drop-zone
-					console.log('[tw-debug] arming generic insert...');
-					armGenericInsert('Place: Canvas', state.shadowHost, (target, position) => {
-						console.log('[tw-debug] armGenericInsert callback fired, target=', target, 'position=', position);
-						try {
-							console.log('[tw-debug] step 1: setting currentTargetEl');
-							state.currentTargetEl = target;
-							console.log('[tw-debug] step 2: calling detectComponent');
-							const boundary = detectComponent(target);
-							console.log('[tw-debug] step 3: boundary=', boundary);
-							state.currentBoundary = boundary
-								? { componentName: boundary.componentName }
-								: { componentName: target.tagName.toLowerCase() };
-							state.currentEquivalentNodes = [target];
-							console.log('[tw-debug] step 4: state set, currentBoundary=', state.currentBoundary, '— calling injectDesignCanvas');
-							injectDesignCanvas(position as InsertMode);
-							console.log('[tw-debug] injectDesignCanvas returned OK');
-						} catch (err) {
-							console.error('[tw-debug] CALLBACK THREW (this is the real error):', err);
-							if (err instanceof Error) {
-								console.error('[tw-debug] message:', err.message, 'stack:', err.stack);
-							}
-						}
-					});
-				}
-			}
-		} else if (msg.type === "CAPTURE_SCREENSHOT") {
-			handleCaptureScreenshot();
-		} else if (msg.type === "DESIGN_SUBMITTED") {
-			handleDesignSubmitted(msg);
-		} else if (msg.type === "CLOSE_PANEL") {
-			if (state.active) toggleInspect(btn);
-		} else if (msg.type === "COMPONENT_ARM") {
-			if (msg.insertMode === 'replace') {
-				const doReplace = (target: HTMLElement) => {
-					const result = findExactMatches(target, state.shadowHost);
-					const componentName = result.componentName ?? target.tagName.toLowerCase();
-					const ghost = replaceElement(target, msg);
-					const selectionTarget = ghost ?? target;
-					state.currentTargetEl = selectionTarget;
-					state.currentBoundary = { componentName: msg.componentName };
-					state.currentEquivalentNodes = [selectionTarget];
-					requestAnimationFrame(() => {
-						clearHighlights();
-						highlightElement(selectionTarget);
-						showDrawButton(selectionTarget);
-					});
-				};
-
-				if (state.replaceDirection === 'element-first' && state.currentTargetEl) {
-					// Element-first mode — replace the current target immediately
-					doReplace(state.currentTargetEl);
-				} else {
-					// Component-first mode — arm crosshair to pick the target
-					armElementSelect(`Replace: ${msg.componentName}`, state.shadowHost, doReplace);
-				}
-			} else if (!placeAtLockedInsert(msg)) {
-				// No locked insert point — enter crosshair drop mode (Flow A)
-				armInsert(msg, state.shadowHost);
-			} else {
-				// Flow B: placed at locked insert — clean up toolbar & selection
-				clearHighlights();
-				clearSelectionState();
-			}
-		} else if (msg.type === "COMPONENT_DISARM") {
-			cancelInsert();
-		} else if (msg.type === "DESIGN_CLOSE") {
-			handleDesignClose();
-
-			// Re-apply selection highlights and toolbar so the user can keep editing
-			if (state.currentTargetEl && state.currentEquivalentNodes.length > 0) {
-				for (const n of state.currentEquivalentNodes) {
-					highlightElement(n);
-				}
-				showDrawButton(state.currentTargetEl);
-			}
-		} else if (msg.type === "RECORDING_GET_HISTORY") {
-			recordingEngine.getHistory().then(snapshots => {
-				sendTo("panel", { type: "RECORDING_HISTORY", snapshots });
-			});
-		} else if (msg.type === "RECORDING_GET_SNAPSHOT") {
-			recordingEngine.getSnapshot(msg.snapshotId).then(snapshot => {
-				if (snapshot) {
-					sendTo("panel", { type: "RECORDING_SNAPSHOT", snapshot });
-				}
-			});
-		} else if (msg.type === "RECORDING_GET_RANGE") {
-			const ids: number[] = msg.ids ?? [];
-			if (ids.length >= 2) {
-				const min = Math.min(...ids);
-				const max = Math.max(...ids);
-				recordingEngine.getRange(min, max).then(snapshots => {
-					sendTo("panel", { type: "RECORDING_RANGE", snapshots });
-				});
-			}
-		} else if (msg.type === "BUG_REPORT_PICK_ELEMENT") {
-			enterBugReportPickMode();
-		} else if (msg.type === "THEME_PREVIEW" || msg.type === "THEME_PREVIEW_CSS") {
-			applyThemePreview(msg);
-		} else if (msg.type === "REQUEST_THEME_VARS") {
-			sendThemeVars();
-		}
-	});
+	onMessage(createWsMessageHandler({
+		serverOrigin: SERVER_ORIGIN,
+		panelOpenKey: PANEL_OPEN_KEY,
+		insideStorybook,
+		closePanel: () => toggleInspect(btn),
+		getRecordingEngine: () => recordingEngine,
+		enterBugReportPickMode,
+		applyThemePreview,
+		sendThemeVars,
+		showToast,
+	}));
 
 	// ── Unified reposition on scroll / resize ────────────────────────────────
 	// Each function is a no-op when it has nothing visible to reposition,
@@ -1057,8 +925,9 @@ function init(): void {
 	if (sessionStorage.getItem(PANEL_OPEN_KEY) === "1") {
 		state.active = true;
 		btn.classList.add("active");
+		showBottomToolbar();
 		if (!insideStorybook) {
-			state.activeContainer.open(`${SERVER_ORIGIN}/panel`);
+			dom.activeContainer.open(`${SERVER_ORIGIN}/panel`);
 		}
 	}
 
@@ -1071,16 +940,16 @@ function init(): void {
 	});
 
 	window.addEventListener("overlay-ws-connected", () => {
-		if (state.wasConnected) {
+		if (dom.wasConnected) {
 			showToast("Reconnected");
 		}
-		state.wasConnected = true;
+		dom.wasConnected = true;
 		// Send theme vars to panel on every connect/reconnect
 		sendThemeVars();
 	});
 
 	window.addEventListener("overlay-ws-disconnected", () => {
-		if (state.wasConnected) {
+		if (dom.wasConnected) {
 			showToast("Connection lost — restart the server and refresh.", 5000);
 		}
 	});
@@ -1119,7 +988,7 @@ function enterBugReportPickMode(): void {
 		e.stopPropagation();
 
 		const target = e.target as HTMLElement;
-		if (!target || target === state.shadowHost || e.composedPath().some(el => el === state.shadowHost)) {
+		if (!target || target === dom.shadowHost || e.composedPath().some(el => el === dom.shadowHost)) {
 			return;
 		}
 

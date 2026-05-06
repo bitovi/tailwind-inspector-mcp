@@ -1,5 +1,8 @@
 import type { SlotFieldProps } from './types';
 import type { SlotArgValue } from '../../types';
+import { useDropTarget } from '../../hooks/useDropTarget';
+import { useCallback } from 'react';
+import type { ArmedComponentData } from '../../types';
 
 function getTextValue(value: SlotArgValue | undefined): string {
   if (!value) return '';
@@ -9,8 +12,27 @@ function getTextValue(value: SlotArgValue | undefined): string {
   return '';
 }
 
-export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: SlotFieldProps) {
+export function SlotField({ name, value, onChange, isReceptive, onArmSelf, groupName }: SlotFieldProps) {
   const isFilled = value?.type === 'component';
+
+  const handleDrop = useCallback((data: ArmedComponentData) => {
+    onChange({
+      type: 'component',
+      componentName: data.componentName,
+      storyId: data.storyId,
+      componentPath: data.componentPath,
+      args: data.args,
+      ghostHtml: data.ghostHtml,
+      ghostCss: data.ghostCss,
+    });
+  }, [onChange]);
+
+  const { ref, isDropHovered, isDragActive } = useDropTarget({
+    groupName: groupName ?? '',
+    propName: name,
+    onDrop: handleDrop,
+    enabled: !isFilled && !!groupName,
+  });
 
   function handleTextChange(raw: string) {
     onChange({ type: 'text', value: raw });
@@ -28,7 +50,7 @@ export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: Slo
 
   if (isFilled && value?.type === 'component') {
     return (
-      <div className="flex-1 flex items-center gap-1.5 bg-bv-surface-hi border border-bv-border rounded px-1.5 py-0.5 min-h-[24px]">
+      <div className="flex-1 flex items-center gap-1.5 bg-bit-surface-hi border border-bit-border rounded px-1.5 py-0.5 min-h-[24px]">
         {/* Mini ghost thumbnail */}
         {value.ghostHtml && (
           <div
@@ -36,8 +58,8 @@ export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: Slo
             dangerouslySetInnerHTML={{ __html: value.ghostHtml }}
           />
         )}
-        <span className="text-[10px] font-medium text-bv-text shrink-0">{value.componentName}</span>
-        <span className="text-[9px] text-bv-muted font-mono flex-1 truncate">
+        <span className="text-[10px] font-medium text-bit-text shrink-0">{value.componentName}</span>
+        <span className="text-[9px] text-bit-muted font-mono flex-1 truncate">
           {value.args && Object.keys(value.args).length > 0
             ? Object.entries(value.args)
                 .slice(0, 2)
@@ -48,7 +70,7 @@ export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: Slo
         <button
           type="button"
           title="Clear"
-          className="w-4 h-4 rounded flex items-center justify-center text-[10px] text-bv-muted hover:bg-bv-orange/15 hover:text-bv-orange transition-colors shrink-0"
+          className="w-4 h-4 rounded flex items-center justify-center text-[10px] text-bit-muted hover:bg-bit-orange/15 hover:text-bit-orange transition-colors shrink-0"
           onClick={handleClear}
         >
           ✕
@@ -57,28 +79,32 @@ export function SlotField({ name, value, onChange, isReceptive, onArmSelf }: Slo
     );
   }
 
-  // Text input with arm button
+  // Text input with arm button — also a drop target during drag
   return (
-    <div className="flex-1 flex items-center gap-1">
+    <div ref={ref} className={`flex-1 flex items-center gap-1 transition-all rounded ${
+      isDropHovered ? 'ring-2 ring-bit-teal bg-bit-teal/10' : ''
+    }`}>
       <input
         type="text"
-        className={`flex-1 bg-bv-surface border rounded px-1.5 py-0.5 text-[10px] text-bv-text outline-none transition-all ${
-          isReceptive
-            ? 'border-bv-teal bg-bv-teal/10'
-            : 'border-bv-border focus:border-bv-teal'
+        className={`flex-1 bg-bit-surface border rounded px-1.5 py-0.5 text-[10px] text-bit-text outline-none transition-all ${
+          isDropHovered
+            ? 'border-bit-teal bg-bit-teal/10'
+            : isReceptive
+              ? 'border-bit-teal bg-bit-teal/10'
+              : 'border-bit-border focus:border-bit-teal'
         }`}
         value={getTextValue(value)}
-        placeholder={isReceptive ? 'Pick a component →' : '(empty)'}
-        readOnly={isReceptive}
-        onChange={isReceptive ? undefined : (e) => handleTextChange(e.target.value)}
+        placeholder={isDropHovered ? 'Drop here' : isReceptive ? 'Pick a component →' : '(empty)'}
+        readOnly={isReceptive || isDragActive}
+        onChange={isReceptive || isDragActive ? undefined : (e) => handleTextChange(e.target.value)}
       />
       <button
         type="button"
         title={isReceptive ? 'Cancel' : `Set ${name} to a component`}
         className={`w-5 h-5 rounded flex items-center justify-center text-[11px] transition-all shrink-0 ${
           isReceptive
-            ? 'bg-bv-teal/20 text-bv-teal border border-bv-teal'
-            : 'bg-bv-surface border border-bv-border text-bv-muted hover:border-bv-teal hover:text-bv-teal'
+            ? 'bg-bit-teal/20 text-bit-teal border border-bit-teal'
+            : 'bg-bit-surface border border-bit-border text-bit-muted hover:border-bit-teal hover:text-bit-teal'
         }`}
         onClick={handleArmClick}
       >
