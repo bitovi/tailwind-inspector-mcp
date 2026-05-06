@@ -684,82 +684,27 @@ async function doStep9(page: Page): Promise<void> {
 async function doStep10(page: Page): Promise<void> {
   await scrollToStep(page, 10);
 
-  // Enter select mode via bottom toolbar
-  await clickSelectButton(page);
-  await page.waitForTimeout(300);
-
-  // DEBUG: check overlay state after clicking Select
-  const stateAfterSelect = await page.evaluate(() => {
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const selectBtn = host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]');
-    return {
-      hostExists: !!host,
-      shadowExists: !!host?.shadowRoot,
-      selectBtnExists: !!selectBtn,
-      selectBtnClasses: selectBtn?.className ?? '(none)',
-      activeElement: document.activeElement?.tagName ?? '(none)',
-      bodyChildCount: document.body.children.length,
-    };
-  });
-  console.log(`[step10-debug] After clickSelectButton:`, JSON.stringify(stateAfterSelect));
+  // After step 9's Backspace delete, select mode is still active from the
+  // initial clickSelectButton in step 8. Don't click Select again — doing so
+  // would toggle it OFF (picking + no element → off) because of the three-way
+  // toggle in the state machine.
 
   // Click one of the team member cards to select it
   const teamMember = page.locator('text=Alice Lim').first();
   await teamMember.scrollIntoViewIfNeeded();
   await page.waitForTimeout(200);
-
-  // DEBUG: check element visibility before click
-  const teamMemberBox = await teamMember.boundingBox();
-  console.log(`[step10-debug] Alice Lim boundingBox: ${JSON.stringify(teamMemberBox)}`);
-
   await teamMember.click();
-  await page.waitForTimeout(800);
 
-  // DEBUG: check overlay state after clicking the element
-  const stateAfterClick = await page.evaluate(() => {
-    // Access overlay internal state via the global debug hook if available
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const highlights = host?.shadowRoot?.querySelectorAll('[class*="highlight"]');
-    // Check if any element has the selection indicator
-    const selectedIndicators = host?.shadowRoot?.querySelectorAll('[class*="select"], [class*="toolbar"]');
-    return {
-      highlightCount: highlights?.length ?? 0,
-      selectedIndicatorCount: selectedIndicators?.length ?? 0,
-      activeElement: document.activeElement?.tagName ?? '(none)',
-      // Check if the overlay has a toolbar visible (indicates element selected)
-      toolbarVisible: !!(host?.shadowRoot?.querySelector('[class*="el-toolbar"], [class*="element-toolbar"]')),
-    };
-  });
-  console.log(`[step10-debug] After clicking Alice Lim:`, JSON.stringify(stateAfterClick));
-
-  // DEBUG: check overlay's internal state.currentTargetEl via a probe
-  const hasCurrentTarget = await page.evaluate(() => {
-    // The overlay stores state in a module-scope variable. We can't access it directly,
-    // but we can check if the keydown handler would early-return by dispatching a probe.
-    // Instead, check for the element toolbar which only shows when something is selected.
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const sr = host?.shadowRoot;
-    if (!sr) return { shadowRoot: false };
-    const toolbar = sr.querySelector('.el-toolbar');
-    const toolbarStyle = toolbar ? getComputedStyle(toolbar).display : '(no toolbar el)';
-    const allToolbars = sr.querySelectorAll('[class*="toolbar"]');
-    const toolbarClasses = Array.from(allToolbars).map(t => t.className).slice(0, 5);
-    return {
-      shadowRoot: true,
-      toolbarEl: !!toolbar,
-      toolbarDisplay: toolbarStyle,
-      allToolbarCount: allToolbars.length,
-      toolbarClasses,
-    };
-  });
-  console.log(`[step10-debug] currentTarget probe (toolbar check):`, JSON.stringify(hasCurrentTarget));
+  // Wait for element selection to register (element drawer appears)
+  await waitForElementDrawer(page);
+  await page.waitForTimeout(300);
 
   // Duplicate: dispatch a synthetic Ctrl+D / Cmd+D KeyboardEvent directly
   // into the document so the overlay's keydown handler fires reliably.
   // Using page.keyboard.press('ControlOrMeta+d') is unreliable in headless CI
   // because browsers may intercept Ctrl+D (bookmark shortcut) before the page
   // handler sees it.
-  const duplicateResult = await page.evaluate(() => {
+  await page.evaluate(() => {
     const isMac = navigator.platform.toUpperCase().includes('MAC');
     const event = new KeyboardEvent('keydown', {
       key: 'd',
@@ -769,34 +714,10 @@ async function doStep10(page: Page): Promise<void> {
       bubbles: true,
       cancelable: true,
     });
-    const wasDefaultPrevented = !document.dispatchEvent(event);
-    return {
-      isMac,
-      ctrlKey: !isMac,
-      metaKey: isMac,
-      defaultPrevented: wasDefaultPrevented,
-      activeElementAtDispatch: document.activeElement?.tagName ?? '(none)',
-    };
+    document.dispatchEvent(event);
   });
-  console.log(`[step10-debug] After dispatching Ctrl+D:`, JSON.stringify(duplicateResult));
 
   await page.waitForTimeout(1000);
-
-  // DEBUG: check if duplicate actually happened (look for cloned element)
-  const afterDuplicate = await page.evaluate(() => {
-    // Count elements containing "Alice Lim" text
-    const aliceElements = Array.from(document.querySelectorAll('*')).filter(
-      el => el.textContent?.includes('Alice Lim') && el.children.length < 3
-    );
-    const progress = JSON.parse(localStorage.getItem('vybit-tutorial-progress') || '[]');
-    return {
-      aliceMatchCount: aliceElements.length,
-      localStorageProgress: progress,
-      // Check for any ghost/dropped elements
-      droppedComponents: document.querySelectorAll('[data-tw-dropped-component]').length,
-    };
-  });
-  console.log(`[step10-debug] After waiting 1s post-duplicate:`, JSON.stringify(afterDuplicate));
 }
 
 async function doStep11(page: Page): Promise<void> {
