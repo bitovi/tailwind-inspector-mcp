@@ -12,18 +12,18 @@ import {
 
 // ── Flow B table (mirrors SKILL.md exactly) ──────────────────────────────
 //
-// | Step | Action              | Tab   | Panel Insert | Overlay    | Components | Page                |
-// |------|---------------------|-------|-------------|------------|------------|---------------------|
-// |  1   | initial             | null  | gray        | no-toolbar | —          | none                |
-// |  2   | clickInsert         | place | orange      | no-toolbar | gray       | browse-mode         |
-// |  3   | clickPlacementSite  | place | teal        | toolbar    | teal       | insert-point-locked |
-// |  4   | clickComponentPlace | place | gray        | no-toolbar | gray       | none                |
+// | Step | Action              | Tab   | Panel Insert | Overlay    | Components | Page                | Reasoning                                    |
+// |------|---------------------|-------|-------------|------------|------------|---------------------|----------------------------------------------|
+// |  1   | initial             | null  | gray        | no-toolbar | —          | none                | Nothing active                               |
+// |  2   | clickInsert         | place | orange      | no-toolbar | gray       | browse-mode         | Orange = crosshair active                    |
+// |  3   | clickPlacementSite  | place | orange      | no-toolbar | teal       | browse-mode         | Browse persists — user can re-click elsewhere|
+// |  4   | clickComponentPlace | place | orange      | no-toolbar | gray       | browse-mode         | Placed — browse restarts for rapid placement |
 
 const FLOW_B_TABLE: FlowTableRow[] = [
   { step: 1, action: 'initial',                          panelInsert: 'gray',   overlay: 'no-toolbar', components: '—',    page: 'none' },
   { step: 2, action: 'clickInsert',        tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray', page: 'browse-mode' },
-  { step: 3, action: 'clickPlacementSite', tab: 'components', panelInsert: 'teal',   overlay: 'no-toolbar', components: 'teal', page: 'browse-mode' },
-  { step: 4, action: 'clickComponentPlace', tab: 'components', panelInsert: 'gray',  overlay: 'no-toolbar', components: 'gray', page: 'none' },
+  { step: 3, action: 'clickPlacementSite', tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'teal', page: 'browse-mode' },
+  { step: 4, action: 'clickComponentPlace', tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray', page: 'browse-mode' },
 ];
 
 const ACTIONS: Record<string, (page: Page, frame: Frame) => Promise<void>> = {

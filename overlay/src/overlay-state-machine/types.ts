@@ -95,6 +95,8 @@ export type LocalAction =
   // Text editing
   | { type: 'TEXT_EDIT_START'; targetEl: HTMLElement }
   | { type: 'TEXT_EDIT_END' }
+  // Component placement completed (restart browse for rapid placement)
+  | { type: 'COMPONENT_PLACED' }
   // Paste flow
   | { type: 'PASTE_INITIATED' }
   // Activation

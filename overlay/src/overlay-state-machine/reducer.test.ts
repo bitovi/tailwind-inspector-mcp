@@ -233,8 +233,20 @@ describe('ELEMENT_SELECTED', () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 describe('INSERT_POINT_LOCKED', () => {
-  it('transitions to locked phase', () => {
+  it('keeps browsing phase when locking during browse (orange stays orange)', () => {
     const prev = stateWith({ insertPhase: 'browsing' });
+    const { state } = overlayReducer(prev, {
+      type: 'INSERT_POINT_LOCKED',
+      target: div,
+      position: 'before',
+    });
+    expect(state.insertPhase).toBe('browsing');
+    expect(state.lockedTarget).toBe(div);
+    expect(state.lockedPosition).toBe('before');
+  });
+
+  it('transitions to locked phase when not browsing', () => {
+    const prev = stateWith({ insertPhase: 'off' });
     const { state } = overlayReducer(prev, {
       type: 'INSERT_POINT_LOCKED',
       target: div,
@@ -533,6 +545,39 @@ describe('NAVIGATION_RESET', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// COMPONENT_PLACED — restart browse for rapid placement
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('COMPONENT_PLACED', () => {
+  it('clears locked point but keeps browsing phase (rapid placement)', () => {
+    const prev = stateWith({ insertPhase: 'browsing', lockedTarget: div, lockedPosition: 'after' as any });
+    const { state, effects } = overlayReducer(prev, { type: 'COMPONENT_PLACED' });
+    expect(state.insertPhase).toBe('browsing');
+    expect(state.lockedTarget).toBeNull();
+    expect(state.lockedPosition).toBeNull();
+    expect(effects.some(e => e.kind === 'start-browse')).toBe(true);
+    expect(effects.some(e => e.kind === 'clear-locked-insert')).toBe(true);
+    const disarm = effects.find(e => e.kind === 'send-to-panel') as any;
+    expect(disarm?.message.type).toBe('COMPONENT_DISARMED');
+  });
+
+  it('restarts browse from locked phase', () => {
+    const prev = stateWith({ insertPhase: 'locked', lockedTarget: div, lockedPosition: 'before' as any });
+    const { state, effects } = overlayReducer(prev, { type: 'COMPONENT_PLACED' });
+    expect(state.insertPhase).toBe('browsing');
+    expect(state.lockedTarget).toBeNull();
+    expect(effects.some(e => e.kind === 'start-browse')).toBe(true);
+  });
+
+  it('no-op when insert is off', () => {
+    const prev = stateWith({ insertPhase: 'off' });
+    const { state, effects } = overlayReducer(prev, { type: 'COMPONENT_PLACED' });
+    expect(state).toBe(prev);
+    expect(effects).toEqual([]);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 // Toolbar visual state derivation
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -555,8 +600,18 @@ describe('Toolbar visual state', () => {
     expect(state.toolbar.select).toBe('engaged');
   });
 
-  it('insert locked → toolbar.insert=engaged', () => {
+  it('insert locked during browsing → toolbar.insert stays picking (orange)', () => {
     const prev = stateWith({ insertPhase: 'browsing' });
+    const { state } = overlayReducer(prev, {
+      type: 'INSERT_POINT_LOCKED',
+      target: div,
+      position: 'after',
+    });
+    expect(state.toolbar.insert).toBe('picking');
+  });
+
+  it('insert locked from off → toolbar.insert=engaged', () => {
+    const prev = stateWith({ insertPhase: 'off' });
     const { state } = overlayReducer(prev, {
       type: 'INSERT_POINT_LOCKED',
       target: div,

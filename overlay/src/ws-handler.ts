@@ -369,7 +369,8 @@ export function createWsMessageHandler(deps: WsHandlerDeps): (msg: any) => void 
 				// No locked insert point — enter crosshair drop mode (Flow A)
 				armInsert(msg, dom.shadowHost);
 			} else {
-				// Flow B: placed at locked insert — clean up toolbar & selection
+				// Flow B: placed at locked insert — restart browse for rapid placement
+				dispatch({ type: 'COMPONENT_PLACED' });
 				clearHighlights();
 				clearSelectionState();
 			}

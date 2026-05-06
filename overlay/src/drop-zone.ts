@@ -6,7 +6,6 @@
 
 import { send, sendTo } from './ws';
 import { getFiber, findOwningComponent } from './react/fiber';
-import { resetToolbar } from './bottom-toolbar';
 import type { Patch } from '../../shared/types';
 import { css, TEAL, TEAL_06, Z_LOCKED, FIXED_OVERLAY, CURSOR_LABEL, INDICATOR_BASE, DASHED_BORDER, ARROW_BASE, LINE_BASE } from './styles';
 import { createDropPreview, type DropPreviewHandle } from './drop-preview';
@@ -148,7 +147,8 @@ export function placeAtLockedInsert(
   inserted.dataset.twDroppedPatchId = patch.id;
 
   send({ type: 'COMPONENT_DROPPED', patch });
-  sendTo('panel', { type: 'COMPONENT_DISARMED' });
+  // Note: COMPONENT_DISARMED is sent by the caller via dispatch({ type: 'COMPONENT_PLACED' })
+  // which also restarts browse mode for rapid placement.
 
   clearLockedInsert();
   return true;
@@ -834,7 +834,6 @@ function handleComponentInsertClick(e: MouseEvent): void {
   inserted.dataset.twDroppedPatchId = patch.id;
 
   send({ type: 'COMPONENT_DROPPED', patch });
-  sendTo('panel', { type: 'COMPONENT_DISARMED' });
 
   // Clear stale selection state from the element that was selected before paste
   revertPreview();
@@ -842,7 +841,10 @@ function handleComponentInsertClick(e: MouseEvent): void {
   clearSelectionState();
 
   cleanup();
-  resetToolbar();
+
+  // Dispatch COMPONENT_PLACED to restart browse mode for rapid placement.
+  // This sends COMPONENT_DISARMED to the panel and triggers start-browse.
+  dispatch({ type: 'COMPONENT_PLACED' });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────

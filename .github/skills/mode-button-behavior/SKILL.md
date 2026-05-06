@@ -121,23 +121,23 @@ When either side receives a sync message, it updates its own state to match. The
 
 ## Flow A: Place — pick component first, then find a spot
 
-| Step | What the user does | Tab visible? | Panel mode button | Overlay toolbar | Component button | Page interaction |
-|---|---|---|---|---|---|---|
-| 1 | Before clicking anything | No tab | Gray | No toolbar | — | None |
-| 2 | Click Insert (panel) | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) |
-| 3 | Click a component's Place | Place tab | Gray | No toolbar | Orange | Component drop mode (position indicators) |
-| 4 | Place on page | Place tab | Gray | No toolbar | Gray | None |
-| 5 | Click Insert again (repeat) | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) |
+| Step | What the user does | Tab visible? | Panel mode button | Overlay toolbar | Component button | Page interaction | Reasoning |
+|---|---|---|---|---|---|---|---|
+| 1 | Before clicking anything | No tab | Gray | No toolbar | — | None | Nothing active |
+| 2 | Click Insert (panel) | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) | Orange = crosshair active, user is finding a spot |
+| 3 | Click a component's Place | Place tab | Orange | No toolbar | Orange | Component drop mode (position indicators) | Insert stays orange — user still actively placing on the page. Component turns orange because it's the armed component |
+| 4 | Place on page | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) | Component placed — Insert stays orange and browse restarts for rapid placement workflow. Component goes gray (placement done) |
+| 5 | Click Insert (stop) | Place tab | Gray | No toolbar | Gray | None | User clicks Insert to stop — gray because no locked point exists. Rapid-fire session ends |
 
 ## Flow B: Place — pick location first, then pick a component
 
-| Step | What the user does | Tab visible? | Panel mode button | Overlay toolbar | Component button | Page interaction |
-|---|---|---|---|---|---|---|
-| 1 | Before clicking anything | No tab | Gray | No toolbar | — | None |
-| 2 | Click Insert (panel) | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) |
-| 3 | Click a placement site | Place tab | Orange | Toolbar appears: Insert: Orange | Teal | Browse persists; locked point indicator visible; Describe change / Insert text shown |
-| 3a | Click a different spot | Place tab | Orange | Insert: Orange | Teal | Locked point moves; browse continues |
-| 4 | Click a component | Place tab | Gray | No toolbar | Gray | Component placed immediately, done |
+| Step | What the user does | Tab visible? | Panel mode button | Overlay toolbar | Component button | Page interaction | Reasoning |
+|---|---|---|---|---|---|---|---|
+| 1 | Before clicking anything | No tab | Gray | No toolbar | — | None | Nothing active |
+| 2 | Click Insert (panel) | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) | Orange = crosshair active, user is browsing for an insertion point |
+| 3 | Click a placement site | Place tab | Orange | Toolbar appears: Insert: Orange | Teal | Browse persists; locked point indicator visible; Describe change / Insert text shown | Insert stays orange — browse continues so user can re-click a different spot. Component turns teal because an insertion point is ready |
+| 3a | Click a different spot | Place tab | Orange | Insert: Orange | Teal | Locked point moves; browse continues | Same reasoning — browsing persists, locked point just relocates |
+| 4 | Click a component | Place tab | Orange | No toolbar | Gray | Browse mode (hover indicators) | Component placed at locked point — Insert stays orange and browse restarts for rapid placement. Component goes gray (placement done) |
 
 ## Flow C: Replace — pick element first, then pick component
 
@@ -165,7 +165,7 @@ When either side receives a sync message, it updates its own state to match. The
 These rules always hold:
 
 1. **Only one button is orange at a time.** If the global button is orange, no component button is orange, and vice versa. Orange means "waiting for the user to act on the page."
-2. **After placing or replacing, both buttons go gray.** The action is complete. The tab stays visible.
+2. **After placing, Insert stays orange (browse restarts) for rapid placement.** After replacing, both buttons go gray. The tab stays visible in both cases.
 3. **The tab never disappears after a place/replace.** The user stays on the component list so they can do another operation.
 4. **Component button label matches the tab.** Place tab → "Place" button. Replace tab → "Replace" button. Never driven by whether an element is selected.
 5. **Teal means a target is locked.** Both the global button and component buttons turn teal when an insert point or element is selected and the system is ready for the next step.

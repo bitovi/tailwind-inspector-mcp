@@ -260,7 +260,7 @@ function coreReducer(
           ? (prev.selectedEl ? 'engaged' : 'picking')
           : (prev.toolbar.select === 'engaged' ? 'engaged' : 'gray'),
         insert: action.tool === 'insert'
-          ? (prev.lockedTarget ? 'engaged' : 'picking')
+          ? (prev.insertPhase === 'browsing' ? 'picking' : (prev.lockedTarget ? 'engaged' : 'picking'))
           : 'gray',
         text: action.tool === 'text' ? 'picking' : 'gray',
       };
@@ -320,7 +320,9 @@ function coreReducer(
       return {
         state: {
           ...prev,
-          insertPhase: 'locked',
+          // Keep browsing active if we're in browse mode — orange persists
+          // so the user can re-click a different spot without re-clicking Insert.
+          insertPhase: prev.insertPhase === 'browsing' ? 'browsing' : 'locked',
           lockedTarget: action.target,
           lockedPosition: action.position,
         },
@@ -716,6 +718,28 @@ function coreReducer(
           { kind: 'set-text-editing-lock', locked: false },
         ],
       };
+    }
+
+    // ── Component placed (restart browse for rapid placement) ────────
+
+    case 'COMPONENT_PLACED': {
+      // After a component is placed (Flow A or B), clear the locked point
+      // but keep browse mode active so the user can rapidly place again.
+      if (prev.insertPhase === 'browsing' || prev.insertPhase === 'locked') {
+        return {
+          state: {
+            ...prev,
+            insertPhase: 'browsing',
+            ...clearInsertLock(prev),
+          },
+          effects: [
+            { kind: 'clear-locked-insert' },
+            { kind: 'start-browse' },
+            { kind: 'send-to-panel', message: { type: 'COMPONENT_DISARMED' } },
+          ],
+        };
+      }
+      return { state: prev, effects: [] };
     }
 
     // ── Paste flow ───────────────────────────────────────────────────
