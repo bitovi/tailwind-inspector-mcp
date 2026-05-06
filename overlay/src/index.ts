@@ -53,12 +53,9 @@ function onBrowseLocked(target: HTMLElement): void {
 		? { componentName: boundary.componentName }
 		: { componentName: target.tagName.toLowerCase() };
 	state.cachedNearGroups = null;
-	dispatch({
-		type: 'ELEMENT_SELECTED',
-		el: target,
-		equivalentNodes: [target],
-		boundary: state.currentBoundary,
-	});
+	// Don't dispatch ELEMENT_SELECTED — that would show selection highlights.
+	// The drop-zone already dispatched INSERT_POINT_LOCKED to the SM and
+	// sent INSERT_POINT_LOCKED to the panel. We just need the element drawer.
 	showDrawButton(target);
 	// Persistent browse: stay orange (picking) — browse continues
 	updateToolState('insert', true, false);
@@ -562,6 +559,7 @@ const PANEL_OPEN_KEY = "tw-inspector-panel-open";
 
 function toggleInspect(btn: HTMLButtonElement): void {
 	const wasActive = state.active;
+	console.log('[toggle-debug] toggleInspect called, wasActive=', wasActive, 'insideStorybook=', insideStorybook, 'activeContainer=', dom.activeContainer?.name);
 	if (!wasActive) {
 		dispatch({ type: 'ACTIVATE' });
 		btn.classList.add("active");
@@ -572,8 +570,14 @@ function toggleInspect(btn: HTMLButtonElement): void {
 		} else {
 			// Open the container — select mode is activated via the panel's SelectElementButton
 			const panelUrl = `${SERVER_ORIGIN}/panel`;
+			console.log('[toggle-debug] Opening container, isOpen=', dom.activeContainer.isOpen(), 'panelUrl=', panelUrl);
 			if (!dom.activeContainer.isOpen()) {
 				dom.activeContainer.open(panelUrl);
+				console.log('[toggle-debug] Container opened, checking iframe...');
+				setTimeout(() => {
+					const iframe = dom.shadowRoot.querySelector('iframe');
+					console.log('[toggle-debug] iframe found=', !!iframe, 'src=', iframe?.src);
+				}, 500);
 			}
 		}
 	} else {
@@ -667,12 +671,11 @@ function init(): void {
 		showToast,
 		deactivateSelectMode: () => {
 			if (state.selectModeOn) {
-				setSelectMode(false);
-				updateToolState('select', false, true);
+				dispatch({ type: 'CMD_TOGGLE_SELECT_MODE', active: false });
 			}
 			if (isDropZoneActive()) {
 				cancelInsert();
-				updateToolState('insert', false, true);
+				dispatch({ type: 'CMD_TOGGLE_INSERT_BROWSE', active: false });
 			}
 		},
 	});

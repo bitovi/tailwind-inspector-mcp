@@ -349,13 +349,31 @@ function coreReducer(
 
       // ── Select re-click toggle ──
       if (tool === 'select') {
-        if (prev.selectPhase === 'picking' && prev.selectedEl) {
-          // Orange + element → Teal
+        if (prev.selectPhase === 'picking' && !prev.selectedEl) {
+          // Orange + no element → Gray: cancel selecting
           return {
-            state: { ...prev, selectPhase: 'engaged' },
+            state: {
+              ...prev,
+              mode: null,
+              editTool: null,
+              selectPhase: 'off',
+            },
             effects: [
               { kind: 'set-select-mode', on: false },
-              { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: 'select' } },
+              { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: null } },
+            ],
+          };
+        }
+        if (prev.selectPhase === 'picking' && prev.selectedEl) {
+          // Orange + element → Teal
+          // Note: no MODE_CHANGED needed — panel is already in 'select' mode.
+          // SELECT_MODE_CHANGED { active: false } (from set-select-mode) is enough.
+          const toolbar = toolbarForPhases('engaged', prev.insertPhase);
+          return {
+            state: { ...prev, selectPhase: 'engaged', toolbar },
+            effects: [
+              { kind: 'set-select-mode', on: false },
+              { kind: 'update-toolbar', visual: toolbar },
             ],
           };
         }
@@ -397,6 +415,21 @@ function coreReducer(
 
       // ── Insert re-click toggle ──
       if (tool === 'insert') {
+        if (prev.insertPhase === 'browsing' && !prev.lockedTarget) {
+          // Orange + no point → Gray: cancel browsing
+          return {
+            state: {
+              ...prev,
+              mode: null,
+              editTool: null,
+              insertPhase: 'off',
+            },
+            effects: [
+              { kind: 'cancel-insert' },
+              { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: null } },
+            ],
+          };
+        }
         if (prev.insertPhase === 'browsing' && prev.lockedTarget) {
           // Orange + point → Teal: stop browsing, keep point
           return {

@@ -3,17 +3,17 @@
 // Lives in the overlay shadow DOM.
 
 import { dom } from "./overlay-dom";
+import { state } from "./overlay-state";
+import { getState } from "./overlay-state-machine";
 import { sendTo } from "./ws";
 import { SELECT_SVG, INSERT_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import type { EditTool } from "../../shared/types";
+import type { ToolbarVisual } from "./overlay-state-machine/types";
 
 let toolbarEl: HTMLElement | null = null;
 let selectGroupEl: HTMLElement | null = null;
 let adjunctBtn: HTMLElement | null = null;
 let groupSepEl: HTMLElement | null = null;
-let currentTool: EditTool = null;
-let isPicking = false;
-let isEngaged = false;
 
 /** Per-tool visual state overrides (e.g. paste sets select=completed, insert=picking). */
 export type ToolVisualState = 'picking' | 'engaged' | 'completed' | 'dim' | null;
@@ -41,37 +41,23 @@ function createButton(label: string, svgHtml: string, tool: EditTool): HTMLEleme
 	btn.addEventListener("click", () => {
 		// Always forward the clicked tool to the state machine — it handles
 		// the three-way toggle (e.g. orange+element → teal, teal → orange).
-		setTool(tool);
+		onToolChange?.(tool);
 	});
 	return btn;
 }
 
-function setTool(tool: EditTool): void {
-	currentTool = tool;
-	isPicking = false;
-	isEngaged = false;
-	onToolChange?.(tool);
-	// Panel notification is handled by the state machine via dispatch effects.
-	updateButtonStates();
-}
-
-/** Called by the overlay when the mode/state changes */
+/** Called by the overlay when the mode/state changes (via update-toolbar effect) */
 export function updateToolState(tool: EditTool, picking: boolean, engaged: boolean): void {
-	console.log(`[paste-debug] updateToolState(${tool}, picking=${picking}, engaged=${engaged}), overrides before:`, Object.fromEntries(toolOverrides));
-	currentTool = tool;
-	isPicking = picking;
-	isEngaged = engaged;
 	// Clear transient overrides (picking/engaged/dim) but keep 'completed' —
 	// completed persists until explicitly cleared via clearToolOverrides().
-	for (const [key, state] of toolOverrides) {
-		if (state !== 'completed') toolOverrides.delete(key);
+	for (const [key, val] of toolOverrides) {
+		if (val !== 'completed') toolOverrides.delete(key);
 	}
 	// Active picking always wins — clear any override on the current tool
 	// so the orange picking state is never masked by a stale override.
 	if (picking && tool) {
 		toolOverrides.delete(tool);
 	}
-	console.log(`[paste-debug] updateToolState overrides after:`, Object.fromEntries(toolOverrides));
 	updateButtonStates();
 }
 
@@ -94,22 +80,17 @@ export function clearToolOverrides(): void {
 	updateButtonStates();
 }
 
-/** Reset toolbar to fully idle (gray) — clears overrides, tool, and picking/engaged flags. */
+/** Reset toolbar to fully idle (gray) — clears overrides and repaints from SM state. */
 export function resetToolbar(): void {
 	toolOverrides.clear();
-	currentTool = null;
-	isPicking = false;
-	isEngaged = false;
 	updateButtonStates();
 }
 
 /** Clear transient overrides (picking/engaged/dim) but preserve completed. */
 export function clearTransientOverrides(): void {
-	console.log(`[paste-debug] clearTransientOverrides, overrides before:`, Object.fromEntries(toolOverrides));
-	for (const [key, state] of toolOverrides) {
-		if (state !== 'completed') toolOverrides.delete(key);
+	for (const [key, val] of toolOverrides) {
+		if (val !== 'completed') toolOverrides.delete(key);
 	}
-	console.log(`[paste-debug] clearTransientOverrides, overrides after:`, Object.fromEntries(toolOverrides));
 	updateButtonStates();
 }
 
@@ -139,45 +120,44 @@ export function updateInstanceCount(count: number): void {
 
 function updateButtonStates(): void {
 	if (!toolbarEl) return;
+	const { toolbar } = getState();
+
+	// Determine if any tool is active (for dimming inactive ones)
+	const anyActive = toolbar.select !== 'gray' || toolbar.insert !== 'gray' || toolbar.text !== 'gray';
 
 	// Update standalone buttons (Text, Insert)
 	const buttons = toolbarEl.querySelectorAll(".bt-combo:not(.bt-group .bt-combo)") as NodeListOf<HTMLElement>;
 	buttons.forEach((btn) => {
-		const btnTool = btn.dataset.tool;
-		const isActive = btnTool === (currentTool ?? "none");
-
+		const btnTool = btn.dataset.tool as string;
 		btn.classList.remove("picking", "engaged", "completed", "dim");
 
-		// Check for per-tool override first
-		const override = btnTool ? toolOverrides.get(btnTool) : undefined;
+		const override = toolOverrides.get(btnTool);
 		if (override) {
 			btn.classList.add(override);
-		} else if (isActive && isPicking) {
-			btn.classList.add("picking");
-		} else if (isActive && isEngaged) {
-			btn.classList.add("engaged");
-		} else if (!isActive && currentTool !== null) {
-			// Another tool is active — dim inactive ones
-			btn.classList.add("dim");
+		} else {
+			const visual = toolbar[btnTool as keyof ToolbarVisual] ?? 'gray';
+			if (visual !== 'gray') {
+				btn.classList.add(visual);
+			} else if (anyActive) {
+				btn.classList.add("dim");
+			}
 		}
-		// When no tool is active (currentTool === null), all buttons stay at rest (#aaa)
 	});
 
 	// Update select group
 	if (selectGroupEl) {
 		selectGroupEl.classList.remove("picking", "engaged", "completed", "dim");
-		const isSelectActive = currentTool === "select";
 
-		// Check for per-tool override first
-		const selectOverride = toolOverrides.get("select");
-		if (selectOverride) {
-			selectGroupEl.classList.add(selectOverride);
-		} else if (isSelectActive && isPicking) {
-			selectGroupEl.classList.add("picking");
-		} else if (isSelectActive && isEngaged) {
-			selectGroupEl.classList.add("engaged");
-		} else if (!isSelectActive && currentTool !== null) {
-			selectGroupEl.classList.add("dim");
+		const override = toolOverrides.get("select");
+		if (override) {
+			selectGroupEl.classList.add(override);
+		} else {
+			const visual = toolbar.select;
+			if (visual !== 'gray') {
+				selectGroupEl.classList.add(visual);
+			} else if (anyActive) {
+				selectGroupEl.classList.add("dim");
+			}
 		}
 	}
 }
@@ -220,18 +200,7 @@ export function showBottomToolbar(): void {
 	selectBtn.innerHTML = `${SELECT_SVG} Select`;
 	selectBtn.title = "Select";
 	selectBtn.addEventListener("click", () => {
-		if (currentTool === "select") {
-			if (isPicking && !isEngaged) {
-				// Orange + no element → Gray: cancel selecting entirely
-				setTool(null);
-			} else {
-				// Re-click Select — let onToolChange handle the toggle
-				// (engaged/teal → re-enable picking, picking → disengage)
-				onToolChange?.("select");
-			}
-		} else {
-			setTool("select");
-		}
+		onToolChange?.("select");
 	});
 	selectGroup.appendChild(selectBtn);
 
@@ -273,17 +242,7 @@ export function showBottomToolbar(): void {
 	insertBtn.innerHTML = `${INSERT_SVG} Insert`;
 	insertBtn.title = "Insert";
 	insertBtn.addEventListener("click", () => {
-		if (currentTool === "insert") {
-			if (isPicking && !isEngaged) {
-				// Orange + no point → Gray: cancel browsing entirely
-				setTool(null);
-			} else {
-				// Re-click Insert — let onToolChange handle the toggle
-				onToolChange?.("insert");
-			}
-		} else {
-			setTool("insert");
-		}
+		onToolChange?.("insert");
 	});
 	toolbar.appendChild(insertBtn);
 

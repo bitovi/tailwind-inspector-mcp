@@ -58,12 +58,12 @@ The Select button has **persistent selection mode** — selecting stays active a
 
 **Re-click behavior (three-way toggle):**
 
-| Current state | Re-click result | New state |
-|---|---|---|
-| **Orange + element** | Stop selecting, keep element | **Teal** (locked) |
-| **Orange + no element** | Cancel selecting entirely | **Gray** (idle) |
-| **Teal** (element locked) | Clear element, re-enter selecting | **Orange** (selecting) |
-| **Gray** (idle) | Enter selecting | **Orange** (selecting) |
+| Current state | Re-click result | New state | Reason |
+|---|---|---|---|
+| **Orange + element** | Stop selecting, keep element | **Teal** (locked) | User found what they wanted — lock it in for editing |
+| **Orange + no element** | Cancel selecting entirely | **Gray** (idle) | Nothing to lock — just exit the mode |
+| **Teal** (element locked) | Clear element, re-enter selecting | **Orange** (selecting) | Gives users a visible way to stop the "entire page is clickable" state without needing to know about Escape |
+| **Gray** (idle) | Enter selecting | **Orange** (selecting) | Enter the mode |
 
 #### Insert button specifics
 

@@ -125,11 +125,25 @@ async function clickDescribeChange(page: Page): Promise<void> {
 /**
  * Click "Edit text" button in the element drawer.
  * Transitions drawer to State C (text editing mode).
+ *
+ * Uses direct JS click (not page.mouse.click) because the drawer may be
+ * positioned off-screen when the selected element is near the top/bottom of
+ * the viewport. The drop-zone capture handler is idle during select mode so
+ * there is no interception risk.
  */
 async function clickEditText(page: Page): Promise<void> {
   await waitForElementDrawer(page);
-  const { x, y } = await getShadowButtonCenter(page, '.ed-action-btn', 'Edit text');
-  await page.mouse.click(x, y);
+  await page.evaluate(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    const btns = host?.shadowRoot?.querySelectorAll('.ed-action-btn') as NodeListOf<HTMLElement>;
+    for (const btn of btns) {
+      if (btn.textContent?.includes('Edit text')) {
+        btn.click();
+        return;
+      }
+    }
+    throw new Error('Shadow button not found: .ed-action-btn[text~="Edit text"]');
+  });
   await page.waitForTimeout(300);
 }
 
