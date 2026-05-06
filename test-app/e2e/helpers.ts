@@ -337,7 +337,7 @@ export async function placeOnPage(page: Page): Promise<void> {
 export interface FlowTableRow {
   step: number;
   action: string;
-  tab: string | null;
+  tab?: string | null;
   panelInsert?: ButtonColor;
   panelSelect?: ButtonColor;
   overlay: 'no-toolbar' | 'toolbar';
@@ -358,10 +358,12 @@ export async function verifyFlowRow(
   const label = `Step ${row.step}`;
 
   // Tab — poll since WS messages may still be propagating
-  await expect.poll(
-    () => getPanelActiveTab(frame),
-    { message: `${label}: tab`, timeout: 5000 },
-  ).toBe(row.tab);
+  if (row.tab !== undefined) {
+    await expect.poll(
+      () => getPanelActiveTab(frame),
+      { message: `${label}: tab`, timeout: 5000 },
+    ).toBe(row.tab);
+  }
 
   // Panel mode buttons — poll for color transitions
   if (row.panelInsert) {

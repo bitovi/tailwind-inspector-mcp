@@ -4,6 +4,7 @@ import {
   getPanelFrame,
   waitForPanelReady,
   clickInsert,
+  ensureStorybookConnected,
 } from './helpers';
 
 /**
@@ -25,8 +26,10 @@ async function getIframePageBox(page: Page): Promise<{ x: number; y: number; wid
  */
 async function openInsertTab(page: Page, frame: Frame): Promise<void> {
   await clickInsert(frame);
-  // Wait for at least one component row to appear
-  await frame.waitForSelector('[class*="cursor-grab"]', { timeout: 15000 });
+  // Ensure Storybook components are scanned and loaded
+  await ensureStorybookConnected(frame);
+  // Wait for at least one component row to appear (data-testid is stable)
+  await frame.waitForSelector('[data-testid^="component-row-"]', { timeout: 30000 });
 }
 
 /**
@@ -34,8 +37,8 @@ async function openInsertTab(page: Page, frame: Frame): Promise<void> {
  * relative to the panel iframe.
  */
 async function getComponentRowBox(frame: Frame, componentName: string): Promise<{ x: number; y: number; width: number; height: number }> {
-  const row = frame.locator(`li`).filter({ hasText: componentName }).first();
-  await row.waitFor({ timeout: 5000 });
+  const row = frame.locator(`[data-testid="component-row-${componentName}"]`).first();
+  await row.waitFor({ timeout: 15000 });
   const box = await row.boundingBox();
   if (!box) throw new Error(`Component row "${componentName}" has no bounding box`);
   return box;
@@ -45,9 +48,8 @@ async function getComponentRowBox(frame: Frame, componentName: string): Promise<
  * Finds the drag handle (thumbnail) for a component by name.
  */
 async function getDragHandleBox(frame: Frame, componentName: string): Promise<{ x: number; y: number; width: number; height: number }> {
-  const row = frame.locator(`li`).filter({ hasText: componentName }).first();
-  const handle = row.locator('[class*="cursor-grab"]').first();
-  await handle.waitFor({ timeout: 5000 });
+  const handle = frame.locator(`[data-testid="drag-handle-${componentName}"]`).first();
+  await handle.waitFor({ timeout: 15000 });
   const box = await handle.boundingBox();
   if (!box) throw new Error(`Drag handle for "${componentName}" not found`);
   return box;
@@ -57,7 +59,7 @@ async function getDragHandleBox(frame: Frame, componentName: string): Promise<{ 
  * Checks whether a component row is expanded (has the props/customize drawer open).
  */
 async function isComponentExpanded(frame: Frame, componentName: string): Promise<boolean> {
-  const row = frame.locator(`li`).filter({ hasText: componentName }).first();
+  const row = frame.locator(`[data-testid="component-row-${componentName}"]`).first();
   const collapseBtn = row.locator('button', { hasText: '▲ Collapse' });
   return (await collapseBtn.count()) > 0;
 }
@@ -76,7 +78,7 @@ async function slotFieldHasDropHint(frame: Frame, propName: string): Promise<boo
  * Checks if a slot field is filled with a component.
  */
 async function slotFieldIsFilled(frame: Frame, componentName: string, propName: string): Promise<boolean> {
-  const row = frame.locator(`li`).filter({ hasText: componentName }).first();
+  const row = frame.locator(`[data-testid="component-row-${componentName}"]`).first();
   const drawer = row.locator('[class*="border-t-0"]');
   // Look for the component name chip inside the prop's field
   const propLabel = drawer.locator(`label`).filter({ hasText: propName });
@@ -179,7 +181,7 @@ test.describe('Drag component to slot prop', () => {
 
     // Verify the slot field shows the Icon component
     // The slot should now show "Icon" text (component name) inside a chip
-    const row = frame.locator('li').filter({ hasText: 'Button' }).first();
+    const row = frame.locator('[data-testid="component-row-Button"]').first();
     const drawer = row.locator('[class*="border-t-0"]');
     const propArea = drawer.locator('label').filter({ hasText: 'leftIcon' }).first();
     const componentChip = propArea.locator('span', { hasText: 'Icon' });

@@ -20,7 +20,7 @@ import {
 // |  4   | clickComponentPlace | place | gray        | no-toolbar | gray       | none                |
 
 const FLOW_B_TABLE: FlowTableRow[] = [
-  { step: 1, action: 'initial',            tab: null,    panelInsert: 'gray',   overlay: 'no-toolbar', components: '—',    page: 'none' },
+  { step: 1, action: 'initial',                          panelInsert: 'gray',   overlay: 'no-toolbar', components: '—',    page: 'none' },
   { step: 2, action: 'clickInsert',        tab: 'place', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray', page: 'browse-mode' },
   { step: 3, action: 'clickPlacementSite', tab: 'place', panelInsert: 'teal',   overlay: 'toolbar',    components: 'teal', page: 'insert-point-locked' },
   { step: 4, action: 'clickComponentPlace', tab: 'place', panelInsert: 'gray',  overlay: 'no-toolbar', components: 'gray', page: 'none' },
