@@ -53,6 +53,41 @@ async function clickSelectButton(page: Page): Promise<void> {
 }
 
 /**
+ * Ensure the overlay is in active select/picking mode (orange).
+ *
+ * Reads the `.bt-group` class on the select button group and clicks
+ * until it reaches the `picking` state. This handles any prior state:
+ *   gray → 1 click → picking
+ *   engaged → 1 click → picking (clears element)
+ *   picking → 0 clicks (already active)
+ *
+ * Max 3 clicks to guard against infinite loops.
+ */
+async function ensureSelectMode(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]'));
+  }, { timeout: 8000 });
+
+  for (let i = 0; i < 3; i++) {
+    const phase = await page.evaluate(() => {
+      const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
+      const group = host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]')?.closest('.bt-group');
+      if (!group) return 'unknown';
+      if (group.classList.contains('picking')) return 'picking';
+      if (group.classList.contains('engaged')) return 'engaged';
+      return 'gray';
+    });
+
+    if (phase === 'picking') return; // already active
+
+    const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="select"]');
+    await page.mouse.click(x, y);
+    await page.waitForTimeout(300);
+  }
+}
+
+/**
  * Click the Insert button in the bottom toolbar (overlay shadow DOM).
  */
 async function clickInsertButton(page: Page): Promise<void> {
@@ -296,7 +331,7 @@ async function doStep3(page: Page): Promise<void> {
   const frame = await getPanelFrame(page);
 
   // Enter select mode via bottom toolbar
-  await clickSelectButton(page);
+  await ensureSelectMode(page);
 
   // Click the Card in section 3 ("Fix Login Page Timeout")
   await page.locator('text=Fix Login Page Timeout').first().click();
@@ -329,7 +364,7 @@ async function doStep5(page: Page): Promise<void> {
   await scrollToStep(page, 5);
 
   // Enter select mode via bottom toolbar
-  await clickSelectButton(page);
+  await ensureSelectMode(page);
 
   // Click the empty state card ("No Data Available")
   await page.locator('text=No Data Available').first().click();
@@ -622,8 +657,7 @@ async function doStep8(page: Page): Promise<void> {
   await scrollToStep(page, 8);
 
   // Enter select mode via bottom toolbar
-  await clickSelectButton(page);
-  await page.waitForTimeout(300);
+  await ensureSelectMode(page);
 
   // Click the "Critical - Fix payment gateway timeout" row to select it
   const criticalRow = page.locator('text=Fix payment gateway timeout').first();
@@ -661,10 +695,8 @@ async function doStep8(page: Page): Promise<void> {
 async function doStep9(page: Page): Promise<void> {
   await scrollToStep(page, 9);
 
-  // After step 8's drag-move, select mode is still active from the initial
-  // clickSelectButton in step 8. Don't click Select again — doing so would
-  // toggle it OFF (orange → gray) because the toolbar is in picking state.
-  // Just click the target element directly.
+  // Ensure select mode is active (picking/orange)
+  await ensureSelectMode(page);
 
   // Click the "Resolved" card to select it
   const resolvedCard = page.locator('text=Migrate to new auth provider').first();
@@ -684,10 +716,8 @@ async function doStep9(page: Page): Promise<void> {
 async function doStep10(page: Page): Promise<void> {
   await scrollToStep(page, 10);
 
-  // After step 9's Backspace delete, select mode is still active from the
-  // initial clickSelectButton in step 8. Don't click Select again — doing so
-  // would toggle it OFF (picking + no element → off) because of the three-way
-  // toggle in the state machine.
+  // Ensure select mode is active (picking/orange)
+  await ensureSelectMode(page);
 
   // Click one of the team member cards to select it
   const teamMember = page.locator('text=Alice Lim').first();
@@ -858,8 +888,7 @@ async function doStep13(page: Page): Promise<void> {
   const frame = await getPanelFrame(page);
 
   // Switch back to Select mode via bottom toolbar
-  await clickSelectButton(page);
-  await page.waitForTimeout(300);
+  await ensureSelectMode(page);
 
   // Click the purple banner element (section 13's playground)
   // The banner has classes: bg-indigo-600 text-white rounded-2xl p-12 ...
