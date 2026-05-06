@@ -66,6 +66,33 @@ const app = createApp(packageRoot, storybookUrl);
 const httpServer = createServer(app);
 const { broadcastPatchUpdate, registerSseClient, handleSseMessage } = setupWebSocket(httpServer);
 
+// --- Background Storybook retry (handles CI startup race) ---
+// If Storybook wasn't found at startup but STORYBOOK_URL is set, keep probing
+// in the background and auto-connect when it becomes available.
+if (!storybookUrl && process.env.STORYBOOK_URL) {
+  console.error(`[server] Storybook not found at startup, will retry in background`);
+  const retryInterval = setInterval(async () => {
+    const found = await detectStorybookUrl();
+    if (found) {
+      clearInterval(retryInterval);
+      try {
+        const res = await fetch(`http://localhost:${port}/api/storybook-reconnect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json() as Record<string, unknown>;
+        console.error(`[server] Background Storybook retry succeeded: ${JSON.stringify(data)}`);
+      } catch (err) {
+        console.error(`[server] Background Storybook retry POST failed:`, err);
+      }
+    } else {
+      console.error(`[server] Background Storybook retry: not found yet`);
+    }
+  }, 3000);
+  retryInterval.unref?.();
+}
+
 // --- SSE + POST endpoints (Codespaces-compatible transport) ---
 import type { Request, Response } from "express";
 
