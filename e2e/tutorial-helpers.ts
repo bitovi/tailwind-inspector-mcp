@@ -695,8 +695,22 @@ async function doStep10(page: Page): Promise<void> {
   await teamMember.click();
   await page.waitForTimeout(800);
 
-  // Press Cmd+D / Ctrl+D to duplicate
-  await page.keyboard.press('ControlOrMeta+d');
+  // Duplicate: dispatch a synthetic Ctrl+D / Cmd+D KeyboardEvent directly
+  // into the document so the overlay's keydown handler fires reliably.
+  // Using page.keyboard.press('ControlOrMeta+d') is unreliable in headless CI
+  // because browsers may intercept Ctrl+D (bookmark shortcut) before the page
+  // handler sees it.
+  await page.evaluate(() => {
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'd',
+      code: 'KeyD',
+      ctrlKey: !isMac,
+      metaKey: isMac,
+      bubbles: true,
+      cancelable: true,
+    }));
+  });
   await page.waitForTimeout(1000);
 }
 
