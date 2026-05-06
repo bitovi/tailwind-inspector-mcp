@@ -4,30 +4,38 @@ import {
   getPanelFrame,
   waitForPanelReady,
   clickInsert,
-  ensureStorybookConnected,
 } from './helpers';
-
-/**
- * Gets the panel iframe's bounding box in page coordinates.
- * Required because page.mouse operates in top-level page coords.
- */
-async function getIframePageBox(page: Page): Promise<{ x: number; y: number; width: number; height: number }> {
-  return page.evaluate(() => {
-    const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    const iframe = host?.shadowRoot?.querySelector('iframe') as HTMLIFrameElement;
-    if (!iframe) throw new Error('Panel iframe not found');
-    const rect = iframe.getBoundingClientRect();
-    return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-  });
-}
 
 /**
  * Switches to the Insert/Place tab and waits for component list to load.
  */
 async function openInsertTab(page: Page, frame: Frame): Promise<void> {
   await clickInsert(frame);
-  // Ensure Storybook components are scanned and loaded
-  await ensureStorybookConnected(frame);
+
+  // The overlay sends a WS message to switch the panel to Components tab,
+  // but in CI the message may arrive late. Wait briefly, then ensure the
+  // Components tab is active by clicking it directly if needed.
+  await page.waitForTimeout(1000);
+  const isComponentsTab = await frame.evaluate(() => {
+    const tab = document.querySelector('[role="tab"][aria-selected="true"]');
+    return tab?.textContent?.trim().toLowerCase() === 'components';
+  }).catch(() => false);
+
+  if (!isComponentsTab) {
+    await frame.evaluate(() => {
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      const componentsTab = tabs.find(t => t.textContent?.trim() === 'Components');
+      if (componentsTab) (componentsTab as HTMLElement).click();
+    });
+    await page.waitForTimeout(500);
+  }
+
+  // If Storybook isn't auto-detected, click "Scan for Storybook" button
+  await frame.evaluate(() => {
+    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
+    if (btn) (btn as HTMLButtonElement).click();
+  }).catch(() => {});
+
   // Wait for at least one component row to appear (data-testid is stable)
   await frame.waitForSelector('[data-testid^="component-row-"]', { timeout: 30000 });
 }
@@ -102,62 +110,82 @@ test.describe('Drag component to slot prop', () => {
   });
 
   test('hover over collapsed component row for 500ms expands it during drag', async () => {
-    const iframeBox = await getIframePageBox(page);
-
-    // Get Icon's drag handle position
+    // Get Icon's drag handle position (in-iframe coords)
     const iconHandle = await getDragHandleBox(frame, 'Icon');
-    const startX = iframeBox.x + iconHandle.x + iconHandle.width / 2;
-    const startY = iframeBox.y + iconHandle.y + iconHandle.height / 2;
+    const startX = iconHandle.x + iconHandle.width / 2;
+    const startY = iconHandle.y + iconHandle.height / 2;
 
-    // Get Button's row position
+    // Get Button's row position (in-iframe coords)
     const buttonRow = await getComponentRowBox(frame, 'Button');
-    const targetX = iframeBox.x + buttonRow.x + buttonRow.width / 2;
-    const targetY = iframeBox.y + buttonRow.y + buttonRow.height / 2;
+    const targetX = buttonRow.x + buttonRow.width / 2;
+    const targetY = buttonRow.y + buttonRow.height / 2;
 
     // Verify Button is initially collapsed
     expect(await isComponentExpanded(frame, 'Button')).toBe(false);
 
-    // Start drag from Icon thumbnail
-    await page.mouse.move(startX, startY);
-    await page.mouse.down();
+    // Dispatch pointer events directly in the iframe to interact with setPointerCapture
+    await frame.evaluate(({ startX, startY, targetX, targetY }) => {
+      const handle = document.querySelector('[data-testid="drag-handle-Icon"]') as HTMLElement;
+      if (!handle) throw new Error('Icon drag handle not found');
 
-    // Move past threshold (5px)
-    await page.mouse.move(startX + 10, startY + 10, { steps: 3 });
+      const fire = (type: string, x: number, y: number, el: HTMLElement | Document = handle) => {
+        el.dispatchEvent(new PointerEvent(type, {
+          clientX: x, clientY: y, screenX: x, screenY: y,
+          bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+        }));
+      };
 
-    // Move to Button row
-    await page.mouse.move(targetX, targetY, { steps: 5 });
+      // pointerdown on the drag handle
+      fire('pointerdown', startX, startY);
+      // Move past threshold
+      fire('pointermove', startX + 10, startY + 10);
+      // Move to Button row
+      fire('pointermove', targetX, targetY);
+    }, { startX, startY, targetX, targetY });
 
     // Wait for hover-to-expand (500ms dwell + buffer)
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(800);
 
     // Button should now be expanded
     expect(await isComponentExpanded(frame, 'Button')).toBe(true);
 
     // Cancel the drag
-    await page.keyboard.press('Escape');
+    await frame.evaluate(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
   });
 
   test('drop Icon on Button leftIcon slot field fills the slot', async () => {
-    const iframeBox = await getIframePageBox(page);
-
-    // Get Icon's drag handle position
+    // Get Icon's drag handle position (in-iframe coords)
     const iconHandle = await getDragHandleBox(frame, 'Icon');
-    const startX = iframeBox.x + iconHandle.x + iconHandle.width / 2;
-    const startY = iframeBox.y + iconHandle.y + iconHandle.height / 2;
+    const startX = iconHandle.x + iconHandle.width / 2;
+    const startY = iconHandle.y + iconHandle.height / 2;
 
-    // Get Button's row position
+    // Get Button's row position (in-iframe coords)
     const buttonRow = await getComponentRowBox(frame, 'Button');
-    const buttonMidX = iframeBox.x + buttonRow.x + buttonRow.width / 2;
-    const buttonMidY = iframeBox.y + buttonRow.y + buttonRow.height / 2;
+    const buttonMidX = buttonRow.x + buttonRow.width / 2;
+    const buttonMidY = buttonRow.y + buttonRow.height / 2;
 
-    // Start drag from Icon thumbnail
-    await page.mouse.move(startX, startY);
-    await page.mouse.down();
-    await page.mouse.move(startX + 10, startY + 10, { steps: 3 });
+    // Dispatch pointer events directly in the iframe
+    await frame.evaluate(({ startX, startY, buttonMidX, buttonMidY }) => {
+      const handle = document.querySelector('[data-testid="drag-handle-Icon"]') as HTMLElement;
+      if (!handle) throw new Error('Icon drag handle not found');
 
-    // Move to Button row and wait for expand
-    await page.mouse.move(buttonMidX, buttonMidY, { steps: 5 });
-    await page.waitForTimeout(700);
+      const fire = (type: string, x: number, y: number, el: HTMLElement | Document = handle) => {
+        el.dispatchEvent(new PointerEvent(type, {
+          clientX: x, clientY: y, screenX: x, screenY: y,
+          bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+        }));
+      };
+
+      // pointerdown → move past threshold → move to Button row
+      fire('pointerdown', startX, startY);
+      fire('pointermove', startX + 10, startY + 10);
+      fire('pointermove', buttonMidX, buttonMidY);
+    }, { startX, startY, buttonMidX, buttonMidY });
+
+    // Wait for hover-to-expand
+    await page.waitForTimeout(800);
 
     // Button should now be expanded, find the leftIcon slot field
     expect(await isComponentExpanded(frame, 'Button')).toBe(true);
@@ -168,19 +196,26 @@ test.describe('Drag component to slot prop', () => {
     const labelBox = await leftIconLabel.boundingBox();
     expect(labelBox).not.toBeNull();
 
-    // Move to the leftIcon field
-    const slotX = iframeBox.x + labelBox!.x + labelBox!.width / 2;
-    const slotY = iframeBox.y + labelBox!.y + labelBox!.height / 2;
-    await page.mouse.move(slotX, slotY, { steps: 5 });
+    // Move to the leftIcon field, then drop
+    await frame.evaluate(({ slotX, slotY }) => {
+      const handle = document.querySelector('[data-testid="drag-handle-Icon"]') as HTMLElement;
+      if (!handle) throw new Error('Icon drag handle not found');
 
-    // Small pause to let hit-testing update
-    await page.waitForTimeout(100);
+      const fire = (type: string, x: number, y: number, el: HTMLElement | Document = handle) => {
+        el.dispatchEvent(new PointerEvent(type, {
+          clientX: x, clientY: y, screenX: x, screenY: y,
+          bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+        }));
+      };
 
-    // Drop
-    await page.mouse.up();
+      fire('pointermove', slotX, slotY);
+      fire('pointerup', slotX, slotY);
+    }, { slotX: labelBox!.x + labelBox!.width / 2, slotY: labelBox!.y + labelBox!.height / 2 });
+
+    // Small pause to let state update
+    await page.waitForTimeout(300);
 
     // Verify the slot field shows the Icon component
-    // The slot should now show "Icon" text (component name) inside a chip
     const row = frame.locator('[data-testid="component-row-Button"]').first();
     const drawer = row.locator('[class*="border-t-0"]');
     const propArea = drawer.locator('label').filter({ hasText: 'leftIcon' }).first();
@@ -189,57 +224,72 @@ test.describe('Drag component to slot prop', () => {
   });
 
   test('drag and release over empty space does not fill any slot', async () => {
-    const iframeBox = await getIframePageBox(page);
-
-    // Get Icon's drag handle position
+    // Get Icon's drag handle position (in-iframe coords)
     const iconHandle = await getDragHandleBox(frame, 'Icon');
-    const startX = iframeBox.x + iconHandle.x + iconHandle.width / 2;
-    const startY = iframeBox.y + iconHandle.y + iconHandle.height / 2;
+    const startX = iconHandle.x + iconHandle.width / 2;
+    const startY = iconHandle.y + iconHandle.height / 2;
 
-    // Start drag from Icon thumbnail
-    await page.mouse.move(startX, startY);
-    await page.mouse.down();
-    await page.mouse.move(startX + 10, startY + 10, { steps: 3 });
+    // Dispatch pointer events directly in the iframe
+    await frame.evaluate(({ startX, startY }) => {
+      const handle = document.querySelector('[data-testid="drag-handle-Icon"]') as HTMLElement;
+      if (!handle) throw new Error('Icon drag handle not found');
 
-    // Move to empty space (top of panel, away from any component)
-    await page.mouse.move(iframeBox.x + 50, iframeBox.y + 20, { steps: 3 });
+      const fire = (type: string, x: number, y: number, el: HTMLElement | Document = handle) => {
+        el.dispatchEvent(new PointerEvent(type, {
+          clientX: x, clientY: y, screenX: x, screenY: y,
+          bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+        }));
+      };
+
+      // pointerdown → move past threshold → move to empty space → release
+      fire('pointerdown', startX, startY);
+      fire('pointermove', startX + 10, startY + 10);
+      fire('pointermove', 50, 20);
+      fire('pointerup', 50, 20);
+    }, { startX, startY });
+
     await page.waitForTimeout(100);
-
-    // Release
-    await page.mouse.up();
 
     // Verify no slots were filled — Button should still be collapsed
     expect(await isComponentExpanded(frame, 'Button')).toBe(false);
   });
 
   test('drag over own component row does not expand it (self-drop prevention)', async () => {
-    const iframeBox = await getIframePageBox(page);
-
-    // First expand Button manually to check slots
+    // Get Button's row and drag handle positions (in-iframe coords)
     const buttonRow = await getComponentRowBox(frame, 'Button');
-
-    // Get Button's drag handle
     const buttonHandle = await getDragHandleBox(frame, 'Button');
-    const startX = iframeBox.x + buttonHandle.x + buttonHandle.width / 2;
-    const startY = iframeBox.y + buttonHandle.y + buttonHandle.height / 2;
+    const startX = buttonHandle.x + buttonHandle.width / 2;
+    const startY = buttonHandle.y + buttonHandle.height / 2;
+    const targetX = buttonRow.x + buttonRow.width / 2;
+    const targetY = buttonRow.y + buttonRow.height / 2;
 
-    // Start drag from Button's own thumbnail
-    await page.mouse.move(startX, startY);
-    await page.mouse.down();
-    await page.mouse.move(startX + 10, startY + 10, { steps: 3 });
+    // Dispatch pointer events directly in the iframe
+    await frame.evaluate(({ startX, startY, targetX, targetY }) => {
+      const handle = document.querySelector('[data-testid="drag-handle-Button"]') as HTMLElement;
+      if (!handle) throw new Error('Button drag handle not found');
 
-    // Hover over Button's own row
-    const targetX = iframeBox.x + buttonRow.x + buttonRow.width / 2;
-    const targetY = iframeBox.y + buttonRow.y + buttonRow.height / 2;
-    await page.mouse.move(targetX, targetY, { steps: 3 });
+      const fire = (type: string, x: number, y: number, el: HTMLElement | Document = handle) => {
+        el.dispatchEvent(new PointerEvent(type, {
+          clientX: x, clientY: y, screenX: x, screenY: y,
+          bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1,
+        }));
+      };
+
+      // pointerdown → move past threshold → hover over own row
+      fire('pointerdown', startX, startY);
+      fire('pointermove', startX + 10, startY + 10);
+      fire('pointermove', targetX, targetY);
+    }, { startX, startY, targetX, targetY });
 
     // Wait longer than dwell time
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(800);
 
     // Should NOT expand (self-drop prevention)
     expect(await isComponentExpanded(frame, 'Button')).toBe(false);
 
     // Cancel
-    await page.keyboard.press('Escape');
+    await frame.evaluate(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
   });
 });
