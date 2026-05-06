@@ -4,36 +4,28 @@ import {
   getPanelFrame,
   waitForPanelReady,
   clickInsert,
+  ensureStorybookConnected,
 } from './helpers';
 
 /**
- * Switches to the Insert/Place tab and waits for component list to load.
- * Uses a polling loop so that tab-switching, Storybook scanning, and
- * component-row rendering can happen in any order without fixed sleeps.
+ * Switches to Insert mode and waits for component rows to load.
+ * Delegates Storybook scan/retry to the shared ensureStorybookConnected helper,
+ * then waits for data-testid component rows to render.
  */
 async function openInsertTab(page: Page, frame: Frame): Promise<void> {
+  console.log('[drag-to-slot] openInsertTab: clicking Insert button');
   await clickInsert(frame);
 
-  // Poll: ensure Components tab is active, trigger Storybook scan if needed,
-  // and wait for at least one component row — all in a single retry loop.
+  console.log('[drag-to-slot] openInsertTab: ensuring Storybook connected');
+  await ensureStorybookConnected(frame);
+
+  // Wait for component rows to render (they appear after Storybook data arrives)
+  console.log('[drag-to-slot] openInsertTab: waiting for component rows');
   await frame.waitForFunction(() => {
-    // 1. Ensure Components tab is selected
-    const activeTab = document.querySelector('[role="tab"][aria-selected="true"]');
-    if (activeTab?.textContent?.trim().toLowerCase() !== 'components') {
-      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-      const ct = tabs.find(t => t.textContent?.trim() === 'Components');
-      if (ct) (ct as HTMLElement).click();
-      return false;
-    }
-
-    // 2. Click "Scan for Storybook" if it appears (idempotent)
-    const scanBtn = Array.from(document.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('Scan for Storybook'));
-    if (scanBtn) (scanBtn as HTMLButtonElement).click();
-
-    // 3. Check for component rows
-    return document.querySelector('[data-testid^="component-row-"]') !== null;
-  }, { timeout: 45_000, polling: 500 });
+    const rows = document.querySelectorAll('[data-testid^="component-row-"]');
+    return rows.length > 0;
+  }, { timeout: 15_000, polling: 500 });
+  console.log('[drag-to-slot] openInsertTab: done');
 }
 
 /**
@@ -98,11 +90,17 @@ test.describe('Drag component to slot prop', () => {
 
   test.beforeEach(async ({ page: p }) => {
     page = p;
+    console.log('[drag-to-slot] beforeEach: navigating to /');
     await page.goto('/');
+    console.log('[drag-to-slot] beforeEach: clicking toggle button');
     await clickToggleButton(page);
+    console.log('[drag-to-slot] beforeEach: getting panel frame');
     frame = await getPanelFrame(page);
+    console.log('[drag-to-slot] beforeEach: waiting for panel ready');
     await waitForPanelReady(frame);
+    console.log('[drag-to-slot] beforeEach: opening Insert tab');
     await openInsertTab(page, frame);
+    console.log('[drag-to-slot] beforeEach: complete');
   });
 
   test('hover over collapsed component row for 500ms expands it during drag', async () => {

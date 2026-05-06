@@ -504,7 +504,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
         : 'border-bit-border text-bit-text-mid bg-bit-surface hover:border-[#555] hover:text-bit-text hover:bg-bit-surface-hi';
 
   return (
-    <li ref={cardRef} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bit-teal rounded-md' : ''} ${isHoverDwelling ? 'ring-1 ring-bit-teal/30 rounded-md' : ''}`}>
+    <li ref={cardRef} data-testid={`component-row-${group.name}`} className={`flex flex-col ${matchedBySelection ? 'ring-1 ring-bit-teal rounded-md' : ''} ${isHoverDwelling ? 'ring-1 ring-bit-teal/30 rounded-md' : ''}`}>
       {/* ── Compact row ── */}
       <div
         className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md cursor-pointer transition-all ${
@@ -522,6 +522,7 @@ export function ComponentGroupItem({ group, isArmed, onArm, onDisarm, cached, on
           onPointerMove={onDragPointerMove}
           onPointerUp={onDragPointerUp}
           onLostPointerCapture={onLostPointerCapture}
+          data-testid={`drag-handle-${group.name}`}
           className={`shrink-0 cursor-grab active:cursor-grabbing select-none touch-none ${isDragActive ? 'opacity-40' : ''}`}
         >
           <ComponentRowThumb

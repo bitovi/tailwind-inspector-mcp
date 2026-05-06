@@ -22,10 +22,10 @@ import {
 
 const FLOW_A_TABLE: FlowTableRow[] = [
   { step: 1, action: 'initial',                          panelInsert: 'gray',   overlay: 'no-toolbar', components: '—',      page: 'none' },
-  { step: 2, action: 'clickInsert',        tab: 'place', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',   page: 'browse-mode' },
-  { step: 3, action: 'clickComponentPlace', tab: 'place', panelInsert: 'gray',  overlay: 'no-toolbar', components: 'one-orange', page: 'browse-mode' },
-  { step: 4, action: 'placeOnPage',        tab: 'place', panelInsert: 'gray',   overlay: 'no-toolbar', components: 'gray',   page: 'none' },
-  { step: 5, action: 'clickInsert',        tab: 'place', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',   page: 'browse-mode' },
+  { step: 2, action: 'clickInsert',        tab: 'components', panelInsert: 'orange', overlay: 'no-toolbar', components: 'gray',   page: 'browse-mode' },
+  { step: 3, action: 'clickComponentPlace', tab: 'components', panelInsert: 'orange',  overlay: 'no-toolbar', components: 'one-orange', page: 'browse-mode' },
+  { step: 4, action: 'placeOnPage',        tab: 'components', panelInsert: 'orange',   overlay: 'no-toolbar', components: 'gray',   page: 'none' },
+  { step: 5, action: 'clickInsert',        tab: 'components', panelInsert: 'gray', overlay: 'no-toolbar', components: 'gray',   page: 'none' },
 ];
 
 const ACTIONS: Record<string, (page: Page, frame: Frame) => Promise<void>> = {

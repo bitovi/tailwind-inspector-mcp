@@ -300,8 +300,8 @@ export async function getComponentButtonColors(frame: Frame): Promise<ButtonColo
     });
     return placeButtons.map(btn => {
       const cls = btn.className;
-      if (cls.includes('bg-bv-orange') && !cls.includes('bg-bv-orange/10')) return 'orange' as const;
-      if (cls.includes('border-bv-teal') || cls.includes('bg-bv-teal')) return 'teal' as const;
+      if ((cls.includes('bg-bit-orange') || cls.includes('bg-bv-orange')) && !cls.includes('bg-bit-orange/10') && !cls.includes('bg-bv-orange/10')) return 'orange' as const;
+      if (cls.includes('border-bit-teal') || cls.includes('bg-bit-teal') || cls.includes('border-bv-teal') || cls.includes('bg-bv-teal')) return 'teal' as const;
       return 'gray' as const;
     });
   });
