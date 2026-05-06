@@ -78,7 +78,7 @@ function clearInsertLock(prev: OverlayState): Partial<OverlayState> {
 
 // ── Reducer ──────────────────────────────────────────────────────────────
 
-export function overlayReducer(
+function coreReducer(
   prev: OverlayState,
   action: OverlayAction,
 ): ReducerResult {
@@ -92,7 +92,6 @@ export function overlayReducer(
       const effects: OverlayEffect[] = [...FULL_CLEANUP];
 
       if (action.mode === 'select') {
-        const toolbar = toolbarForPhases('picking', 'off');
         return {
           state: {
             ...prev,
@@ -104,20 +103,17 @@ export function overlayReducer(
             ...clearSelection(prev),
             ...clearInsertLock(prev),
             currentTab: prev.tabPreference === 'component' ? 'replace' : 'design',
-            toolbar,
           },
           effects: [
             ...effects,
             { kind: 'set-select-mode', on: true },
             { kind: 'show-toolbar' },
-            { kind: 'update-toolbar', visual: toolbar },
           ],
         };
       }
 
       if (action.mode === 'insert') {
         const tabPref = prev.tabPreference === 'design' ? 'component' : prev.tabPreference;
-        const toolbar = toolbarForPhases('off', 'browsing');
         return {
           state: {
             ...prev,
@@ -130,20 +126,17 @@ export function overlayReducer(
             ...clearInsertLock(prev),
             tabPreference: tabPref,
             currentTab: 'place',
-            toolbar,
           },
           effects: [
             ...effects,
             { kind: 'set-select-mode', on: false },
             { kind: 'start-browse' },
             { kind: 'show-toolbar' },
-            { kind: 'update-toolbar', visual: toolbar },
           ],
         };
       }
 
       // mode === null (or bug-report / theme) — cancel everything
-      const toolbar = toolbarForPhases('off', 'off');
       const isEditNull = action.mode === null;
       return {
         state: {
@@ -154,13 +147,11 @@ export function overlayReducer(
           insertPhase: 'off',
           ...clearSelection(prev),
           ...clearInsertLock(prev),
-          toolbar,
         },
         effects: [
           ...effects,
           { kind: 'set-select-mode', on: false },
           ...(isEditNull && prev.active ? [{ kind: 'show-toolbar' as const }] : [{ kind: 'hide-toolbar' as const }]),
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
@@ -168,34 +159,28 @@ export function overlayReducer(
     case 'CMD_TOGGLE_SELECT_MODE': {
       if (action.active) {
         // Enter selecting (orange)
-        const toolbar = toolbarForPhases('picking', prev.insertPhase);
         return {
           state: {
             ...prev,
             active: true,
             selectPhase: 'picking',
-            toolbar,
           },
           effects: [
             { kind: 'set-select-mode', on: true },
             { kind: 'show-toolbar' },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'open-panel' },
           ],
         };
       } else {
         // Stop selecting (orange → teal if element, or just off)
         const newPhase: SelectPhase = prev.selectedEl ? 'engaged' : 'off';
-        const toolbar = toolbarForPhases(newPhase, prev.insertPhase);
         return {
           state: {
             ...prev,
             selectPhase: newPhase,
-            toolbar,
           },
           effects: [
             { kind: 'set-select-mode', on: false },
-            { kind: 'update-toolbar', visual: toolbar },
           ],
         };
       }
@@ -204,44 +189,37 @@ export function overlayReducer(
     case 'CMD_TOGGLE_INSERT_BROWSE': {
       if (action.active) {
         // Teal → Orange: re-enable browsing, clear locked point
-        const toolbar = toolbarForPhases(prev.selectPhase, 'browsing');
         return {
           state: {
             ...prev,
             insertPhase: 'browsing',
             ...clearInsertLock(prev),
             ...clearSelection(prev),
-            toolbar,
           },
           effects: [
             { kind: 'clear-locked-insert' },
             { kind: 'clear-selection-state' },
             { kind: 'start-browse' },
             { kind: 'show-toolbar' },
-            { kind: 'update-toolbar', visual: toolbar },
           ],
         };
       } else {
         // Orange → Teal: stop browsing, keep locked insert point
         const hasLock = prev.lockedTarget !== null;
         const newPhase: InsertPhase = hasLock ? 'locked' : 'off';
-        const toolbar = toolbarForPhases(prev.selectPhase, newPhase);
         return {
           state: {
             ...prev,
             insertPhase: newPhase,
-            toolbar,
           },
           effects: [
             { kind: 'cancel-insert' },
-            { kind: 'update-toolbar', visual: toolbar },
           ],
         };
       }
     }
 
     case 'CMD_CANCEL_MODE': {
-      const toolbar = toolbarForPhases('off', 'off');
       return {
         state: {
           ...prev,
@@ -249,7 +227,6 @@ export function overlayReducer(
           insertPhase: 'off',
           ...clearSelection(prev),
           ...clearInsertLock(prev),
-          toolbar,
         },
         effects: [
           { kind: 'revert-preview' },
@@ -258,7 +235,6 @@ export function overlayReducer(
           { kind: 'set-select-mode', on: false },
           { kind: 'cancel-insert' },
           { kind: 'clear-locked-insert' },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
@@ -294,7 +270,7 @@ export function overlayReducer(
           editTool: action.tool,
           toolbar,
         },
-        effects: [{ kind: 'update-toolbar', visual: toolbar }],
+        effects: [],
       };
     }
 
@@ -308,7 +284,6 @@ export function overlayReducer(
     // ════════════════════════════════════════════════════════════════════
 
     case 'ELEMENT_SELECTED': {
-      const toolbar = toolbarForPhases(prev.selectPhase, prev.insertPhase);
       return {
         state: {
           ...prev,
@@ -317,7 +292,6 @@ export function overlayReducer(
           boundary: action.boundary,
           // When element is selected, select phase stays as-is (persistent select)
           mode: prev.mode ?? 'select',
-          toolbar,
         },
         effects: [
           { kind: 'clear-highlights' },
@@ -325,56 +299,45 @@ export function overlayReducer(
           { kind: 'highlight-element', el: action.el },
           { kind: 'show-draw-button', el: action.el },
           { kind: 'set-grab-cursor', el: action.el },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
 
     case 'ELEMENT_DESELECTED': {
-      const toolbar = toolbarForPhases(prev.selectPhase, prev.insertPhase);
       return {
         state: {
           ...prev,
           ...clearSelection(prev),
-          toolbar,
         },
         effects: [
           ...SELECTION_CLEANUP,
           { kind: 'remove-draw-button' },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
 
     case 'INSERT_POINT_LOCKED': {
-      const toolbar = toolbarForPhases(prev.selectPhase, 'locked');
       return {
         state: {
           ...prev,
           insertPhase: 'locked',
           lockedTarget: action.target,
           lockedPosition: action.position,
-          toolbar,
         },
-        effects: [
-          { kind: 'update-toolbar', visual: toolbar },
-        ],
+        effects: [],
       };
     }
 
     case 'INSERT_POINT_CLEARED': {
       const newPhase: InsertPhase = prev.insertPhase === 'locked' ? 'off' : prev.insertPhase;
-      const toolbar = toolbarForPhases(prev.selectPhase, newPhase);
       return {
         state: {
           ...prev,
           insertPhase: newPhase,
           ...clearInsertLock(prev),
-          toolbar,
         },
         effects: [
           { kind: 'clear-locked-insert' },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
@@ -388,38 +351,32 @@ export function overlayReducer(
       if (tool === 'select') {
         if (prev.selectPhase === 'picking' && prev.selectedEl) {
           // Orange + element → Teal
-          const toolbar = toolbarForPhases('engaged', prev.insertPhase);
           return {
-            state: { ...prev, selectPhase: 'engaged', toolbar },
+            state: { ...prev, selectPhase: 'engaged' },
             effects: [
               { kind: 'set-select-mode', on: false },
-              { kind: 'update-toolbar', visual: toolbar },
               { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: 'select' } },
             ],
           };
         }
         if (prev.selectPhase === 'engaged') {
           // Teal → Orange: clear element, fresh selecting
-          const toolbar = toolbarForPhases('picking', prev.insertPhase);
           return {
             state: {
               ...prev,
               selectPhase: 'picking',
               ...clearSelection(prev),
-              toolbar,
             },
             effects: [
               ...SELECTION_CLEANUP,
               { kind: 'cancel-insert' },
               { kind: 'clear-locked-insert' },
               { kind: 'set-select-mode', on: true },
-              { kind: 'update-toolbar', visual: toolbar },
               { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: 'select' } },
             ],
           };
         }
         // Gray → Orange: enter select mode
-        const toolbar = toolbarForPhases('picking', 'off');
         return {
           state: {
             ...prev,
@@ -429,12 +386,10 @@ export function overlayReducer(
             insertPhase: 'off',
             ...clearSelection(prev),
             ...clearInsertLock(prev),
-            toolbar,
           },
           effects: [
             ...FULL_CLEANUP,
             { kind: 'set-select-mode', on: true },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'EDIT_TOOL_CHANGED', tool: 'select' } },
           ],
         };
@@ -444,19 +399,16 @@ export function overlayReducer(
       if (tool === 'insert') {
         if (prev.insertPhase === 'browsing' && prev.lockedTarget) {
           // Orange + point → Teal: stop browsing, keep point
-          const toolbar = toolbarForPhases(prev.selectPhase, 'locked');
           return {
-            state: { ...prev, insertPhase: 'locked', toolbar },
+            state: { ...prev, insertPhase: 'locked' },
             effects: [
               { kind: 'cancel-insert' },
-              { kind: 'update-toolbar', visual: toolbar },
               { kind: 'send-to-panel', message: { type: 'EDIT_TOOL_CHANGED', tool: 'insert' } },
             ],
           };
         }
         if (prev.insertPhase === 'locked') {
           // Teal → Orange: clear point, fresh browsing
-          const toolbar = toolbarForPhases('off', 'browsing');
           return {
             state: {
               ...prev,
@@ -464,20 +416,17 @@ export function overlayReducer(
               insertPhase: 'browsing',
               ...clearInsertLock(prev),
               ...clearSelection(prev),
-              toolbar,
             },
             effects: [
               { kind: 'clear-locked-insert' },
               { kind: 'clear-highlights' },
               { kind: 'clear-selection-state' },
               { kind: 'start-browse' },
-              { kind: 'update-toolbar', visual: toolbar },
               { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: 'insert' } },
             ],
           };
         }
         // Gray → Orange: enter insert mode
-        const toolbar = toolbarForPhases('off', 'browsing');
         return {
           state: {
             ...prev,
@@ -488,20 +437,17 @@ export function overlayReducer(
             ...clearSelection(prev),
             ...clearInsertLock(prev),
             tabPreference: prev.tabPreference === 'design' ? 'component' : prev.tabPreference,
-            toolbar,
           },
           effects: [
             ...FULL_CLEANUP,
             { kind: 'set-select-mode', on: false },
             { kind: 'start-browse' },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'EDIT_TOOL_CHANGED', tool: 'insert' } },
           ],
         };
       }
 
       // ── null tool (deselect) ──
-      const toolbar = toolbarForPhases('off', 'off');
       return {
         state: {
           ...prev,
@@ -511,12 +457,10 @@ export function overlayReducer(
           insertPhase: 'off',
           ...clearSelection(prev),
           ...clearInsertLock(prev),
-          toolbar,
         },
         effects: [
           ...FULL_CLEANUP,
           { kind: 'set-select-mode', on: false },
-          { kind: 'update-toolbar', visual: toolbar },
           { kind: 'send-to-panel', message: { type: 'EDIT_TOOL_CHANGED', tool: null } },
         ],
       };
@@ -528,19 +472,16 @@ export function overlayReducer(
       // Insert mode escape (mirrors panel's layered escape)
       if (prev.insertPhase === 'browsing' && prev.lockedTarget) {
         // Orange + locked point → Teal: stop browsing, keep point
-        const toolbar = toolbarForPhases(prev.selectPhase, 'locked');
         return {
-          state: { ...prev, insertPhase: 'locked', toolbar },
+          state: { ...prev, insertPhase: 'locked' },
           effects: [
             { kind: 'cancel-insert' },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'INSERT_BROWSE_CHANGED', active: false } },
           ],
         };
       }
       if (prev.insertPhase === 'locked') {
         // Teal → Gray: clear locked point entirely
-        const toolbar = toolbarForPhases(prev.selectPhase, 'off');
         return {
           state: {
             ...prev,
@@ -548,29 +489,24 @@ export function overlayReducer(
             editTool: null,
             insertPhase: 'off',
             ...clearInsertLock(prev),
-            toolbar,
           },
           effects: [
             { kind: 'clear-locked-insert' },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: null } },
           ],
         };
       }
       if (prev.insertPhase === 'browsing' && !prev.lockedTarget) {
         // Orange + no point → Gray: cancel insert entirely
-        const toolbar = toolbarForPhases(prev.selectPhase, 'off');
         return {
           state: {
             ...prev,
             mode: null,
             editTool: null,
             insertPhase: 'off',
-            toolbar,
           },
           effects: [
             { kind: 'cancel-insert' },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: null } },
           ],
         };
@@ -579,18 +515,15 @@ export function overlayReducer(
       // Select mode escape
       if (prev.selectPhase === 'picking' && prev.selectedEl) {
         // Orange + element → Teal: stop selecting, keep element
-        const toolbar = toolbarForPhases('engaged', prev.insertPhase);
         return {
-          state: { ...prev, selectPhase: 'engaged', toolbar },
+          state: { ...prev, selectPhase: 'engaged' },
           effects: [
             { kind: 'set-select-mode', on: false },
-            { kind: 'update-toolbar', visual: toolbar },
           ],
         };
       }
       if (prev.selectPhase === 'engaged') {
         // Teal → Gray: deselect element entirely
-        const toolbar = toolbarForPhases('off', prev.insertPhase);
         return {
           state: {
             ...prev,
@@ -598,29 +531,24 @@ export function overlayReducer(
             editTool: null,
             selectPhase: 'off',
             ...clearSelection(prev),
-            toolbar,
           },
           effects: [
             ...SELECTION_CLEANUP,
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: null } },
           ],
         };
       }
       if (prev.selectPhase === 'picking' && !prev.selectedEl) {
         // Orange + no element → Gray: cancel select entirely
-        const toolbar = toolbarForPhases('off', prev.insertPhase);
         return {
           state: {
             ...prev,
             mode: null,
             editTool: null,
             selectPhase: 'off',
-            toolbar,
           },
           effects: [
             { kind: 'set-select-mode', on: false },
-            { kind: 'update-toolbar', visual: toolbar },
             { kind: 'send-to-panel', message: { type: 'MODE_CHANGED', mode: null } },
           ],
         };
@@ -658,7 +586,6 @@ export function overlayReducer(
         effects: [
           { kind: 'set-select-mode', on: false },
           { kind: 'clear-grab-cursor', el: prev.selectedEl! },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
@@ -669,13 +596,11 @@ export function overlayReducer(
         return { state: prev, effects: [] };
       }
       const saved = prev.interaction.savedSelectPhase;
-      const toolbar = toolbarForPhases(saved, prev.insertPhase);
       return {
         state: {
           ...prev,
           interaction: { kind: 'none' },
           selectPhase: saved,
-          toolbar,
         },
         effects: [
           { kind: 'set-select-mode', on: saved === 'picking' },
@@ -684,7 +609,6 @@ export function overlayReducer(
             { kind: 'highlight-element' as const, el: prev.selectedEl },
             { kind: 'show-draw-button' as const, el: prev.selectedEl },
           ] : []),
-          { kind: 'update-toolbar', visual: toolbar },
           { kind: 'send-to-panel', message: {
             type: 'MODE_CHANGED',
             mode: 'select',
@@ -720,16 +644,12 @@ export function overlayReducer(
       if (prev.interaction.kind !== 'component-drag') {
         return { state: prev, effects: [] };
       }
-      const toolbar = toolbarForPhases(prev.selectPhase, prev.insertPhase);
       return {
         state: {
           ...prev,
           interaction: { kind: 'none' },
-          toolbar,
         },
-        effects: [
-          { kind: 'update-toolbar', visual: toolbar },
-        ],
+        effects: [],
       };
     }
 
@@ -754,16 +674,13 @@ export function overlayReducer(
       if (prev.interaction.kind !== 'text-editing') {
         return { state: prev, effects: [] };
       }
-      const toolbar = toolbarForPhases(prev.selectPhase, prev.insertPhase);
       return {
         state: {
           ...prev,
           interaction: { kind: 'none' },
-          toolbar,
         },
         effects: [
           { kind: 'set-text-editing-lock', locked: false },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
@@ -781,7 +698,6 @@ export function overlayReducer(
         },
         effects: [
           { kind: 'set-select-mode', on: false },
-          { kind: 'update-toolbar', visual: toolbar },
         ],
       };
     }
@@ -796,7 +712,6 @@ export function overlayReducer(
     }
 
     case 'DEACTIVATE': {
-      const toolbar = toolbarForPhases('off', 'off');
       return {
         state: {
           ...prev,
@@ -808,7 +723,6 @@ export function overlayReducer(
           interaction: { kind: 'none' },
           ...clearSelection(prev),
           ...clearInsertLock(prev),
-          toolbar,
         },
         effects: [
           ...FULL_CLEANUP,
@@ -821,7 +735,6 @@ export function overlayReducer(
     // ── Navigation reset ─────────────────────────────────────────────
 
     case 'NAVIGATION_RESET': {
-      const toolbar = toolbarForPhases('off', 'off');
       return {
         state: {
           ...prev,
@@ -832,12 +745,10 @@ export function overlayReducer(
           interaction: { kind: 'none' },
           ...clearSelection(prev),
           ...clearInsertLock(prev),
-          toolbar,
         },
         effects: [
           ...FULL_CLEANUP,
           { kind: 'set-select-mode', on: false },
-          { kind: 'update-toolbar', visual: toolbar },
           { kind: 'send-to-panel', message: { type: 'RESET_SELECTION' } },
           { kind: 'send-to-panel', message: { type: 'COMPONENT_DISARMED' } },
         ],
@@ -847,4 +758,39 @@ export function overlayReducer(
     default:
       return { state: prev, effects: [] };
   }
+}
+
+// ── Auto-derive toolbar wrapper ──────────────────────────────────────────
+
+export function overlayReducer(
+  prev: OverlayState,
+  action: OverlayAction,
+): ReducerResult {
+  const result = coreReducer(prev, action);
+
+  // No-op branches return prev unchanged — skip toolbar derivation
+  if (result.state === prev) {
+    return result;
+  }
+
+  // If core set a custom toolbar (new object reference), keep it;
+  // otherwise derive from phases.
+  const coreSetToolbar = result.state.toolbar !== prev.toolbar;
+  const toolbar = coreSetToolbar
+    ? result.state.toolbar
+    : toolbarForPhases(result.state.selectPhase, result.state.insertPhase);
+
+  const toolbarChanged = toolbar.select !== prev.toolbar.select
+    || toolbar.insert !== prev.toolbar.insert
+    || toolbar.text !== prev.toolbar.text;
+
+  // Strip any manually-added update-toolbar effects, then re-add if needed
+  const filteredEffects = result.effects.filter(e => e.kind !== 'update-toolbar');
+
+  return {
+    state: { ...result.state, toolbar },
+    effects: toolbarChanged
+      ? [...filteredEffects, { kind: 'update-toolbar', visual: toolbar }]
+      : filteredEffects,
+  };
 }
