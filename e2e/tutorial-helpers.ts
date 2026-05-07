@@ -1,5 +1,5 @@
 import { type Page, type Frame, expect } from '@playwright/test';
-import { ensureStorybookConnected } from './shared-helpers';
+import { ensureStorybookConnected, waitForPanelReady } from './shared-helpers';
 
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -31,19 +31,6 @@ async function getPanelFrame(page: Page): Promise<Frame> {
   }
   if (!frame) throw new Error('Panel frame not found');
   return frame;
-}
-
-async function waitForPanelReady(frame: Frame): Promise<void> {
-  await frame.waitForFunction(
-    () => {
-      // Ensure React has actually mounted (tabs always render on mount)
-      const hasTabs = document.querySelectorAll('[role="tab"]').length > 0;
-      // Ensure WebSocket is connected
-      const notWaiting = !document.body.textContent?.includes('Waiting for connection');
-      return hasTabs && notWaiting;
-    },
-    { timeout: 30_000, polling: 500 },
-  );
 }
 
 /**

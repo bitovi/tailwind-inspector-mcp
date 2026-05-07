@@ -1,6 +1,6 @@
 import { type Page, type Frame, type Locator, expect } from '@playwright/test';
-import { ensureStorybookConnected } from '../../e2e/shared-helpers';
-export { ensureStorybookConnected };
+import { ensureStorybookConnected, waitForPanelReady } from '../../e2e/shared-helpers';
+export { ensureStorybookConnected, waitForPanelReady };
 
 /**
  * Clicks the overlay toggle button to open the inspector panel.
@@ -38,24 +38,6 @@ export async function getPanelFrame(page: Page): Promise<Frame> {
   }
   if (!frame) throw new Error('Panel frame not found');
   return frame;
-}
-
-/**
- * Waits for the panel React app to mount AND WebSocket to connect.
- * Previous version only checked for absence of "Waiting for connection" text,
- * which falsely passed on empty/unloaded frames (empty body doesn't contain that text).
- */
-export async function waitForPanelReady(frame: Frame): Promise<void> {
-  await frame.waitForFunction(
-    () => {
-      // Ensure React has actually mounted (tabs always render on mount)
-      const hasTabs = document.querySelectorAll('[role="tab"]').length > 0;
-      // Ensure WebSocket is connected
-      const notWaiting = !document.body.textContent?.includes('Waiting for connection');
-      return hasTabs && notWaiting;
-    },
-    { timeout: 30_000, polling: 500 },
-  );
 }
 
 /**

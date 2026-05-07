@@ -13,23 +13,17 @@ import {
  * may cause the overlay to recreate the iframe on slow CI loads.
  */
 async function openInsertTab(page: Page, frame: Frame): Promise<Frame> {
-  console.log('[drag-to-slot] openInsertTab: clicking Insert button');
   await clickInsert(frame);
 
   // Re-acquire frame — on slow CI the iframe may reload after clickInsert
-  console.log('[drag-to-slot] openInsertTab: re-acquiring panel frame');
   const freshFrame = await getPanelFrame(page);
-
-  console.log('[drag-to-slot] openInsertTab: ensuring Storybook connected');
   await ensureStorybookConnected(freshFrame);
 
   // Wait for component rows to render (they appear after Storybook data arrives)
-  console.log('[drag-to-slot] openInsertTab: waiting for component rows');
   await freshFrame.waitForFunction(() => {
     const rows = document.querySelectorAll('[data-testid^="component-row-"]');
     return rows.length > 0;
   }, { timeout: 15_000, polling: 500 });
-  console.log('[drag-to-slot] openInsertTab: done');
   return freshFrame;
 }
 
@@ -99,17 +93,11 @@ test.describe('Drag component to slot prop', () => {
 
   test.beforeEach(async ({ page: p }) => {
     page = p;
-    console.log('[drag-to-slot] beforeEach: navigating to /');
     await page.goto('/');
-    console.log('[drag-to-slot] beforeEach: clicking toggle button');
     await clickToggleButton(page);
-    console.log('[drag-to-slot] beforeEach: getting panel frame');
     frame = await getPanelFrame(page);
-    console.log('[drag-to-slot] beforeEach: waiting for panel ready');
     await waitForPanelReady(frame);
-    console.log('[drag-to-slot] beforeEach: opening Insert tab');
     frame = await openInsertTab(page, frame);
-    console.log('[drag-to-slot] beforeEach: complete');
   });
 
   test('hover over collapsed component row for 500ms expands it during drag', async () => {
