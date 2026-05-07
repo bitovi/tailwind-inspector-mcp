@@ -41,12 +41,20 @@ export async function getPanelFrame(page: Page): Promise<Frame> {
 }
 
 /**
- * Waits for the panel WebSocket to connect.
+ * Waits for the panel React app to mount AND WebSocket to connect.
+ * Previous version only checked for absence of "Waiting for connection" text,
+ * which falsely passed on empty/unloaded frames (empty body doesn't contain that text).
  */
 export async function waitForPanelReady(frame: Frame): Promise<void> {
   await frame.waitForFunction(
-    () => !document.body.textContent?.includes('Waiting for connection'),
-    { timeout: 10000 },
+    () => {
+      // Ensure React has actually mounted (tabs always render on mount)
+      const hasTabs = document.querySelectorAll('[role="tab"]').length > 0;
+      // Ensure WebSocket is connected
+      const notWaiting = !document.body.textContent?.includes('Waiting for connection');
+      return hasTabs && notWaiting;
+    },
+    { timeout: 30_000, polling: 500 },
   );
 }
 

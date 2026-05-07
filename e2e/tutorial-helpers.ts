@@ -35,8 +35,14 @@ async function getPanelFrame(page: Page): Promise<Frame> {
 
 async function waitForPanelReady(frame: Frame): Promise<void> {
   await frame.waitForFunction(
-    () => !document.body.textContent?.includes('Waiting for connection'),
-    { timeout: 10000 },
+    () => {
+      // Ensure React has actually mounted (tabs always render on mount)
+      const hasTabs = document.querySelectorAll('[role="tab"]').length > 0;
+      // Ensure WebSocket is connected
+      const notWaiting = !document.body.textContent?.includes('Waiting for connection');
+      return hasTabs && notWaiting;
+    },
+    { timeout: 30_000, polling: 500 },
   );
 }
 
