@@ -605,52 +605,45 @@ async function dragComponentToTarget(
 
 /**
  * Returns true if Storybook components loaded, false if unavailable (e.g. demo).
+ * Retries up to 3 times (clicking "Scan for Storybook" each attempt) with 10s waits.
  */
 async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
-  // Check if components are already loaded
-  const hasComponents = await frame.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-  }).catch(() => false);
-  if (hasComponents) {
-    console.log('[tutorial] ensureStorybookConnected: Place buttons already present');
-    return true;
-  }
+  const MAX_ATTEMPTS = 3;
+  const WAIT_PER_ATTEMPT = 10_000;
 
-  // Log current panel state for diagnosis
-  const panelState = await frame.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button')).map(b => b.textContent?.trim()).filter(Boolean);
-    const text = document.body.innerText.slice(0, 400);
-    return { buttons, text };
-  }).catch(() => ({ buttons: [] as string[], text: '(eval failed)' }));
-  console.log('[tutorial] ensureStorybookConnected: no Place buttons found');
-  console.log('[tutorial] panel buttons:', panelState.buttons.slice(0, 20));
-  console.log('[tutorial] panel text (first 400 chars):', panelState.text);
-
-  // If "Storybook not detected" is shown, click "Scan for Storybook" as fallback
-  const hasScanButton = await frame.evaluate(() => {
-    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
-    if (btn) {
-      (btn as HTMLButtonElement).click();
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // Already have components? Done.
+    const hasComponents = await frame.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+    }).catch(() => false);
+    if (hasComponents) {
+      console.log('[tutorial] ensureStorybookConnected: Place buttons already present');
       return true;
     }
-    return false;
-  }).catch(() => false);
 
-  console.log('[tutorial] ensureStorybookConnected: hasScanButton =', hasScanButton);
+    // Click "Scan for Storybook" if visible
+    await frame.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
+      if (btn) (btn as HTMLButtonElement).click();
+    }).catch(() => {});
 
-  // Wait up to 15s for components to appear; return false if they don't
-  const appeared = await frame.waitForFunction(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-  }, { timeout: 15000 }).then(() => true).catch(() => false);
+    // Wait up to WAIT_PER_ATTEMPT for Place buttons to appear
+    const appeared = await frame.waitForFunction(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
+    }, { timeout: WAIT_PER_ATTEMPT }).then(() => true).catch(() => false);
 
-  if (appeared) {
-    console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
-  } else {
-    console.log('[tutorial] ensureStorybookConnected: Storybook unavailable, will use fallback');
+    if (appeared) {
+      console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
+      return true;
+    }
+
+    console.log(`[tutorial] ensureStorybookConnected: attempt ${attempt}/${MAX_ATTEMPTS} timed out, retrying…`);
   }
-  return appeared;
+
+  console.log('[tutorial] ensureStorybookConnected: Storybook unavailable, will use fallback');
+  return false;
 }
 
 async function doStep8(page: Page): Promise<void> {
