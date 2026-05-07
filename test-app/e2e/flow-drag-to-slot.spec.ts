@@ -85,6 +85,10 @@ async function slotFieldIsFilled(frame: Frame, componentName: string, propName: 
 // ── Tests ────────────────────────────────────────────────────────────────
 
 test.describe('Drag component to slot prop', () => {
+  // beforeEach navigates, opens panel, and waits for Storybook component data —
+  // in CI that can exceed the default 30s timeout.
+  test.describe.configure({ timeout: 60_000 });
+
   let page: Page;
   let frame: Frame;
 
