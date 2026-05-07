@@ -80,7 +80,7 @@ export default defineConfig({
     ...(!activeProject || activeProject === 'test-app' ? [{
       command: 'npm run storybook',
       cwd: path.join(root, 'storybook-test', 'v10'),
-      url: 'http://localhost:6008',
+      url: 'http://localhost:6008/index.json',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       stdout: 'ignore' as const,
