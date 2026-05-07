@@ -1,4 +1,6 @@
 import { type Page, type Frame, type Locator, expect } from '@playwright/test';
+import { ensureStorybookConnected, waitForPanelReady } from '../../e2e/shared-helpers';
+export { ensureStorybookConnected, waitForPanelReady };
 
 /**
  * Clicks the overlay toggle button to open the inspector panel.
@@ -36,16 +38,6 @@ export async function getPanelFrame(page: Page): Promise<Frame> {
   }
   if (!frame) throw new Error('Panel frame not found');
   return frame;
-}
-
-/**
- * Waits for the panel WebSocket to connect.
- */
-export async function waitForPanelReady(frame: Frame): Promise<void> {
-  await frame.waitForFunction(
-    () => !document.body.textContent?.includes('Waiting for connection'),
-    { timeout: 10000 },
-  );
 }
 
 /**
@@ -206,27 +198,6 @@ export async function clickInsert(frame: Frame): Promise<void> {
 export async function clickPlacementSite(page: Page): Promise<void> {
   await page.locator('h3:has-text("Monthly Signups")').first().click();
   await page.waitForTimeout(800);
-}
-
-/** Ensure Storybook components are loaded in the panel — triggers a scan if needed. */
-export async function ensureStorybookConnected(frame: Frame): Promise<void> {
-  const hasComponents = await frame.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-  }).catch(() => false);
-  if (hasComponents) return;
-
-  // Click "Scan for Storybook" if visible
-  await frame.evaluate(() => {
-    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
-    if (btn) (btn as HTMLButtonElement).click();
-  }).catch(() => {});
-
-  // Wait up to 30s for Place buttons to appear
-  await frame.waitForFunction(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-  }, { timeout: 30000 });
 }
 
 /** Click the first visible component Place button in the panel (excludes tab bar buttons). */

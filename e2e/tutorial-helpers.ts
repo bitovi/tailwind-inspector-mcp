@@ -1,6 +1,7 @@
 import { type Page, type Frame, expect } from '@playwright/test';
+import { ensureStorybookConnected, waitForPanelReady } from './shared-helpers';
 
-// ── Helpers (inlined from test-app/e2e/helpers.ts to avoid dual-Playwright) ──
+// ──────────────────────────────────────────────────────────────────────────────
 
 async function clickToggleButton(page: Page): Promise<void> {
   await page.waitForFunction(() => {
@@ -30,13 +31,6 @@ async function getPanelFrame(page: Page): Promise<Frame> {
   }
   if (!frame) throw new Error('Panel frame not found');
   return frame;
-}
-
-async function waitForPanelReady(frame: Frame): Promise<void> {
-  await frame.waitForFunction(
-    () => !document.body.textContent?.includes('Waiting for connection'),
-    { timeout: 10000 },
-  );
 }
 
 /**
@@ -603,56 +597,6 @@ async function dragComponentToTarget(
   await page.waitForTimeout(1500);
 }
 
-/**
- * Returns true if Storybook components loaded, false if unavailable (e.g. demo).
- */
-async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
-  // Check if components are already loaded
-  const hasComponents = await frame.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-  }).catch(() => false);
-  if (hasComponents) {
-    console.log('[tutorial] ensureStorybookConnected: Place buttons already present');
-    return true;
-  }
-
-  // Log current panel state for diagnosis
-  const panelState = await frame.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll('button')).map(b => b.textContent?.trim()).filter(Boolean);
-    const text = document.body.innerText.slice(0, 400);
-    return { buttons, text };
-  }).catch(() => ({ buttons: [] as string[], text: '(eval failed)' }));
-  console.log('[tutorial] ensureStorybookConnected: no Place buttons found');
-  console.log('[tutorial] panel buttons:', panelState.buttons.slice(0, 20));
-  console.log('[tutorial] panel text (first 400 chars):', panelState.text);
-
-  // If "Storybook not detected" is shown, click "Scan for Storybook" as fallback
-  const hasScanButton = await frame.evaluate(() => {
-    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
-    if (btn) {
-      (btn as HTMLButtonElement).click();
-      return true;
-    }
-    return false;
-  }).catch(() => false);
-
-  console.log('[tutorial] ensureStorybookConnected: hasScanButton =', hasScanButton);
-
-  // Wait up to 15s for components to appear; return false if they don't
-  const appeared = await frame.waitForFunction(() => {
-    const buttons = Array.from(document.querySelectorAll('button'));
-    return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-  }, { timeout: 15000 }).then(() => true).catch(() => false);
-
-  if (appeared) {
-    console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
-  } else {
-    console.log('[tutorial] ensureStorybookConnected: Storybook unavailable, will use fallback');
-  }
-  return appeared;
-}
-
 async function doStep8(page: Page): Promise<void> {
   await scrollToStep(page, 8);
 
@@ -771,7 +715,7 @@ async function doStep11(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
-  const hasStorybook = await ensureStorybookConnected(frame);
+  const hasStorybook = await ensureStorybookConnected(frame, false);
 
   if (hasStorybook) {
     // Drag the Badge component from the panel thumbnail to the page
@@ -802,7 +746,7 @@ async function doStep12(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
-  const hasStorybook = await ensureStorybookConnected(frame);
+  const hasStorybook = await ensureStorybookConnected(frame, false);
 
   if (!hasStorybook) {
     // No Storybook (e.g. demo project) — use fallback "Mark complete" button

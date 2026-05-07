@@ -18,12 +18,14 @@ export interface KeyboardHandlerDeps {
 
 export function createKeydownHandler(deps: KeyboardHandlerDeps): (e: KeyboardEvent) => void {
 	return (e: KeyboardEvent) => {
-		// Skip when typing in inputs, textareas, or contenteditable
-		const target = e.target as HTMLElement;
+		// Skip when typing in inputs, textareas, or contenteditable.
+		// Use composedPath() so we see the real element inside shadow DOM
+		// (e.target is retargeted to the shadow host at the document level).
+		const origin = e.composedPath()[0] as HTMLElement;
 		if (
-			target.tagName === "INPUT" ||
-			target.tagName === "TEXTAREA" ||
-			target.isContentEditable
+			origin.tagName === "INPUT" ||
+			origin.tagName === "TEXTAREA" ||
+			origin.isContentEditable
 		) return;
 		// Skip during text editing mode
 		if (isTextEditing()) return;

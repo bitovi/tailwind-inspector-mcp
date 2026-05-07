@@ -177,10 +177,22 @@ function renderStateB(): void {
 	queueBtn.addEventListener("click", () => {
 		const text = textarea.value.trim();
 		if (!text) return;
-		submitDescribeChange(text, usedVoice ? 'voice' : undefined);
+		submitDescribeChange(text, false, usedVoice ? 'voice' : undefined);
 		renderStateA();
 	});
 	rightGroup.appendChild(queueBtn);
+
+	// Commit button (stages + immediately commits at front of queue)
+	const commitBtn = document.createElement("button");
+	commitBtn.className = "ed-commit-btn";
+	commitBtn.textContent = "Commit";
+	commitBtn.addEventListener("click", () => {
+		const text = textarea.value.trim();
+		if (!text) return;
+		submitDescribeChange(text, true, usedVoice ? 'voice' : undefined);
+		renderStateA();
+	});
+	rightGroup.appendChild(commitBtn);
 
 	controls.appendChild(rightGroup);
 	wrapper.appendChild(controls);
@@ -199,11 +211,18 @@ function renderStateB(): void {
 			e.preventDefault();
 			renderStateA();
 		}
-		if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+		if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
 			e.preventDefault();
 			const text = textarea.value.trim();
 			if (text) {
-				submitDescribeChange(text, usedVoice ? 'voice' : undefined);
+				submitDescribeChange(text, true, usedVoice ? 'voice' : undefined);
+				renderStateA();
+			}
+		} else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+			e.preventDefault();
+			const text = textarea.value.trim();
+			if (text) {
+				submitDescribeChange(text, false, usedVoice ? 'voice' : undefined);
 				renderStateA();
 			}
 		}
@@ -213,7 +232,7 @@ function renderStateB(): void {
 	requestAnimationFrame(() => textarea.focus());
 }
 
-function submitDescribeChange(text: string, inputMethod?: string): void {
+function submitDescribeChange(text: string, autoCommit: boolean, inputMethod?: string): void {
 	const id = crypto.randomUUID();
 	const targetEl = state.currentTargetEl;
 	const locked = getLockedInsert();
@@ -237,9 +256,10 @@ function submitDescribeChange(text: string, inputMethod?: string): void {
 		context,
 		insertMode,
 		pageUrl,
+		...(autoCommit ? { autoCommit: true } : {}),
 		...(inputMethod ? { inputMethod } : {}),
 	});
-	showToast("Change queued");
+	showToast(autoCommit ? "Change committed" : "Change queued");
 }
 
 // ═══════════════════════════════════════════════════════════
