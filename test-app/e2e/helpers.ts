@@ -1,4 +1,6 @@
 import { type Page, type Frame, type Locator, expect } from '@playwright/test';
+import { ensureStorybookConnected } from '../../e2e/shared-helpers';
+export { ensureStorybookConnected };
 
 /**
  * Clicks the overlay toggle button to open the inspector panel.
@@ -206,43 +208,6 @@ export async function clickInsert(frame: Frame): Promise<void> {
 export async function clickPlacementSite(page: Page): Promise<void> {
   await page.locator('h3:has-text("Monthly Signups")').first().click();
   await page.waitForTimeout(800);
-}
-
-/** Ensure Storybook components are loaded in the panel — triggers a scan if needed.
- *  Retries up to 3 times (clicking "Scan for Storybook" each attempt) with 10s waits. */
-export async function ensureStorybookConnected(frame: Frame): Promise<void> {
-  const MAX_ATTEMPTS = 3;
-  const WAIT_PER_ATTEMPT = 10_000;
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    // Already have components? Done.
-    const hasComponents = await frame.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }).catch(() => false);
-    if (hasComponents) return;
-
-    // Click "Scan for Storybook" if visible
-    await frame.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
-      if (btn) (btn as HTMLButtonElement).click();
-    }).catch(() => {});
-
-    // Wait up to WAIT_PER_ATTEMPT for Place buttons to appear
-    try {
-      await frame.waitForFunction(() => {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-      }, { timeout: WAIT_PER_ATTEMPT });
-      return; // success
-    } catch {
-      if (attempt < MAX_ATTEMPTS) {
-        console.log(`[ensureStorybookConnected] attempt ${attempt}/${MAX_ATTEMPTS} timed out, retrying…`);
-      }
-    }
-  }
-
-  throw new Error(`Storybook components not found after ${MAX_ATTEMPTS} attempts (${MAX_ATTEMPTS * WAIT_PER_ATTEMPT / 1000}s total)`);
 }
 
 /** Click the first visible component Place button in the panel (excludes tab bar buttons). */

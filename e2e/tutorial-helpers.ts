@@ -1,6 +1,7 @@
 import { type Page, type Frame, expect } from '@playwright/test';
+import { ensureStorybookConnected } from './shared-helpers';
 
-// ── Helpers (inlined from test-app/e2e/helpers.ts to avoid dual-Playwright) ──
+// ──────────────────────────────────────────────────────────────────────────────
 
 async function clickToggleButton(page: Page): Promise<void> {
   await page.waitForFunction(() => {
@@ -603,49 +604,6 @@ async function dragComponentToTarget(
   await page.waitForTimeout(1500);
 }
 
-/**
- * Returns true if Storybook components loaded, false if unavailable (e.g. demo).
- * Retries up to 3 times (clicking "Scan for Storybook" each attempt) with 10s waits.
- */
-async function ensureStorybookConnected(frame: Frame): Promise<boolean> {
-  const MAX_ATTEMPTS = 3;
-  const WAIT_PER_ATTEMPT = 10_000;
-
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    // Already have components? Done.
-    const hasComponents = await frame.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }).catch(() => false);
-    if (hasComponents) {
-      console.log('[tutorial] ensureStorybookConnected: Place buttons already present');
-      return true;
-    }
-
-    // Click "Scan for Storybook" if visible
-    await frame.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Scan for Storybook'));
-      if (btn) (btn as HTMLButtonElement).click();
-    }).catch(() => {});
-
-    // Wait up to WAIT_PER_ATTEMPT for Place buttons to appear
-    const appeared = await frame.waitForFunction(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.some(b => b.textContent?.trim() === 'Place' && b.className.includes('h-5.5'));
-    }, { timeout: WAIT_PER_ATTEMPT }).then(() => true).catch(() => false);
-
-    if (appeared) {
-      console.log('[tutorial] ensureStorybookConnected: Place buttons now present');
-      return true;
-    }
-
-    console.log(`[tutorial] ensureStorybookConnected: attempt ${attempt}/${MAX_ATTEMPTS} timed out, retrying…`);
-  }
-
-  console.log('[tutorial] ensureStorybookConnected: Storybook unavailable, will use fallback');
-  return false;
-}
-
 async function doStep8(page: Page): Promise<void> {
   await scrollToStep(page, 8);
 
@@ -764,7 +722,7 @@ async function doStep11(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
-  const hasStorybook = await ensureStorybookConnected(frame);
+  const hasStorybook = await ensureStorybookConnected(frame, false);
 
   if (hasStorybook) {
     // Drag the Badge component from the panel thumbnail to the page
@@ -795,7 +753,7 @@ async function doStep12(page: Page): Promise<void> {
   await page.waitForTimeout(500);
 
   // Ensure Storybook is connected (click "Scan for Storybook" if needed)
-  const hasStorybook = await ensureStorybookConnected(frame);
+  const hasStorybook = await ensureStorybookConnected(frame, false);
 
   if (!hasStorybook) {
     // No Storybook (e.g. demo project) — use fallback "Mark complete" button
