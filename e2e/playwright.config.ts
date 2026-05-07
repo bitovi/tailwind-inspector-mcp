@@ -75,6 +75,17 @@ export default defineConfig({
       stdout: 'ignore' as const,
       stderr: 'ignore' as const,
     }] : []),
+    // Storybook v10 (test-app stories) — must start BEFORE Express server so
+    // the server finds Storybook at startup (Playwright starts servers sequentially)
+    ...(!activeProject || activeProject === 'test-app' ? [{
+      command: 'npm run storybook',
+      cwd: path.join(root, 'storybook-test', 'v10'),
+      url: 'http://localhost:6008',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'ignore' as const,
+      stderr: 'ignore' as const,
+    }] : []),
     // Test app: Express + WS + MCP server (with Storybook URL for component discovery)
     ...(!activeProject || activeProject === 'test-app' ? [{
       command: 'node --import tsx ../server/index.ts',
@@ -85,16 +96,6 @@ export default defineConfig({
       stdout: 'ignore' as const,
       stderr: 'ignore' as const,
       env: { PORT: '3333', STORYBOOK_URL: 'http://localhost:6008' },
-    }] : []),
-    // Storybook v10 (test-app stories) — needed for component discovery in steps 8/9
-    ...(!activeProject || activeProject === 'test-app' ? [{
-      command: 'npm run storybook',
-      cwd: path.join(root, 'storybook-test', 'v10'),
-      url: 'http://localhost:6008',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-      stdout: 'ignore' as const,
-      stderr: 'ignore' as const,
     }] : []),
     // Angular test app: ng serve on port 5177
     ...(!activeProject || activeProject === 'test-app-angular' ? [{
