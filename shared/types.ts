@@ -244,6 +244,7 @@ export interface MessageStageMessage {
   message: string;          // the user's text
   elementKey?: string;      // optional — current element, or empty for general context
   component?: { name: string; instanceCount?: number };
+  autoCommit?: boolean;     // if true, immediately commit as own commit at front of queue
 }
 
 /** Server → Panel/Overlay: broadcast full queue state */

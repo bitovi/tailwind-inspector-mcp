@@ -1,6 +1,6 @@
 ---
 name: launch-react-vite-storyV10-environment
-description: Launch the MCP dev server pointed at the React test app's Storybook v10 on port 6008, with overlay/panel watchers and the test app. Kills conflicting processes on ports 3333, 6008, and 5173 first, reuses already-running watchers.
+description: Launch the MCP dev server pointed at the React test app's Storybook v10 on port 6008, with overlay/panel watchers and the test app.
 model: haiku
 tools: Bash, run_task
 ---
@@ -15,44 +15,55 @@ Set up the development environment so the MCP server (port 3333) points at Story
 
 ### Step 1 — Kill conflicting processes
 
-Kill anything running on the ports these services need:
+Kill anything running on ports 3333 and 5173:
 
 ```bash
-lsof -ti :3333 :6008 :5173 2>/dev/null | xargs kill -9 2>/dev/null || true
+lsof -ti :3333 :5173 2>/dev/null | xargs kill -9 2>/dev/null || true
 ```
 
 Report which ports were cleared, or "none" if all were already free.
 
-### Step 2 — Check if watchers are already running
+### Step 2 — Check if watchers are running
 
-Check if the overlay esbuild watcher is already running:Check if the overlay esbuild watrlay.*--watchCheck if the overlay esbuild watcher is already running:Check if the overlay esbuild watrlay.*--watchCheck if the overlay esbuild watcher is already running:Check if the overlay esbuild watrlay.*--watchCheck if the overlay esbuild watcher isR_Check if th`
-Check if the overlayt watchCheck if the overlayt watchCheck if the overlayt watchCheck if the overlayt watchCheck if the overlayt watchChelay`
+Verify the overlay esbuild watcher and panel vite watcher are active:
 
-If the panel watcher is **STOPPED**, run the VS Code task:
-- Task ID: `shell: Watch: Panel`
+```bash
+ps aux | grep -E "(esbuild.*overlay.*--watch|vite.*build.*--watch)" | grep -v grep | wc -l
+```
 
-If a watcher is already running, skip it and report "reused".
+If the count is less than 2, run the missing watchers:
+- If overlay watcher is missing: Task ID: `shell: Watch: Overlay`
+- If panel watcher is missing: Task ID: `shell: Watch: Panel`
 
-### Step 4 — Start the three background services
+Otherwise, report "watchers reused".
 
-Run each of these VS Code tasks **one at a time** (not in parallel):
+### Step 3 — Launch all three background services in parallel
 
-1. Task ID: `shell: Storybook 10: Test App (port 6008)`
-2. Task ID: `shell: Server for SB10 (port 3333)`
-3. Task ID: `shell: Test App (port 5173)`
+Launch each task immediately without waiting for the previous one to fully start (background tasks return instantly):
 
-**Background tasks return immediately with **Background tasks return immediately with **Backgrs success.** Do NOT verify ports after launching. Do NOT wait for more output. Do NOT check if the process is running. Proceed immediately after each task returns.
+1. Task ID: `shell: Server for SB10 (port 3333)`
+2. Task ID: `shell: Test App (port 5173)`
+
+Do NOT add any delays or checks between task launches. Proceed immediately after each task call returns.
 
 ## Rules
 
-- Run tasks individually — never use compound tasks.
-- Do not parallelize the three background service tasks — run them sequentially.
-- After launching a background task, move on immediately regardless of output. Empty output = success.
-- Do NOT run port checks or process checks after launching background services.
-- If a w- If a w- If a w- If a w- If a w- If a w- If a w- If a it.
-- If a w- If a w- If a w- If a ual error (not empty output), stop and report.
+- Run tasks individually, not as compound tasks
+- Background tasks return immediately with success; do not wait for additional output
+- Launch all three service tasks in rapid succession without intervening waits or port checks
+- Do not verify ports or process status after launching services
+- Proceed to output immediately after the last task returns
 
 ## Output
 
-Once alOnce alOnce alOnce alOnce alOnce alOnce alOnce ach pOnce alOnce alOnce alOnce alOnce alOnce alOnce alOnce ach pOnce alOesh or reused
-- Confirmation all three services were launch- Confirmation all three services were launch- panel/, Storybook at http://localhost:6008, test app at http://localhost:5173
+Report completion with this format:
+
+```
+✓ Setup complete!
+
+Services running:
+- Server (MCP): http://localhost:3333
+- Storybook v10: http://localhost:6008 (pre-existing)
+- Test App: http://localhost:5173
+- Overlay & Panel watchers: [reused/started]
+```

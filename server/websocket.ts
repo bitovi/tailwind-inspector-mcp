@@ -4,7 +4,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import type { Server } from "http";
 import type { Response as ExpressResponse } from "express";
 
-import { addPatch, addAndCommit, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit, attachMessageToPatch, updateDraftPatch } from "./queue.js";
+import { addPatch, addAndCommit, addAndCommitFirst, commitDraft, getQueueUpdate, discardDraftPatch, discardCommit, attachMessageToPatch, updateDraftPatch } from "./queue.js";
 import { generateCssForClasses, getTailwindVersion } from "./tailwind.js";
 import type { Patch } from "../shared/types.js";
 
@@ -146,11 +146,11 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
       console.error(`[msg] Patch staged: #${patch.id}`);
       broadcastPatchUpdate();
     } else if (msg.type === "MESSAGE_STAGE") {
-      const patch = addPatch({
+      const patchData = {
         id: msg.id,
-        kind: 'message',
+        kind: 'message' as const,
         elementKey: msg.elementKey ?? '',
-        status: 'staged',
+        status: 'staged' as const,
         originalClass: '',
         newClass: '',
         property: msg.property ?? '',
@@ -161,8 +161,14 @@ export function setupWebSocket(httpServer: Server): WebSocketDeps {
         context: msg.context,
         insertMode: msg.insertMode,
         pageUrl: msg.pageUrl,
-      });
-      console.error(`[msg] Message patch staged: #${patch.id}`);
+      };
+      if (msg.autoCommit) {
+        const commit = addAndCommitFirst(patchData);
+        console.error(`[msg] Message patch auto-committed (front of queue): commit #${commit.id}`);
+      } else {
+        const patch = addPatch(patchData);
+        console.error(`[msg] Message patch staged: #${patch.id}`);
+      }
       broadcastPatchUpdate();
     } else if (msg.type === "PATCH_COMMIT") {
       const commit = commitDraft(msg.ids);

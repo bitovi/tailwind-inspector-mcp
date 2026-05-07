@@ -100,6 +100,30 @@ export function addAndCommit(patch: Patch): Commit {
   return commit;
 }
 
+/**
+ * Immediately commit a single patch as its own commit (skips the draft),
+ * inserting it before the first 'committed' commit so the agent picks it up next.
+ */
+export function addAndCommitFirst(patch: Patch): Commit {
+  patch.status = 'committed';
+  const commit: Commit = {
+    id: crypto.randomUUID(),
+    patches: [patch],
+    status: 'committed',
+    timestamp: new Date().toISOString(),
+  };
+  patch.commitId = commit.id;
+  // Insert before the first 'committed' commit so getNextCommitted() returns this one next
+  const firstCommittedIdx = commits.findIndex(c => c.status === 'committed');
+  if (firstCommittedIdx === -1) {
+    commits.push(commit);
+  } else {
+    commits.splice(firstCommittedIdx, 0, commit);
+  }
+  emitter.emit('committed');
+  return commit;
+}
+
 export function commitDraft(ids: string[]): Commit {
   const idSet = new Set(ids);
   const commitPatches: Patch[] = [];

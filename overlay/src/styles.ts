@@ -715,6 +715,20 @@ export const OVERLAY_CSS = `
     transition: background 100ms;
   }
   .ed-queue-btn:hover { background: var(--ov-teal-btn-hover); }
+  .ed-commit-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: none;
+    background: #F5532D;
+    color: white;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 100ms;
+  }
+  .ed-commit-btn:hover { background: #d94420; }
   .ed-mic-btn {
     width: 22px;
     height: 22px;
