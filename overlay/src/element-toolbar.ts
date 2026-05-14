@@ -12,6 +12,7 @@ import { revertPreview } from "./patcher";
 import { SELECT_SVG, INSERT_SVG, DESIGN_SVG, TEXT_SVG, REPLACE_SVG, SEND_SVG, MIC_SVG, DRAG_GRIP_SVG } from "./svg-icons";
 import { startTextEdit } from "./text-edit";
 import { buildContext, buildInsertContext, buildTextContext } from "./context";
+import { detectComponent } from "./framework-detect";
 import { send, sendTo } from "./ws";
 import { showElementDrawer, removeElementDrawer, repositionDrawer } from "./element-drawer";
 
@@ -293,8 +294,8 @@ function createMsgRow(
 		const id = crypto.randomUUID();
 
 		// Build placement context from the current target element
-		const targetEl = state.currentTargetEl;
 		const locked = getLockedInsert();
+		const targetEl = state.currentTargetEl ?? locked?.target ?? null;
 		const target = targetEl
 			? { tag: targetEl.tagName.toLowerCase(), classes: typeof targetEl.className === 'string' ? targetEl.className : '', innerText: targetEl.innerText?.slice(0, 100) ?? '' }
 			: undefined;
@@ -304,12 +305,21 @@ function createMsgRow(
 			: undefined;
 		const pageUrl = window.location.href;
 
+		// Fall back to detecting boundary from the target element
+		let resolvedBoundary = boundary;
+		if (!resolvedBoundary && targetEl) {
+			const detected = detectComponent(targetEl);
+			resolvedBoundary = detected
+				? { componentName: detected.componentName }
+				: { componentName: targetEl.tagName.toLowerCase() };
+		}
+
 		send({
 			type: "MESSAGE_STAGE",
 			id,
 			message: text,
-			elementKey: boundary?.componentName ?? "",
-			component: boundary ? { name: boundary.componentName } : undefined,
+			elementKey: resolvedBoundary?.componentName ?? "",
+			component: resolvedBoundary ? { name: resolvedBoundary.componentName } : undefined,
 			target,
 			context,
 			insertMode,

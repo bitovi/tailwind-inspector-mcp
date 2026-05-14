@@ -13,19 +13,28 @@ Set up the development environment so the MCP server (port 3333) points at Story
 
 ## Workflow
 
+Before starting, create a todo list with all steps so nothing is missed:
+- Kill conflicting processes
+- Check if watchers are running
+- Launch Server for SB10
+- Launch Test App
+- Report completion
+
+Mark each todo in-progress before starting it, and completed immediately after.
+
 ### Step 1 — Kill conflicting processes
 
-Kill anything running on ports 3333 and 5173:
+Mark "Kill conflicting processes" as in-progress, then kill anything running on ports 3333 and 5173:
 
 ```bash
 lsof -ti :3333 :5173 2>/dev/null | xargs kill -9 2>/dev/null || true
 ```
 
-Report which ports were cleared, or "none" if all were already free.
+Report which ports were cleared, or "none" if all were already free. Mark completed.
 
 ### Step 2 — Check if watchers are running
 
-Verify the overlay esbuild watcher and panel vite watcher are active:
+Mark "Check if watchers are running" as in-progress, then verify the overlay esbuild watcher and panel vite watcher are active:
 
 ```bash
 ps aux | grep -E "(esbuild.*overlay.*--watch|vite.*build.*--watch)" | grep -v grep | wc -l
@@ -35,14 +44,13 @@ If the count is less than 2, run the missing watchers:
 - If overlay watcher is missing: Task ID: `shell: Watch: Overlay`
 - If panel watcher is missing: Task ID: `shell: Watch: Panel`
 
-Otherwise, report "watchers reused".
+Otherwise, report "watchers reused". Mark completed.
 
-### Step 3 — Launch all three background services in parallel
+### Step 3 — Launch background services
 
-Launch each task immediately without waiting for the previous one to fully start (background tasks return instantly):
+Mark "Launch Server for SB10" as in-progress, run Task ID: `shell: Server for SB10 (port 3333)`, mark completed immediately after the call returns.
 
-1. Task ID: `shell: Server for SB10 (port 3333)`
-2. Task ID: `shell: Test App (port 5173)`
+Mark "Launch Test App" as in-progress, run Task ID: `shell: Test App (port 5173)`, mark completed immediately after the call returns.
 
 Do NOT add any delays or checks between task launches. Proceed immediately after each task call returns.
 
@@ -50,7 +58,7 @@ Do NOT add any delays or checks between task launches. Proceed immediately after
 
 - Run tasks individually, not as compound tasks
 - Background tasks return immediately with success; do not wait for additional output
-- Launch all three service tasks in rapid succession without intervening waits or port checks
+- Launch all service tasks in rapid succession without intervening waits or port checks
 - Do not verify ports or process status after launching services
 - Proceed to output immediately after the last task returns
 

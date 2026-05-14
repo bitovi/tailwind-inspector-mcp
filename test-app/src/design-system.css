@@ -1,0 +1,6 @@
+/* Design system base typography — shared between app and Storybook.
+   This simulates a component library that provides default heading styles. */
+h2 {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}

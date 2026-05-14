@@ -1,2 +1,3 @@
-@import "../../../test-app/src/index.css";
+@import "tailwindcss";
+@import "../../../test-app/src/design-system.css";
 @source "../../../test-app/src";

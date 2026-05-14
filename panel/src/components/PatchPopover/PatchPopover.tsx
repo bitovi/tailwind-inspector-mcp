@@ -70,6 +70,8 @@ interface PatchPopoverProps {
 	/** Bulk actions shown at the bottom */
 	onCommitAll?: () => void;
 	onDiscardAll?: () => void;
+	/** Called when a patch row is clicked (opens detail modal) */
+	onItemClick?: (patchId: string) => void;
 }
 
 export function PatchPopover({
@@ -82,6 +84,7 @@ export function PatchPopover({
 	onDiscard,
 	onCommitAll,
 	onDiscardAll,
+	onItemClick,
 }: PatchPopoverProps) {
 	const [open, setOpen] = useState(false);
 	const wrapperRef = useRef<HTMLDivElement>(null);
@@ -183,7 +186,8 @@ export function PatchPopover({
 								return (
 									<div
 										key={item.id}
-										className="flex items-center gap-1.5 px-3 py-1.5 border-b border-bit-border last:border-b-0 group"
+										className={`flex items-center gap-1.5 px-3 py-1.5 border-b border-bit-border last:border-b-0 group ${onItemClick ? 'cursor-pointer hover:bg-bit-surface-hi' : ''}`}
+										onClick={() => onItemClick?.(item.id)}
 									>
 										<div className="flex-1 min-w-0">
 											{!isMessage && !isDesign && !isComponentDrop && !isTextChange && !isBugReport && !isDeleteElement && !isMoveElement && item.component?.name && (

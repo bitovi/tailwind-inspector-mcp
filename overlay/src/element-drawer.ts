@@ -14,6 +14,7 @@ import { sendTo, send } from "./ws";
 import { startTextEdit, endTextEdit, isTextEditing } from "./text-edit";
 import { buildContext, buildInsertContext, buildTextContext } from "./context";
 import { getLockedInsert } from "./drop-zone";
+import { detectComponent } from "./framework-detect";
 import { repositionHighlights } from "./element-highlight";
 import { MIC_SVG } from "./svg-icons";
 
@@ -234,8 +235,8 @@ function renderStateB(): void {
 
 function submitDescribeChange(text: string, autoCommit: boolean, inputMethod?: string): void {
 	const id = crypto.randomUUID();
-	const targetEl = state.currentTargetEl;
 	const locked = getLockedInsert();
+	const targetEl = state.currentTargetEl ?? locked?.target ?? null;
 	const target = targetEl
 		? { tag: targetEl.tagName.toLowerCase(), classes: typeof targetEl.className === 'string' ? targetEl.className : '', innerText: targetEl.innerText?.slice(0, 100) ?? '' }
 		: undefined;
@@ -244,7 +245,13 @@ function submitDescribeChange(text: string, autoCommit: boolean, inputMethod?: s
 		? (insertMode ? buildInsertContext(targetEl, insertMode) : buildContext(targetEl, '', '', new Map()))
 		: undefined;
 	const pageUrl = window.location.href;
-	const boundary = state.currentBoundary;
+	let boundary = state.currentBoundary;
+	if (!boundary && targetEl) {
+		const detected = detectComponent(targetEl);
+		boundary = detected
+			? { componentName: detected.componentName }
+			: { componentName: targetEl.tagName.toLowerCase() };
+	}
 
 	send({
 		type: "MESSAGE_STAGE",
