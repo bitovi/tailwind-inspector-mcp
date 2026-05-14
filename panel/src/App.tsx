@@ -4,7 +4,9 @@ import { DrawTab } from "./components/DrawTab";
 import { ElementsTab } from "./components/ElementsTab";
 import { ModeToggle } from "./components/ModeToggle";
 import { PatchPopover } from "./components/PatchPopover";
+import { PatchDetailModal } from "./components/PatchDetailModal";
 import { BugReportMode } from "./components/BugReportMode";
+import type { Commit } from "../../shared/types";
 import { TabBar } from "./components/TabBar";
 import { ThemeTab } from "./components/ThemeTab";
 import type { ThemeOverride } from "./components/ThemeTab";
@@ -61,6 +63,7 @@ function InspectorApp() {
 	const [promptCopied, setPromptCopied] = useState(false);
 	const [isComponentArmed, setIsComponentArmed] = useState(false);
 	const [themeConfig, setThemeConfig] = useState<any>(null);
+	const [modalCommit, setModalCommit] = useState<Commit | null>(null);
 	const [colorScheme, setColorScheme] = useState<'dark' | 'light'>(() => {
 		try { return (localStorage.getItem('vybit-color-scheme') as 'dark' | 'light') || 'dark'; } catch { return 'dark'; }
 	});
@@ -291,6 +294,29 @@ function InspectorApp() {
 		(c) => c.status === "implemented",
 	);
 
+	const handlePatchItemClick = useCallback((patchId: string) => {
+		// Find the parent commit containing this patch
+		const commit = patchManager.queueState.commits.find(
+			(c) => c.patches.some((p) => p.id === patchId),
+		);
+		if (commit) {
+			setModalCommit(commit);
+		}
+	}, [patchManager.queueState.commits]);
+
+	const handleDraftItemClick = useCallback((patchId: string) => {
+		// Wrap the single draft patch in a synthetic Commit for preview
+		const patch = draftPatches.find((p) => p.id === patchId);
+		if (patch) {
+			setModalCommit({
+				id: "preview",
+				patches: [patch as any],
+				status: "staged",
+				timestamp: new Date().toISOString(),
+			});
+		}
+	}, [draftPatches]);
+
 	const VYBIT_PROMPT =
 		"Please implement the next change and continue implementing changes with VyBit.";
 
@@ -456,6 +482,7 @@ function InspectorApp() {
 					onDiscard={handleDiscard}
 					onCommitAll={() => patchManager.commitAll()}
 					onDiscardAll={handleDiscardAll}
+					onItemClick={handleDraftItemClick}
 				/>
 				<PatchPopover
 					label="committed"
@@ -463,20 +490,28 @@ function InspectorApp() {
 					items={committedCommits.flatMap((c) => c.patches)}
 					activeColor="text-bit-committed"
 					onDiscard={(id: string) => patchManager.discardCommit(id)}
+					onItemClick={handlePatchItemClick}
 				/>
 				<PatchPopover
 					label="implementing"
 					count={implementing}
 					items={implementingCommits.flatMap((c) => c.patches)}
 					activeColor="text-blue-400"
+					onItemClick={handlePatchItemClick}
 				/>
 				<PatchPopover
 					label="implemented"
 					count={implemented}
 					items={implementedCommits.flatMap((c) => c.patches)}
 					activeColor="text-bit-teal"
+					onItemClick={handlePatchItemClick}
 				/>
 			</div>
+			<PatchDetailModal
+				commit={modalCommit}
+				remainingCount={0}
+				onClose={() => setModalCommit(null)}
+			/>
 		</div>
 	);
 

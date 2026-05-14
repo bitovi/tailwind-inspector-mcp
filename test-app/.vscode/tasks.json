@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Server SB10 Restart",
+			"type": "shell",
+			"command": "npx tsx watch ../server/index.ts",
+			"isBackground": true
+		}
+	]
+}

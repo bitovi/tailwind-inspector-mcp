@@ -1,0 +1,1 @@
+export { PatchDetailModal } from "./PatchDetailModal";

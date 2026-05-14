@@ -1,1 +1,8 @@
 @import "tailwindcss";
+@import "./design-system.css";
+
+/* App-specific override — tighter heading spacing for this app's layout */
+h2 {
+  margin-top: 0;
+  margin-bottom: 0;
+}

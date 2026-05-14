@@ -13,6 +13,10 @@
 				"${workspaceFolder}/temp"
 			],
 			"type": "stdio"
+		},
+		"github": {
+			"type": "http",
+			"url": "https://api.githubcopilot.com/mcp/"
 		}
 	},
 	"inputs": []
