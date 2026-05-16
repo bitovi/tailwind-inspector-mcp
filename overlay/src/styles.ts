@@ -1230,12 +1230,46 @@ export const OVERLAY_CSS = `
     background: var(--ov-teal-bg-08);
     color: var(--ov-text);
   }
-  .slot-picker-label {
+  /* Reuse depth indentation from depth-picker */
+  .slot-picker-row.depth-0 { padding-left: 12px; }
+  .slot-picker-row.depth-1 { padding-left: 28px; }
+  .slot-picker-row.depth-2 { padding-left: 44px; }
+  .slot-picker-row.depth-3 { padding-left: 60px; }
+  .slot-picker-row.depth-4 { padding-left: 76px; }
+  .slot-picker-pos {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ov-teal-label);
+    flex-shrink: 0;
+    min-width: 52px;
+  }
+  .slot-picker-tag {
     font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
     font-size: 12px;
     font-weight: 500;
-    color: inherit;
+    color: var(--ov-text-mid);
+    flex-shrink: 0;
   }
+  .slot-picker-row:hover .slot-picker-tag { color: var(--ov-text); }
+  .slot-picker-comp {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ov-teal-label);
+    flex-shrink: 0;
+  }
+  .slot-picker-classes {
+    font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ov-text-subtle);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .slot-picker-row:hover .slot-picker-classes { color: var(--ov-text-mid); }
   .slot-picker-hint {
     font-size: 10px;
     color: var(--ov-text-subtle);

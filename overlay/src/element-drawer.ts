@@ -108,6 +108,7 @@ function renderStateA(): void {
 	const describeBtn = document.createElement("vb-button") as HTMLElement;
 	describeBtn.setAttribute('icon', 'describe');
 	describeBtn.setAttribute('theme', 'primary');
+	describeBtn.setAttribute('class', 'ed-action-btn');
 	describeBtn.textContent = 'Describe change';
 	describeBtn.addEventListener("click", () => {
 		deactivateSelectMode();
@@ -120,6 +121,7 @@ function renderStateA(): void {
 	const editTextBtn = document.createElement("vb-button") as HTMLElement;
 	editTextBtn.setAttribute('icon', 'text');
 	editTextBtn.setAttribute('theme', 'primary');
+	editTextBtn.setAttribute('class', 'ed-action-btn');
 	editTextBtn.textContent = isInsert ? 'Insert text' : 'Edit text';
 	editTextBtn.addEventListener("click", () => {
 		deactivateSelectMode();
@@ -178,6 +180,7 @@ function renderStateB(): void {
 	queueBtn.setAttribute('theme', 'danger');
 	queueBtn.setAttribute('structure', 'filled');
 	queueBtn.setAttribute('size', 'sm');
+	queueBtn.setAttribute('class', 'ed-queue-btn');
 	queueBtn.textContent = "Queue";
 	queueBtn.addEventListener("click", () => {
 		const text = textarea.value.trim();
@@ -416,6 +419,7 @@ function renderStateCDirty(): void {
 	queueBtn.setAttribute('theme', 'danger');
 	queueBtn.setAttribute('structure', 'filled');
 	queueBtn.setAttribute('size', 'sm');
+	queueBtn.setAttribute('class', 'ed-queue-btn');
 	queueBtn.textContent = "Queue";
 	queueBtn.addEventListener("mousedown", (e) => e.preventDefault()); // prevent blur
 	queueBtn.addEventListener("click", () => {

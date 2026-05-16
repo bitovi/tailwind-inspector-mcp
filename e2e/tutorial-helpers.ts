@@ -125,7 +125,12 @@ async function getShadowButtonCenter(
       const candidates = host.shadowRoot!.querySelectorAll(sel) as NodeListOf<HTMLElement>;
       for (const el of candidates) {
         if (!text || el.textContent?.includes(text)) {
-          const r = el.getBoundingClientRect();
+          let r = el.getBoundingClientRect();
+          // vb-button has display:contents — fall through to inner <button> for real rect
+          if (r.width === 0 && r.height === 0) {
+            const inner = el.querySelector('button');
+            if (inner) r = inner.getBoundingClientRect();
+          }
           return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
         }
       }

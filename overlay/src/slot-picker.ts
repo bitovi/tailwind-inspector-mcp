@@ -16,7 +16,11 @@ const RECT_THRESHOLD = 2;     // px — tolerance for "same rect" (matches depth
 export interface SlotCandidate {
   target: HTMLElement;
   position: DropPosition;
-  label: string; // e.g. "Before <button> Middle"
+  label: string;           // e.g. "↳ start" or "↑ before" or "↓ after"
+  tag: string;             // e.g. "div", "a"
+  componentName: string | null;
+  classes: string;         // full className string
+  depth: number;           // nesting depth for indentation (0 = innermost)
 }
 
 /**
@@ -55,8 +59,49 @@ export function findAmbiguousSlots(
     return true;
   });
 
+  // Deduplicate equivalent DOM insertion points:
+  // "after A" ≡ "before A.nextElementSibling" (adjacent siblings)
+  // "first-child C" ≡ "before C.firstElementChild"
+  // "last-child C" ≡ "after C.lastElementChild"
+  const removed = new Set<number>();
+  for (let i = 0; i < unique.length; i++) {
+    if (removed.has(i)) continue;
+    for (let j = i + 1; j < unique.length; j++) {
+      if (removed.has(j)) continue;
+      if (areSameInsertionPoint(unique[i], unique[j])) {
+        removed.add(j);
+      }
+    }
+  }
+  const deduped = unique.filter((_, i) => !removed.has(i));
+
   // Only show picker if there are genuinely multiple options
-  return unique.length > 1 ? unique : [];
+  return deduped.length > 1 ? deduped : [];
+}
+
+/**
+ * Two candidates represent the same DOM insertion point if:
+ * - "after A" and "before B" where B is A's next sibling
+ * - "first-child C" and "before C's first child"
+ * - "last-child C" and "after C's last child"
+ */
+function areSameInsertionPoint(a: SlotCandidate, b: SlotCandidate): boolean {
+  if (a.position === 'after' && b.position === 'before'
+      && a.target.nextElementSibling === b.target) return true;
+  if (b.position === 'after' && a.position === 'before'
+      && b.target.nextElementSibling === a.target) return true;
+
+  if (a.position === 'first-child' && b.position === 'before'
+      && a.target.firstElementChild === b.target) return true;
+  if (b.position === 'first-child' && a.position === 'before'
+      && b.target.firstElementChild === a.target) return true;
+
+  if (a.position === 'last-child' && b.position === 'after'
+      && a.target.lastElementChild === b.target) return true;
+  if (b.position === 'last-child' && a.position === 'after'
+      && b.target.lastElementChild === a.target) return true;
+
+  return false;
 }
 
 /** Check if two DOMRects match within the threshold. */
@@ -92,13 +137,23 @@ function findSameRectInsertSlots(
   const startRect = startEl.getBoundingClientRect();
 
   // Always include the current resolved slot
-  candidates.push({
-    target,
-    position,
-    label: formatSlotLabel(target, position, target.parentElement || target),
-  });
+  {
+    const tag = target.tagName.toLowerCase();
+    const comp = detectComponent(target);
+    const classes = typeof target.className === "string" ? target.className : "";
+    candidates.push({
+      target,
+      position,
+      label: positionLabel(position),
+      tag,
+      componentName: comp?.componentName ?? null,
+      classes,
+      depth: 0,
+    });
+  }
 
   // Walk up from startEl, checking each parent for same-rect match
+  let depth = 1;
   let el: HTMLElement | null = startEl.parentElement;
   while (el) {
     if (
@@ -110,11 +165,12 @@ function findSameRectInsertSlots(
     const parentRect = el.getBoundingClientRect();
     if (!rectsMatch(startRect, parentRect)) break;
 
-    // This parent shares the same rect — offer insert slots inside it
+    // This parent shares the same rect — only offer the same position
+    // type as the original click (start stays start, end stays end)
     const cls = typeof el.className === "string" ? el.className : "";
     if (cls.trim()) {
-      addCandidate(candidates, el, 'first-child', el);
-      addCandidate(candidates, el, 'last-child', el);
+      addCandidate(candidates, el, position, el, depth);
+      depth++;
     }
 
     el = el.parentElement;
@@ -186,38 +242,29 @@ function addCandidate(
   target: HTMLElement,
   position: DropPosition,
   container: HTMLElement,
+  depth?: number,
 ): void {
+  const tag = target.tagName.toLowerCase();
+  const comp = detectComponent(target);
+  const classes = typeof target.className === "string" ? target.className : "";
   candidates.push({
     target,
     position,
-    label: formatSlotLabel(target, position, container),
+    label: positionLabel(position),
+    tag,
+    componentName: comp?.componentName ?? null,
+    classes,
+    depth: depth ?? 0,
   });
 }
 
-function formatSlotLabel(
-  target: HTMLElement,
-  position: DropPosition,
-  container: HTMLElement,
-): string {
-  if (position === 'first-child' || position === 'last-child') {
-    const name = getElementLabel(target);
-    return position === 'first-child'
-      ? `Inside ${name} (start)`
-      : `Inside ${name} (end)`;
+function positionLabel(position: DropPosition): string {
+  switch (position) {
+    case 'before': return '↑ before';
+    case 'after': return '↓ after';
+    case 'first-child': return '↳ start';
+    case 'last-child': return '↳ end';
   }
-  const name = getElementLabel(target);
-  const posWord = position === 'before' ? 'Before' : 'After';
-  return `${posWord} ${name}`;
-}
-
-function getElementLabel(el: HTMLElement): string {
-  const tag = el.tagName.toLowerCase();
-  const comp = detectComponent(el);
-  if (comp?.componentName) return comp.componentName;
-  // Use text content snippet if short enough
-  const text = el.textContent?.trim().slice(0, 20);
-  if (text) return `<${tag}> ${text}`;
-  return `<${tag}>`;
 }
 
 // ── Slot Picker UI ───────────────────────────────────────────────────────
@@ -257,12 +304,22 @@ export function showSlotPicker(
 
   candidates.forEach((candidate) => {
     const row = document.createElement("div");
-    row.className = "slot-picker-row";
+    row.className = `slot-picker-row depth-${Math.min(candidate.depth, 4)}`;
 
-    const labelSpan = document.createElement("span");
-    labelSpan.className = "slot-picker-label";
-    labelSpan.textContent = candidate.label;
-    row.appendChild(labelSpan);
+    // Position badge (before/after/start/end)
+    const posSpan = document.createElement("span");
+    posSpan.className = "slot-picker-pos";
+    posSpan.textContent = candidate.label;
+    row.appendChild(posSpan);
+
+    // Element identifier: <tag .class1 .class2...>
+    const elSpan = document.createElement("span");
+    elSpan.className = "slot-picker-tag";
+    const classTokens = candidate.classes.trim()
+      ? " " + candidate.classes.trim().split(/\s+/).slice(0, 5).map(c => `.${c}`).join(" ")
+      : "";
+    elSpan.textContent = `<${candidate.tag}${classTokens}>`;
+    row.appendChild(elSpan);
 
     // Hover: show preview indicator at this slot's position
     row.addEventListener("mouseenter", () => {
