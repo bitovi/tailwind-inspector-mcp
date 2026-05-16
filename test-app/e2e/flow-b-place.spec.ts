@@ -76,11 +76,11 @@ test.describe('Flow B: Place — pick location first, then pick a component', ()
       const insertColor = await frame.page().evaluate(() => {
         const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
         const sr = host?.shadowRoot;
-        const btn = sr?.querySelector('.bt-combo[data-tool="insert"]') as HTMLElement | null;
+        const btn = sr?.querySelector('vb-button[data-tool="insert"]') as HTMLElement | null;
         if (!btn) return 'not-found';
-        const cls = btn.className;
-        if (cls.includes('picking')) return 'orange';
-        if (cls.includes('engaged')) return 'teal';
+        const state = btn.getAttribute('state');
+        if (state === 'armed') return 'orange';
+        if (state === 'active') return 'teal';
         return 'gray';
       });
       const hasElToolbar = await page.evaluate(() => {

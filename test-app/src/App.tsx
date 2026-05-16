@@ -744,6 +744,129 @@ function App() {
             </div>
           </div>
         </TutorialSection>
+
+        {/* ── Bonus Step 17: Select Hard-to-Select Elements ── */}
+        <TutorialSection
+          step={17}
+          title="Select Hard-to-Select Elements"
+          completed={completedSteps.has(17)}
+          onMarkComplete={() => completeStep(17)}
+          instructions={
+            <>
+              <p>
+                Some elements are tricky to select or insert near. When multiple elements occupy the same visual space, VyBit shows a disambiguation picker so you can choose exactly which element — or insertion slot — you mean.
+              </p>
+              <p className="mt-2">
+                Try each section below in both <strong>Select</strong> mode (<SelectIcon />) and <strong>Insert</strong> mode (<InsertIcon />) to experience the challenge.
+              </p>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-8">
+            {/* ── Scenario A: Same-Rect Wrappers ── */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">A. Same-Rect Wrappers</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                These nested elements share the exact same visual boundary. Click one — VyBit's element picker should let you choose which layer you meant.
+              </p>
+              <div className="flex gap-4">
+                {/* Wrapper 1: outer has bg + rounded, inner has font styling, no padding difference */}
+                <div className="bg-indigo-100 rounded-lg">
+                  <div className="text-indigo-800 font-semibold text-sm px-4 py-3">
+                    Nested wrapper A
+                  </div>
+                </div>
+                {/* Wrapper 2: three-deep nesting */}
+                <div className="bg-amber-100 rounded-lg">
+                  <div className="text-amber-900 font-medium">
+                    <div className="text-sm px-4 py-3">Three layers deep</div>
+                  </div>
+                </div>
+                {/* Wrapper 3: link wrapping styled content */}
+                <a href="#" onClick={e => e.preventDefault()} className="bg-teal-100 rounded-lg block">
+                  <div className="text-teal-800 font-semibold text-sm px-4 py-3">
+                    Link wrapping content
+                  </div>
+                </a>
+              </div>
+            </div>
+
+            {/* ── Scenario B: Tightly Packed Siblings ── */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">B. Tightly Packed Siblings</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                These buttons and badges have zero gap between them. Try selecting the middle one, or switching to Insert mode to place something between them.
+              </p>
+              {/* Row of buttons with no gap */}
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-0">
+                  <button className="bg-indigo-600 text-white px-4 py-2 text-sm font-medium rounded-l-md">Left</button>
+                  <button className="bg-indigo-500 text-white px-4 py-2 text-sm font-medium border-x border-indigo-400">Middle</button>
+                  <button className="bg-indigo-600 text-white px-4 py-2 text-sm font-medium rounded-r-md">Right</button>
+                </div>
+                {/* Badges packed tight */}
+                <div className="flex gap-0">
+                  <Badge color="blue">Status</Badge><Badge color="green">Active</Badge><Badge color="yellow">Pending</Badge><Badge color="red">Alert</Badge><Badge color="gray">Archived</Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Scenario C: Small Elements ── */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">C. Small Elements</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                These tiny targets are hard to click precisely. Try selecting each icon button or inserting next to one.
+              </p>
+              <div className="flex items-center gap-1">
+                {/* Tiny icon-only buttons */}
+                <button className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 text-gray-600 hover:bg-gray-300">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <button className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 text-gray-600 hover:bg-gray-300">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
+                <button className="w-5 h-5 flex items-center justify-center rounded bg-gray-200 text-gray-600 hover:bg-gray-300">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">3</span>
+                <span className="w-4 h-4 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center">!</span>
+                {/* Slightly larger but still small */}
+                <button className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                </button>
+                <button className="w-6 h-6 flex items-center justify-center rounded-full bg-pink-100 text-pink-600 hover:bg-pink-200">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            {/* ── Scenario D: Overlapping Positioned Elements ── */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">D. Overlapping Positioned Elements</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                The badge sits on top of the card. Click the overlap area — did you mean the badge or the card? Try inserting near the badge too.
+              </p>
+              <div className="flex gap-6">
+                {/* Card with overlapping badge */}
+                <div className="relative">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 w-48">
+                    <h4 className="text-sm font-semibold text-gray-900">Notifications</h4>
+                    <p className="text-xs text-gray-500 mt-1">3 unread messages</p>
+                  </div>
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow">3</span>
+                </div>
+                {/* Card with overlapping close button */}
+                <div className="relative">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 w-48">
+                    <h4 className="text-sm font-semibold text-gray-900">Alert Panel</h4>
+                    <p className="text-xs text-gray-500 mt-1">System status OK</p>
+                  </div>
+                  <button className="absolute -top-2 -right-2 w-6 h-6 bg-gray-800 text-white text-xs rounded-full flex items-center justify-center shadow hover:bg-gray-700">✕</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TutorialSection>
       </main>
     </div>
   )

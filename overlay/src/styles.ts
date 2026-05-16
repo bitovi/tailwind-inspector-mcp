@@ -1188,6 +1188,76 @@ export const OVERLAY_CSS = `
     z-index: 999998;
   }
 
+  /* ── Slot picker (insertion point disambiguation, mirrors depth-picker) ── */
+  .slot-picker {
+    position: fixed;
+    z-index: 1000000;
+    background: var(--ov-toolbar-bg);
+    border-radius: 8px;
+    box-shadow: var(--ov-toolbar-shadow);
+    min-width: 220px;
+    max-width: 380px;
+    font-family: 'Inter', system-ui, sans-serif;
+    pointer-events: auto;
+    overflow: hidden;
+  }
+  .slot-picker-header {
+    display: flex;
+    align-items: center;
+    padding: 7px 12px 5px;
+    border-bottom: 1px solid var(--ov-depth-sep);
+  }
+  .slot-picker-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ov-text-dim);
+  }
+  .slot-picker-list {
+    padding: 4px 0;
+  }
+  .slot-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+    color: var(--ov-text-muted);
+  }
+  .slot-picker-row:hover {
+    background: var(--ov-teal-bg-08);
+    color: var(--ov-text);
+  }
+  .slot-picker-label {
+    font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: inherit;
+  }
+  .slot-picker-hint {
+    font-size: 10px;
+    color: var(--ov-text-subtle);
+    padding: 5px 12px 7px;
+    border-top: 1px solid var(--ov-depth-sep);
+  }
+  .slot-picker-hint kbd {
+    font-family: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+    font-size: 9px;
+    background: var(--ov-back-btn-hover-bg);
+    border: 1px solid var(--ov-kbd-border);
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: var(--ov-text-mid);
+  }
+  .slot-picker-preview {
+    background: var(--ov-orange);
+    pointer-events: none;
+    z-index: 999998;
+    border-radius: 1px;
+  }
+
   /* ── vb-button — unified button component ────────────────────────── */
 
   /* Base */
@@ -1267,6 +1337,9 @@ export const OVERLAY_CSS = `
 
   /* ── State: disabled ── */
   .vb-btn--disabled { opacity: 0.4; pointer-events: none; }
+
+  /* ── State: dim (visual only, still clickable) ── */
+  .vb-btn--dim { opacity: 0.4; }
 
   /* ── vb-button-group — button + adjunct badge ────────────────────── */
 

@@ -39,9 +39,9 @@ async function getPanelFrame(page: Page): Promise<Frame> {
 async function clickSelectButton(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]'));
+    return !!(host?.shadowRoot?.querySelector('vb-button[data-tool="select"]'));
   }, { timeout: 8000 });
-  const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="select"]');
+  const { x, y } = await getShadowButtonCenter(page, 'vb-button[data-tool="select"] button');
   await page.mouse.click(x, y);
   await page.waitForTimeout(300);
 }
@@ -60,22 +60,23 @@ async function clickSelectButton(page: Page): Promise<void> {
 async function ensureSelectMode(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]'));
+    return !!(host?.shadowRoot?.querySelector('vb-button[data-tool="select"]'));
   }, { timeout: 8000 });
 
   for (let i = 0; i < 3; i++) {
     const phase = await page.evaluate(() => {
       const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-      const group = host?.shadowRoot?.querySelector('.bt-combo[data-tool="select"]')?.closest('.bt-group');
-      if (!group) return 'unknown';
-      if (group.classList.contains('picking')) return 'picking';
-      if (group.classList.contains('engaged')) return 'engaged';
+      const btn = host?.shadowRoot?.querySelector('vb-button[data-tool="select"]');
+      if (!btn) return 'unknown';
+      const state = btn.getAttribute('state');
+      if (state === 'armed') return 'picking';
+      if (state === 'active') return 'engaged';
       return 'gray';
     });
 
     if (phase === 'picking') return; // already active
 
-    const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="select"]');
+    const { x, y } = await getShadowButtonCenter(page, 'vb-button[data-tool="select"] button');
     await page.mouse.click(x, y);
     await page.waitForTimeout(300);
   }
@@ -87,9 +88,9 @@ async function ensureSelectMode(page: Page): Promise<void> {
 async function clickInsertButton(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
-    return !!(host?.shadowRoot?.querySelector('.bt-combo[data-tool="insert"]'));
+    return !!(host?.shadowRoot?.querySelector('vb-button[data-tool="insert"]'));
   }, { timeout: 8000 });
-  const { x, y } = await getShadowButtonCenter(page, '.bt-combo[data-tool="insert"]');
+  const { x, y } = await getShadowButtonCenter(page, 'vb-button[data-tool="insert"] button');
   await page.mouse.click(x, y);
   await page.waitForTimeout(300);
 }

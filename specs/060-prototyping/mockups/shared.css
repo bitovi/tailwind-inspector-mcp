@@ -1,9 +1,13 @@
 /* ===== VyBit Mockup Shared Styles ===== */
 
+@import '../../../shared/tokens/panel-tokens.css';
+@import '../../../shared/tokens/overlay-tokens.css';
+@import '../../../shared/tokens/overlay-components.css';
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Core tokens */
+  /* Core tokens (--bit-* shorthand for mockups; --color-bit-* lives in panel-tokens.css) */
   --bit-bg: #2c2c2c;
   --bit-surface: #383838;
   --bit-surface-hi: #404040;
@@ -25,14 +29,8 @@
   --bit-draft: #fbbf24;
   --bit-committed: #F5532D;
 
-  /* Overlay tokens */
-  --ov-toolbar-bg: #1a1a1a;
-  --ov-toolbar-hover: #333;
-  --ov-toolbar-active: #444;
-  --ov-toolbar-sep: #3a3a3a;
-  --ov-toolbar-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
-  --ov-input-bg: #2a2a2a;
-  --ov-drawer-bg: var(--bit-teal-mid);
+  /* Overlay tokens: --ov-* imported from overlay-tokens.css */
+  /* Mockup-only overlay additions */
   --ov-drawer-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,132,139,0.3);
 
   /* Explore-specific (new) */

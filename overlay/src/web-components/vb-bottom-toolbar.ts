@@ -30,7 +30,7 @@ const STATE_MAP: Record<string, string> = {
   picking: 'armed',
   engaged: 'active',
   completed: 'fulfilled',
-  dim: 'disabled',
+  dim: 'dim',
 };
 
 export class VbBottomToolbar extends HTMLElement {
@@ -117,6 +117,7 @@ export class VbBottomToolbar extends HTMLElement {
     const selectBtn = document.createElement('vb-button') as HTMLElement;
     selectBtn.setAttribute('icon', 'select');
     selectBtn.setAttribute('theme', 'mode');
+    selectBtn.setAttribute('data-tool', 'select');
     selectBtn.textContent = 'Select';
     selectBtn.title = 'Select';
     selectBtn.addEventListener('click', () => this.emitToolChange('select'));
@@ -140,6 +141,7 @@ export class VbBottomToolbar extends HTMLElement {
     const insertBtn = document.createElement('vb-button') as HTMLElement;
     insertBtn.setAttribute('icon', 'insert');
     insertBtn.setAttribute('theme', 'mode');
+    insertBtn.setAttribute('data-tool', 'insert');
     insertBtn.textContent = 'Insert';
     insertBtn.title = 'Insert';
     insertBtn.addEventListener('click', () => this.emitToolChange('insert'));

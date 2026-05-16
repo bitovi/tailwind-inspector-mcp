@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!-- Based on: [ComponentName] -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>[Mockup Title]</title>
+
+  <!-- Tailwind Play CDN + project token config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwindcss.config = {
+      theme: { extend: { colors: {
+        'bit-bg': '#2c2c2c',
+        'bit-surface': '#383838',
+        'bit-surface-hi': '#404040',
+        'bit-border': '#3a3a3a',
+        'bit-text': '#e5e5e5',
+        'bit-text-mid': '#b3b3b3',
+        'bit-muted': '#999999',
+        'bit-orange': '#F5532D',
+        'bit-teal': '#00848B',
+        'bit-teal-dark': '#00464A',
+        'bit-teal-mid': '#003D40',
+        'bit-teal-hover': '#006b70',
+        'bit-teal-light': '#5fd4da',
+        'bit-green': '#2E7229',
+        'bit-draft': '#fbbf24',
+        'bit-committed': '#F5532D',
+      }}}
+    }
+  </script>
+
+  <!-- Project design tokens (CSS custom properties) -->
+  <!-- For panel components: -->
+  <link rel="stylesheet" href="../../../shared/tokens/panel-tokens.css">
+  <!-- For overlay components (uncomment as needed): -->
+  <!-- <link rel="stylesheet" href="../../../shared/tokens/overlay-tokens.css"> -->
+  <!-- <link rel="stylesheet" href="../../../shared/tokens/overlay-components.css"> -->
+
+  <style>
+    body {
+      margin: 0;
+      background: var(--color-bit-bg);
+      color: var(--color-bit-text);
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-bit-bg text-bit-text min-h-screen p-8">
+
+  <!-- Mockup content here -->
+
+</body>
+</html>

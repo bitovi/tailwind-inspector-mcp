@@ -50,7 +50,7 @@ const ICON_MAP: Record<string, string> = {
 export type ButtonStructure = 'ghost' | 'filled';
 export type ButtonSize = 'sm' | 'md';
 export type ButtonTheme = 'neutral' | 'primary' | 'danger' | 'mode';
-export type ButtonState = 'default' | 'armed' | 'active' | 'fulfilled' | 'disabled';
+export type ButtonState = 'default' | 'armed' | 'active' | 'fulfilled' | 'disabled' | 'dim';
 
 export class VbButton extends HTMLElement {
   private btn: HTMLButtonElement | null = null;
@@ -223,7 +223,7 @@ export class VbButton extends HTMLElement {
       classes.push('vb-btn--text-only');
     }
 
-    // Disabled
+    // Disabled (dim is visual-only, still clickable)
     this.btn.disabled = state === 'disabled';
 
     this.btn.className = classes.join(' ');

@@ -62,7 +62,7 @@ function onBrowseLocked(target: HTMLElement): void {
 	showDrawButton(target);
 	// Persistent browse: stay orange (picking) — browse continues
 	updateToolState('insert', true, false);
-	updateInstanceCount(state.currentEquivalentNodes.length);
+	// Don't update instance count — the "1+" badge is a Select-only feature.
 }
 
 const THEME_PREVIEW_STYLE_ID = "vybit-theme-preview";

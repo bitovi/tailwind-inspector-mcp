@@ -58,7 +58,7 @@ export async function clickSelectElementButton(frame: Frame): Promise<void> {
       const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
       const sr = host?.shadowRoot;
       // Bottom toolbar Select button
-      const btn = sr?.querySelector('.bt-combo[data-tool="select"]') as HTMLButtonElement | null;
+      const btn = sr?.querySelector('vb-button[data-tool="select"]') as HTMLButtonElement | null;
       if (btn) { btn.click(); return true; }
       // Legacy: old overlay toolbar class
       const legacy = sr?.querySelector('.tb-select') as HTMLButtonElement | null;
@@ -182,7 +182,7 @@ export async function clickInsert(frame: Frame): Promise<void> {
     const found = await page.evaluate(() => {
       const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
       const sr = host?.shadowRoot;
-      const btn = sr?.querySelector('.bt-combo[data-tool="insert"]') as HTMLButtonElement | null;
+      const btn = sr?.querySelector('vb-button[data-tool="insert"]') as HTMLButtonElement | null;
       if (btn) { btn.click(); return true; }
       return false;
     }).catch(() => false);
@@ -221,31 +221,31 @@ export async function getPanelButtonColor(frame: Frame, title: string): Promise<
   const page = frame.page();
 
   // Select button lives on the overlay bottom toolbar, not the panel.
-  // Classes (picking/engaged) are on the .bt-group parent, not the button itself.
+  // State is on the vb-button[state] attribute: armed=picking, active=engaged.
   if (title === 'Select an element') {
     return page.evaluate(() => {
       const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
       const sr = host?.shadowRoot;
-      const group = sr?.querySelector('.bt-group') as HTMLElement | null;
-      if (!group) return 'gray' as const;
-      const cls = group.className;
-      if (cls.includes('picking')) return 'orange' as const;
-      if (cls.includes('engaged')) return 'teal' as const;
+      const btn = sr?.querySelector('vb-button[data-tool="select"]') as HTMLElement | null;
+      if (!btn) return 'gray' as const;
+      const state = btn.getAttribute('state');
+      if (state === 'armed') return 'orange' as const;
+      if (state === 'active') return 'teal' as const;
       return 'gray' as const;
     });
   }
 
-  // Insert button lives on the overlay bottom toolbar (standalone .bt-combo).
-  // Classes (picking/engaged) are directly on the button element.
+  // Insert button lives on the overlay bottom toolbar.
+  // State is on the vb-button[state] attribute: armed=picking, active=engaged.
   if (title === 'Insert to add content') {
     return page.evaluate(() => {
       const host = document.querySelector('#tw-visual-editor-host') as HTMLElement;
       const sr = host?.shadowRoot;
-      const btn = sr?.querySelector('.bt-combo[data-tool="insert"]') as HTMLElement | null;
+      const btn = sr?.querySelector('vb-button[data-tool="insert"]') as HTMLElement | null;
       if (!btn) return 'gray' as const;
-      const cls = btn.className;
-      if (cls.includes('picking')) return 'orange' as const;
-      if (cls.includes('engaged')) return 'teal' as const;
+      const state = btn.getAttribute('state');
+      if (state === 'armed') return 'orange' as const;
+      if (state === 'active') return 'teal' as const;
       return 'gray' as const;
     });
   }
