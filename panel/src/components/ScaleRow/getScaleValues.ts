@@ -1,6 +1,6 @@
 import {
   FONT_SIZES, FONT_WEIGHTS, RADIUS_SCALE, LINE_HEIGHTS, LETTER_SPACINGS, OPACITY_VALUES,
-} from '../../../overlay/src/tailwind/scales';
+} from '../../../../overlay/src/tailwind/scales';
 
 const SPECIAL_SPACING_ORDER: Record<string, number> = {
   px: 0.0625,  // between 0 and 0.5

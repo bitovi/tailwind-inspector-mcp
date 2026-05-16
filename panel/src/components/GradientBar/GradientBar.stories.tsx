@@ -129,3 +129,69 @@ export const FourStops: Story = {
     />
   ),
 };
+
+export const TwoStopsNaive: Story = {
+  args: {
+    stops: [
+      { id: '1', role: 'from', colorName: 'purple-600', hex: '#9333EA', position: 0 },
+      { id: '2', role: 'to', colorName: 'cyan-500', hex: '#06B6D4', position: 100 },
+    ],
+    direction: 'to right',
+    selectedStopId: null,
+    onStopDrag: () => {},
+    onStopDragEnd: () => {},
+    onStopClick: () => {},
+    onBarClick: () => {},
+    onStopRemove: () => {},
+  },
+};
+
+export const ThreeStopsVertical: Story = {
+  args: {
+    stops: [
+      { id: '1', role: 'from', colorName: 'slate-600', hex: '#475569', position: 0 },
+      { id: '2', role: 'via', colorName: 'slate-400', hex: '#94A3B8', position: 50 },
+      { id: '3', role: 'to', colorName: 'slate-200', hex: '#E2E8F0', position: 100 },
+    ],
+    direction: 'to bottom',
+    selectedStopId: null,
+    onStopDrag: () => {},
+    onStopDragEnd: () => {},
+    onStopClick: () => {},
+    onBarClick: () => {},
+    onStopRemove: () => {},
+  },
+};
+
+export const DiagonalGradient: Story = {
+  args: {
+    stops: [
+      { id: '1', role: 'from', colorName: 'orange-500', hex: '#F97316', position: 10 },
+      { id: '2', role: 'via', colorName: 'red-500', hex: '#EF4444', position: 50 },
+      { id: '3', role: 'to', colorName: 'rose-600', hex: '#E11D48', position: 90 },
+    ],
+    direction: 'to bottom right',
+    selectedStopId: null,
+    onStopDrag: () => {},
+    onStopDragEnd: () => {},
+    onStopClick: () => {},
+    onBarClick: () => {},
+    onStopRemove: () => {},
+  },
+};
+
+export const NoPosition: Story = {
+  args: {
+    stops: [
+      { id: '1', role: 'from', colorName: 'teal-500', hex: '#14B8A6', position: null },
+      { id: '2', role: 'to', colorName: 'blue-500', hex: '#3B82F6', position: null },
+    ],
+    direction: 'to right',
+    selectedStopId: null,
+    onStopDrag: () => {},
+    onStopDragEnd: () => {},
+    onStopClick: () => {},
+    onBarClick: () => {},
+    onStopRemove: () => {},
+  },
+};

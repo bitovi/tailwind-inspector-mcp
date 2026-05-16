@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-12/13: Commit vs Keep Flags — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Per-flag commit/keep actions */
+    .flag-action-row {
+      display: flex;
+      gap: 4px;
+      padding: 4px 0 0;
+    }
+    .flag-card {
+      background: var(--bit-surface);
+      border: 1px solid var(--bit-border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      padding: 10px;
+    }
+    .flag-card.committed {
+      border-color: rgba(46,114,41,0.4);
+      background: rgba(46,114,41,0.08);
+    }
+    .flag-card.kept {
+      border-color: rgba(251,191,36,0.4);
+      background: rgba(251,191,36,0.06);
+    }
+    .flag-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .flag-status-badge {
+      font-size: 8px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-left: auto;
+    }
+    .badge-committed { background: rgba(46,114,41,0.2); color: #4ade80; }
+    .badge-kept { background: rgba(251,191,36,0.2); color: #fbbf24; }
+    .badge-pending { background: rgba(0,132,139,0.2); color: var(--bit-teal); }
+
+    .flag-value-display {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+    }
+    .flag-value-display .arrow {
+      color: var(--bit-muted);
+      font-size: 10px;
+    }
+    .flag-value-display .final-value {
+      color: var(--bit-teal);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-12/13 Var A — Per-flag commit/keep actions, mixed states</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-bold selected-element" style="position: relative;">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px;">
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center; font-size: 11px; font-weight: 600;">🚀 Fast</div>
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center; font-size: 11px; font-weight: 600;">🔒 Secure</div>
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center; font-size: 11px; font-weight: 600;">⚡ Reliable</div>
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center; font-size: 11px; font-weight: 600;">💎 Premium</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">Select</button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--bit-orange);font-size:9px;font-weight:600;background:rgba(245,83,45,0.15);padding:2px 6px;border-radius:4px;">🚩 3 flags</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content" style="padding: 10px 12px;">
+        <div style="font-size: 10px; font-weight: 600; color: var(--bit-text); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Resolve Feature Flags</div>
+
+        <!-- Flag 1: Already committed -->
+        <div class="flag-card committed">
+          <div class="flag-card-header">
+            <span style="font-size: 10px; font-weight: 600; font-family: var(--font-mono); color: var(--bit-text);">hero-variant</span>
+            <span class="flag-status-badge badge-committed">✓ Will Commit</span>
+          </div>
+          <div class="flag-value-display">
+            <span style="color: var(--bit-muted); text-decoration: line-through; font-size: 10px;">Modern, <span style="color: var(--bit-muted);">Playful</span></span>
+            <span class="arrow">→</span>
+            <span class="final-value">"bold"</span>
+          </div>
+          <div style="font-size: 9px; color: var(--bit-green); margin-top: 4px;">Agent will remove other variants and hardcode Bold Gradient.</div>
+          <div class="flag-action-row">
+            <button class="btn btn-ghost btn-sm" style="font-size: 9px;">Undo</button>
+          </div>
+        </div>
+
+        <!-- Flag 2: Kept for A/B testing -->
+        <div class="flag-card kept">
+          <div class="flag-card-header">
+            <span style="font-size: 10px; font-weight: 600; font-family: var(--font-mono); color: var(--bit-text);">grid-columns</span>
+            <span class="flag-status-badge badge-kept">🚩 Keeping</span>
+          </div>
+          <div class="flag-value-display">
+            <span style="font-size: 10px; color: var(--bit-text-mid);">Current: </span>
+            <span class="final-value">4</span>
+          </div>
+          <div style="font-size: 9px; color: #fbbf24; margin-top: 4px;">Flag stays in code for production A/B testing.</div>
+          <div class="flag-action-row">
+            <button class="btn btn-ghost btn-sm" style="font-size: 9px;">Commit 4 Instead</button>
+          </div>
+        </div>
+
+        <!-- Flag 3: Still deciding -->
+        <div class="flag-card">
+          <div class="flag-card-header">
+            <span style="font-size: 10px; font-weight: 600; font-family: var(--font-mono); color: var(--bit-text);">show-testimonials</span>
+            <span class="flag-status-badge badge-pending">Pending</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-size: 10px; color: var(--bit-text-mid);">Currently:</span>
+            <button class="flag-toggle on" style="transform: scale(0.85);"></button>
+          </div>
+          <div class="flag-action-row">
+            <button class="btn btn-teal btn-sm" style="font-size: 9px;">Commit "on"</button>
+            <button class="btn btn-ghost-teal btn-sm" style="font-size: 9px;">Keep as Flag 🚩</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apply all decisions -->
+      <div style="padding: 8px 12px; border-top: 1px solid var(--bit-border); display: flex; flex-direction: column; gap: 6px;">
+        <div style="font-size: 9px; color: var(--bit-text-mid); text-align: center;">
+          1 will be committed • 1 kept for A/B • 1 pending
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-teal btn-sm btn-disabled" style="flex: 1;">Apply Decisions</button>
+          <button class="btn btn-danger btn-sm">Remove All</button>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

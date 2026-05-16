@@ -5,6 +5,7 @@
 import { computePosition, flip, offset, autoUpdate } from "@floating-ui/dom";
 import { clearGrabCursor, setGrabCursor, state } from './overlay-state';
 import { dispatch } from './overlay-state-machine';
+import './web-components/vb-button';
 interface TextEditDeps {
   sendTo: (role: string, msg: any) => void;
   send: (msg: any) => void;
@@ -212,8 +213,10 @@ function showActionBar(): void {
   deps.shadowRoot.appendChild(bar);
   actionBarEl = bar;
 
-  const confirmBtn = document.createElement('button');
-  confirmBtn.className = 'text-action-confirm';
+  const confirmBtn = document.createElement('vb-button') as HTMLElement;
+  confirmBtn.setAttribute('theme', 'primary');
+  confirmBtn.setAttribute('structure', 'filled');
+  confirmBtn.setAttribute('size', 'sm');
   confirmBtn.textContent = '✓ Queue as Change';
   confirmBtn.addEventListener('mousedown', (e) => {
     e.preventDefault(); // Prevent blur on editTarget
@@ -225,8 +228,8 @@ function showActionBar(): void {
   });
   bar.appendChild(confirmBtn);
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'text-action-cancel';
+  const cancelBtn = document.createElement('vb-button') as HTMLElement;
+  cancelBtn.setAttribute('size', 'sm');
   cancelBtn.textContent = '✕ Cancel';
   cancelBtn.addEventListener('mousedown', (e) => {
     e.preventDefault(); // Prevent blur on editTarget

@@ -1188,6 +1188,151 @@ export const OVERLAY_CSS = `
     z-index: 999998;
   }
 
+  /* ── vb-button — unified button component ────────────────────────── */
+
+  /* Base */
+  .vb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    font-family: 'Inter', system-ui, sans-serif;
+    white-space: nowrap;
+    transition: all 120ms ease-out;
+    box-sizing: border-box;
+    line-height: 1;
+  }
+
+  /* ── Size ── */
+  .vb-btn--md { height: 28px; font-size: 11px; font-weight: 600; border-radius: 6px; }
+  .vb-btn--sm { height: 22px; font-size: 10px; font-weight: 500; border-radius: 5px; }
+
+  /* ── Content composition ── */
+  .vb-btn--icon-text { gap: 4px; padding: 0 8px; }
+  .vb-btn--icon-only { padding: 0; }
+  .vb-btn--icon-only.vb-btn--md { width: 28px; }
+  .vb-btn--icon-only.vb-btn--sm { width: 22px; }
+  .vb-btn--text-only { padding: 4px 10px; }
+
+  /* Icon sizing */
+  .vb-btn__icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .vb-btn--md .vb-btn__icon svg { width: 12px; height: 12px; }
+  .vb-btn--sm .vb-btn__icon svg { width: 12px; height: 12px; }
+
+  /* Label */
+  .vb-btn__label { flex-shrink: 0; }
+
+  /* ── Structure: ghost ── */
+  .vb-btn--ghost { background: transparent; }
+
+  /* ── Structure: filled ── */
+  /* (color comes from theme below) */
+
+  /* ── Theme: neutral ── */
+  .vb-btn--neutral { color: var(--ov-text-mid); }
+  .vb-btn--neutral:hover { background: var(--ov-toolbar-hover); color: var(--ov-text); }
+
+  /* ── Theme: primary (teal) ── */
+  .vb-btn--primary.vb-btn--ghost { color: var(--ov-text-mid); }
+  .vb-btn--primary.vb-btn--ghost:hover { background: var(--ov-teal-hover); color: var(--ov-text); }
+  .vb-btn--primary.vb-btn--filled { background: var(--ov-teal); color: white; }
+  .vb-btn--primary.vb-btn--filled:hover { background: var(--ov-teal-btn-hover); }
+
+  /* primary armed — teal ring */
+  .vb-btn--primary.vb-btn--armed { box-shadow: inset 0 0 0 1.5px var(--ov-teal); color: var(--ov-teal-light); }
+  /* primary active — solid teal */
+  .vb-btn--primary.vb-btn--active.vb-btn--filled { background: var(--ov-teal); color: white; }
+
+  /* ── Theme: danger (orange) ── */
+  .vb-btn--danger.vb-btn--ghost { color: var(--ov-text-mid); }
+  .vb-btn--danger.vb-btn--ghost:hover { color: var(--ov-orange); background: var(--ov-orange-bg-10); }
+  .vb-btn--danger.vb-btn--filled { background: #F5532D; color: white; }
+  .vb-btn--danger.vb-btn--filled:hover { background: #d94420; }
+
+  /* danger armed — orange bg + pulse */
+  .vb-btn--danger.vb-btn--armed { background: var(--ov-orange); color: white; animation: mic-pulse 1.5s ease-in-out infinite; }
+  .vb-btn--danger.vb-btn--armed:not(.vb-btn--icon-only) { animation: none; }
+
+  /* ── Theme: mode (multi-color state machine) ── */
+  .vb-btn--mode { color: var(--ov-text-mid); background: transparent; }
+  .vb-btn--mode:hover { background: var(--ov-toolbar-hover); color: var(--ov-text); }
+
+  /* mode: armed → orange */
+  .vb-btn--mode.vb-btn--armed { background: var(--ov-orange-bg); color: var(--ov-orange); }
+  /* mode: active → teal ring */
+  .vb-btn--mode.vb-btn--active { box-shadow: inset 0 0 0 1.5px var(--ov-teal); color: var(--ov-teal-light); }
+  /* mode: fulfilled → green */
+  .vb-btn--mode.vb-btn--fulfilled { background: var(--ov-green-bg); color: var(--ov-green); }
+
+  /* ── State: disabled ── */
+  .vb-btn--disabled { opacity: 0.4; pointer-events: none; }
+
+  /* ── vb-button-group — button + adjunct badge ────────────────────── */
+
+  .vb-btn-group {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 5px;
+    overflow: hidden;
+    transition: all 120ms ease-out;
+  }
+
+  /* Remove border-radius from the button inside a group */
+  .vb-btn-group .vb-btn { border-radius: 0; }
+
+  /* Separator between button and adjunct */
+  .vb-btn-group__sep {
+    width: 1px;
+    height: 14px;
+    background: var(--ov-toolbar-sep);
+    flex-shrink: 0;
+  }
+
+  /* Adjunct badge */
+  .vb-btn-group__adjunct {
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--ov-text-mid);
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 120ms ease-out;
+  }
+  .vb-btn-group__adjunct:hover { background: var(--ov-toolbar-hover); }
+  .vb-btn-group__plus { font-size: 9px; margin-left: 1px; opacity: 0.6; }
+
+  /* Group state: armed (mode theme → orange) */
+  .vb-btn-group--mode.vb-btn-group--armed { background: var(--ov-orange-bg); }
+  .vb-btn-group--mode.vb-btn-group--armed .vb-btn-group__adjunct { color: var(--ov-orange); }
+  .vb-btn-group--mode.vb-btn-group--armed .vb-btn-group__sep { background: var(--ov-orange-ring); }
+
+  /* Group state: active (mode theme → teal ring) */
+  .vb-btn-group--mode.vb-btn-group--active { box-shadow: inset 0 0 0 1.5px var(--ov-teal); }
+  .vb-btn-group--mode.vb-btn-group--active .vb-btn-group__adjunct { color: var(--ov-teal-light); }
+  .vb-btn-group--mode.vb-btn-group--active .vb-btn-group__sep { background: var(--ov-teal-ring); }
+
+  /* Group state: fulfilled (mode theme → green) */
+  .vb-btn-group--mode.vb-btn-group--fulfilled { background: var(--ov-green-bg); }
+  .vb-btn-group--mode.vb-btn-group--fulfilled .vb-btn-group__adjunct { color: var(--ov-green); }
+  .vb-btn-group--mode.vb-btn-group--fulfilled .vb-btn-group__sep { background: var(--ov-green-ring); }
+
+  /* Group state: disabled */
+  .vb-btn-group--disabled { opacity: 0.4; pointer-events: none; }
+
+  /* Text-editing lock — dims vb-button/vb-button-group inside bottom toolbar */
+  .bottom-toolbar.text-editing vb-button,
+  .bottom-toolbar.text-editing vb-button-group {
+    pointer-events: none;
+    opacity: 0.25;
+  }
+
   /* ── Bottom toolbar ── */
   .bottom-toolbar {
     position: fixed;
@@ -1212,6 +1357,7 @@ export const OVERLAY_CSS = `
     cursor: grab;
     flex-shrink: 0;
     opacity: 0.5;
+    color: var(--ov-text-mid);
     transition: opacity 120ms ease-out;
   }
   .bottom-toolbar .bt-grip:hover { opacity: 1; }
@@ -1317,5 +1463,101 @@ export const OVERLAY_CSS = `
     background: var(--ov-toolbar-sep);
     margin: 0 2px;
     flex-shrink: 0;
+  }
+
+  /* ── Modal container ── */
+  .container-modal {
+    position: fixed;
+    background: var(--ov-toolbar-bg);
+    border: 1px solid var(--ov-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    pointer-events: auto;
+    z-index: 999998;
+  }
+  .container-modal .drag-handle {
+    padding: 6px 12px;
+    cursor: grab;
+    background: var(--ov-toolbar-bg);
+    border-bottom: 1px solid var(--ov-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .container-modal .drag-handle:active { cursor: grabbing; }
+  .container-modal .drag-handle svg { width: 32px; height: 6px; }
+  .container-modal iframe {
+    flex: 1;
+    border: none;
+    width: 100%;
+    height: 100%;
+  }
+  .container-modal .resize-gripper {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    cursor: se-resize;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 2px 4px;
+    color: var(--ov-text-dim);
+    font-size: 10px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .container-modal .resize-gripper:hover { color: var(--ov-text); }
+
+  /* ── Sidebar container ── */
+  .container-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100vh;
+    background: var(--ov-toolbar-bg);
+    border-left: 1px solid var(--ov-border);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    pointer-events: auto;
+    z-index: 999998;
+  }
+  .container-sidebar iframe {
+    flex: 1;
+    border: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Popover container ── */
+  .container-popover {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background: var(--ov-toolbar-bg);
+    border-left: 1px solid var(--ov-border);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    pointer-events: auto;
+    z-index: 999999;
+  }
+  .container-popover iframe {
+    flex: 1;
+    border: none;
+    width: 100%;
+    height: 100%;
   }
 `;

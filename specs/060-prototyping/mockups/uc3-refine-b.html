@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-3: Refine a Mockup — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: Refinement as a chat-like thread below the carousel */
+    .refine-thread {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .thread-msg {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      line-height: 1.4;
+      max-width: 85%;
+    }
+    .thread-msg.user {
+      background: var(--bit-teal-dark);
+      color: var(--bit-text);
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+    .thread-msg.agent {
+      background: var(--bit-surface);
+      color: var(--bit-text-mid);
+      align-self: flex-start;
+      border-bottom-left-radius: 2px;
+    }
+    .thread-input-row {
+      display: flex;
+      gap: 4px;
+      padding: 4px 12px 8px;
+    }
+    .thread-input {
+      flex: 1;
+      background: var(--bit-surface);
+      border: 1px solid var(--bit-border);
+      border-radius: 6px;
+      color: var(--bit-text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      padding: 6px 10px;
+      outline: none;
+    }
+    .thread-input:focus { border-color: var(--bit-teal); }
+    .thread-input::placeholder { color: var(--bit-muted); }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-3 Var B — Refine with chat-like thread, conversational iteration</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">Select</button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel: Carousel with chat-like refinement thread -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--explore-purple);font-size:9px;font-weight:600;background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;">✨ Exploring</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="carousel" style="flex: none;">
+        <div class="carousel-nav">
+          <button class="nav-btn">◀</button>
+          <span class="page-indicator">Refined (v2)</span>
+          <button class="nav-btn">▶</button>
+        </div>
+
+        <div class="carousel-frame" style="min-height: 140px;">
+          <!-- Refined mockup — darker, more whitespace -->
+          <div style="padding: 40px 32px; background: linear-gradient(180deg, #1a0a2e, #2d1b4e); color: white; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 700; margin-bottom: 12px;">Welcome to Our Platform</h2>
+            <p style="font-size: 12px; opacity: 0.65; max-width: 260px; line-height: 1.6;">Build something amazing with our tools.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Refinement chat thread -->
+      <div class="refine-thread">
+        <div class="thread-msg user">make this hero more modern, show me a few options</div>
+        <div class="thread-msg agent">Generated 3 options: Modern Minimal, Bold Gradient, Playful.</div>
+        <div class="thread-msg user">I like Bold Gradient but make it darker, more whitespace around the heading</div>
+        <div class="thread-msg agent">Refined "Bold Gradient" → darker tones, increased heading margin.</div>
+      </div>
+
+      <!-- Input for next refinement -->
+      <div class="thread-input-row">
+        <input type="text" class="thread-input" placeholder="Refine further or type a new direction...">
+        <button class="btn btn-explore btn-sm" style="padding: 6px 10px;">→</button>
+      </div>
+
+      <div style="padding: 4px 12px 8px; display: flex; gap: 6px;">
+        <button class="btn btn-teal btn-sm">Implement This</button>
+        <span style="flex:1;"></span>
+        <button class="btn btn-ghost btn-sm">Discard All</button>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-committed"></span> 1 exploring</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -16,7 +16,7 @@ import { buildContext, buildInsertContext, buildTextContext } from "./context";
 import { getLockedInsert } from "./drop-zone";
 import { detectComponent } from "./framework-detect";
 import { repositionHighlights } from "./element-highlight";
-import { MIC_SVG } from "./svg-icons";
+import './web-components/vb-button';
 
 // Detect Web Speech API
 const SpeechRecognitionAPI: (new () => any) | null =
@@ -105,9 +105,10 @@ function renderStateA(): void {
 	pair.className = "ed-btn-pair";
 
 	// Describe change button
-	const describeBtn = document.createElement("button");
-	describeBtn.className = "ed-action-btn";
-	describeBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12M2 8h8M2 12h10"/></svg> Describe change`;
+	const describeBtn = document.createElement("vb-button") as HTMLElement;
+	describeBtn.setAttribute('icon', 'describe');
+	describeBtn.setAttribute('theme', 'primary');
+	describeBtn.textContent = 'Describe change';
 	describeBtn.addEventListener("click", () => {
 		deactivateSelectMode();
 		renderStateB();
@@ -116,9 +117,10 @@ function renderStateA(): void {
 
 	// Edit/Insert text button — label depends on whether there's an insertion point
 	const isInsert = !!getLockedInsert();
-	const editTextBtn = document.createElement("button");
-	editTextBtn.className = "ed-action-btn";
-	editTextBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none"><text x="0" y="12" font-family="Inter, sans-serif" font-size="11" font-weight="800" fill="currentColor">Aa</text></svg> ${isInsert ? 'Insert text' : 'Edit text'}`;
+	const editTextBtn = document.createElement("vb-button") as HTMLElement;
+	editTextBtn.setAttribute('icon', 'text');
+	editTextBtn.setAttribute('theme', 'primary');
+	editTextBtn.textContent = isInsert ? 'Insert text' : 'Edit text';
 	editTextBtn.addEventListener("click", () => {
 		deactivateSelectMode();
 		enterTextEditMode();
@@ -152,9 +154,9 @@ function renderStateB(): void {
 	controls.className = "ed-controls-row";
 
 	// Back button
-	const backBtn = document.createElement("button");
-	backBtn.className = "ed-back-btn";
-	backBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>`;
+	const backBtn = document.createElement("vb-button") as HTMLElement;
+	backBtn.setAttribute('icon', 'back');
+	backBtn.setAttribute('size', 'sm');
 	backBtn.addEventListener("click", () => renderStateA());
 	controls.appendChild(backBtn);
 
@@ -172,8 +174,10 @@ function renderStateB(): void {
 	}
 
 	// Queue button
-	const queueBtn = document.createElement("button");
-	queueBtn.className = "ed-queue-btn";
+	const queueBtn = document.createElement("vb-button") as HTMLElement;
+	queueBtn.setAttribute('theme', 'danger');
+	queueBtn.setAttribute('structure', 'filled');
+	queueBtn.setAttribute('size', 'sm');
 	queueBtn.textContent = "Queue";
 	queueBtn.addEventListener("click", () => {
 		const text = textarea.value.trim();
@@ -184,8 +188,10 @@ function renderStateB(): void {
 	rightGroup.appendChild(queueBtn);
 
 	// Commit button (stages + immediately commits at front of queue)
-	const commitBtn = document.createElement("button");
-	commitBtn.className = "ed-commit-btn";
+	const commitBtn = document.createElement("vb-button") as HTMLElement;
+	commitBtn.setAttribute('theme', 'primary');
+	commitBtn.setAttribute('structure', 'filled');
+	commitBtn.setAttribute('size', 'sm');
 	commitBtn.textContent = "Commit";
 	commitBtn.addEventListener("click", () => {
 		const text = textarea.value.trim();
@@ -355,9 +361,9 @@ function renderStateCClean(): void {
 	row.className = "ed-edit-row";
 
 	// Back button
-	const backBtn = document.createElement("button");
-	backBtn.className = "ed-back-btn";
-	backBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2L4 8l6 6"/></svg>`;
+	const backBtn = document.createElement("vb-button") as HTMLElement;
+	backBtn.setAttribute('icon', 'back');
+	backBtn.setAttribute('size', 'sm');
 	backBtn.addEventListener("mousedown", (e) => e.preventDefault()); // prevent blur
 	backBtn.addEventListener("click", () => {
 		(drawerEl as any)?.__cleanupInput?.();
@@ -394,8 +400,9 @@ function renderStateCDirty(): void {
 	row.appendChild(spacer);
 
 	// Discard button
-	const discardBtn = document.createElement("button");
-	discardBtn.className = "ed-discard-btn";
+	const discardBtn = document.createElement("vb-button") as HTMLElement;
+	discardBtn.setAttribute('theme', 'danger');
+	discardBtn.setAttribute('size', 'sm');
 	discardBtn.textContent = "✕ Discard";
 	discardBtn.addEventListener("mousedown", (e) => e.preventDefault()); // prevent blur
 	discardBtn.addEventListener("click", () => {
@@ -405,8 +412,10 @@ function renderStateCDirty(): void {
 	row.appendChild(discardBtn);
 
 	// Queue button
-	const queueBtn = document.createElement("button");
-	queueBtn.className = "ed-queue-btn";
+	const queueBtn = document.createElement("vb-button") as HTMLElement;
+	queueBtn.setAttribute('theme', 'danger');
+	queueBtn.setAttribute('structure', 'filled');
+	queueBtn.setAttribute('size', 'sm');
 	queueBtn.textContent = "Queue";
 	queueBtn.addEventListener("mousedown", (e) => e.preventDefault()); // prevent blur
 	queueBtn.addEventListener("click", () => {
@@ -422,10 +431,10 @@ function renderStateCDirty(): void {
 // MIC BUTTON
 // ═══════════════════════════════════════════════════════════
 
-function createMicButton(textarea: HTMLTextAreaElement, onVoiceUsed: () => void): HTMLButtonElement {
-	const micBtn = document.createElement("button");
-	micBtn.className = "ed-mic-btn";
-	micBtn.innerHTML = MIC_SVG;
+function createMicButton(textarea: HTMLTextAreaElement, onVoiceUsed: () => void): HTMLElement {
+	const micBtn = document.createElement("vb-button") as HTMLElement;
+	micBtn.setAttribute('icon', 'mic');
+	micBtn.setAttribute('size', 'sm');
 	let recognition: any = null;
 
 	micBtn.addEventListener("click", (e) => {
@@ -456,16 +465,16 @@ function createMicButton(textarea: HTMLTextAreaElement, onVoiceUsed: () => void)
 		};
 
 		recognition.onend = () => {
-			micBtn.classList.remove("listening");
+			micBtn.setAttribute('state', 'default');
 			recognition = null;
 		};
 
 		recognition.onerror = () => {
-			micBtn.classList.remove("listening");
+			micBtn.setAttribute('state', 'default');
 			recognition = null;
 		};
 
-		micBtn.classList.add("listening");
+		micBtn.setAttribute('state', 'armed');
 		recognition.start();
 	});
 

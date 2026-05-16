@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-4: Redirect All Options — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: "None of these" button triggers a redirect prompt */
+    .redirect-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bit-surface);
+      border: 1px solid var(--bit-border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      z-index: 500;
+      width: 300px;
+    }
+    .redirect-modal h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--bit-text);
+      margin-bottom: 6px;
+    }
+    .redirect-modal p {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .redirect-modal textarea {
+      width: 100%;
+      background: var(--bit-bg);
+      border: 1px solid var(--bit-border);
+      border-radius: 6px;
+      color: var(--bit-text);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      padding: 8px 10px;
+      resize: none;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .redirect-modal textarea:focus { border-color: var(--bit-teal); }
+    .redirect-modal .actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .quick-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .quick-option {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: var(--bit-bg);
+      border: 1px solid var(--bit-border);
+      color: var(--bit-text-mid);
+      cursor: pointer;
+      font-family: var(--font-ui);
+    }
+    .quick-option:hover {
+      border-color: var(--explore-purple);
+      color: var(--explore-purple);
+      background: rgba(139,92,246,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-4 Var B — "None of these" triggers a redirect modal with quick-option chips</div>
+
+  <div class="backdrop"></div>
+
+  <div class="layout" style="filter: blur(1px);">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+      </div>
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+      <div class="carousel">
+        <div class="carousel-nav">
+          <button class="nav-btn">◀</button>
+          <span class="page-indicator">Option 1 of 3</span>
+          <button class="nav-btn">▶</button>
+        </div>
+        <div class="carousel-frame" style="min-height: 140px;">
+          <div style="padding: 28px; background: linear-gradient(180deg, #0f172a, #1e293b); color: white; height: 100%;">
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 20px;">Welcome</h2>
+          </div>
+        </div>
+        <div class="carousel-actions">
+          <button class="btn btn-teal btn-sm">Implement</button>
+          <button class="btn btn-ghost-teal btn-sm">Refine...</button>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" style="border-color: var(--explore-purple); color: var(--explore-purple);">None of these</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Redirect modal -->
+  <div class="redirect-modal">
+    <h3>Try a different direction</h3>
+    <p>Tell the agent what you'd like instead, or pick a quick suggestion:</p>
+
+    <div class="quick-options">
+      <button class="quick-option">More playful</button>
+      <button class="quick-option">More minimal</button>
+      <button class="quick-option">Brighter colors</button>
+      <button class="quick-option">Dark theme</button>
+      <button class="quick-option">Different layout</button>
+    </div>
+
+    <textarea rows="2" placeholder="Or describe what you're looking for...">These are too corporate. Something warmer and more approachable.</textarea>
+
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm">Cancel</button>
+      <button class="btn btn-explore btn-sm">Regenerate</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-8/9/10: Flag Variant Switcher — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Live app shows the currently selected variant */
+    .variant-indicator {
+      position: absolute;
+      top: -12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bit-teal);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: var(--font-ui);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .variant-indicator .flag-icon { font-size: 10px; }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-8/9/10 Var A — Flag variants as radio group in panel, live preview in app</div>
+
+  <div class="layout">
+    <!-- App Area: Shows the "Bold" variant live -->
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-bold selected-element" style="position: relative;">
+          <div class="variant-indicator"><span class="flag-icon">🚩</span> hero-variant: bold</div>
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools. Fast, reliable, and designed for developers who care about quality.</p>
+          <button style="background: white; color: #ef4444; border: none; padding: 10px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 16px;">Get Started</button>
+        </div>
+        <p style="margin-top: 16px;">Some additional content below the hero section...</p>
+      </div>
+
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">
+          Select
+          <span style="background:rgba(0,132,139,0.2);color:var(--bit-teal-light);font-size:9px;padding:1px 5px;border-radius:9999px;margin-left:3px;">1+</span>
+        </button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel: Variant switcher -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span style="color:var(--bit-text-mid);font-size:10px;">— 1 instance</span>
+        <span class="spacer"></span>
+        <span style="color:var(--bit-orange);font-size:9px;font-weight:600;background:rgba(245,83,45,0.15);padding:2px 6px;border-radius:4px;">🚩 Flagged</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Feature Flags section -->
+        <div class="flag-section">
+          <div class="flag-section-title">Feature Flags</div>
+
+          <div class="flag-group">
+            <div class="flag-group-label">hero-variant</div>
+            <div class="flag-radio-group">
+              <div class="flag-radio">
+                <div class="radio-dot"></div>
+                <div>
+                  <div class="radio-label">Modern Minimal</div>
+                  <div class="radio-desc">Clean lines, dark gradient, subtle CTA</div>
+                </div>
+              </div>
+              <div class="flag-radio selected">
+                <div class="radio-dot"></div>
+                <div>
+                  <div class="radio-label">Bold Gradient</div>
+                  <div class="radio-desc">Vibrant warm gradient, strong typography</div>
+                </div>
+              </div>
+              <div class="flag-radio">
+                <div class="radio-dot"></div>
+                <div>
+                  <div class="radio-label">Playful</div>
+                  <div class="radio-desc">Warm colors, dashed border, friendly feel</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 1px; background: var(--bit-border);"></div>
+
+        <!-- Normal design sections below -->
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▸</span>
+            <span class="label">Box Model</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▸</span>
+            <span class="label">Layout</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▸</span>
+            <span class="label">Typography</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer with flag actions -->
+      <div style="padding: 8px 12px; border-top: 1px solid var(--bit-border); display: flex; gap: 6px;">
+        <button class="btn btn-teal btn-sm" style="flex: 1;">Commit to "Bold"</button>
+        <button class="btn btn-danger btn-sm">Remove Flags</button>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+        <span class="count-label"><span class="dot dot-committed"></span> 0 committed</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

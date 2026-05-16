@@ -15,6 +15,7 @@ import { buildContext, buildInsertContext, buildTextContext } from "./context";
 import { detectComponent } from "./framework-detect";
 import { send, sendTo } from "./ws";
 import { showElementDrawer, removeElementDrawer, repositionDrawer } from "./element-drawer";
+import './web-components/vb-button';
 
 // Detect Web Speech API (Chrome/Edge: webkitSpeechRecognition, Safari: SpeechRecognition)
 const SpeechRecognitionAPI: (new () => any) | null =
@@ -44,8 +45,8 @@ function showMicBanner(message: string): void {
 	text.textContent = message;
 	banner.appendChild(text);
 
-	const dismiss = document.createElement("button");
-	dismiss.className = "mic-banner-dismiss";
+	const dismiss = document.createElement("vb-button") as HTMLElement;
+	dismiss.setAttribute('size', 'sm');
 	dismiss.textContent = "×";
 	dismiss.addEventListener("click", () => {
 		banner.classList.remove("visible");
@@ -227,10 +228,10 @@ function createMsgRow(
 	let usedVoice = false;
 
 	if (SpeechRecognitionAPI) {
-		micBtn = document.createElement("button");
-		micBtn.className = "mic-btn";
+		micBtn = document.createElement("vb-button") as any as HTMLButtonElement;
+		micBtn.setAttribute('icon', 'mic');
+		micBtn.setAttribute('size', 'sm');
 		micBtn.title = "Record voice message";
-		micBtn.innerHTML = MIC_SVG;
 		msgRow.appendChild(micBtn);
 
 		micBtn.addEventListener("click", (e) => {
@@ -262,29 +263,29 @@ function createMsgRow(
 			};
 
 			recognition.onend = () => {
-				micBtn!.classList.remove("listening");
+				micBtn!.setAttribute('state', 'default');
 				recognition = null;
 			};
 
 			recognition.onerror = (event: any) => {
-				micBtn!.classList.remove("listening");
+				micBtn!.setAttribute('state', 'default');
 				if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-					micBtn!.classList.add("error");
+					micBtn!.setAttribute('theme', 'danger');
 					showMicBanner("Microphone blocked — allow access in your browser's address bar");
 				}
 				recognition = null;
 			};
 
-			micBtn!.classList.remove("error");
-			micBtn!.classList.add("listening");
+			micBtn!.setAttribute('theme', 'neutral');
+			micBtn!.setAttribute('state', 'armed');
 			recognition.start();
 		});
 	}
 
-	const msgSendBtn = showSendButton ? document.createElement("button") : null;
+	const msgSendBtn = showSendButton ? document.createElement("vb-button") as HTMLElement : null;
 	if (msgSendBtn) {
-		msgSendBtn.className = "msg-send";
-		msgSendBtn.innerHTML = SEND_SVG;
+		msgSendBtn.setAttribute('icon', 'send');
+		msgSendBtn.setAttribute('size', 'sm');
 		msgRow.appendChild(msgSendBtn);
 	}
 
@@ -441,6 +442,9 @@ export function showGroupPicker(
 	picker.style.top = "0px";
 	dom.shadowRoot.appendChild(picker);
 	dom.pickerEl = picker;
+	console.log('[showGroupPicker] picker appended, immediate rect:', picker.getBoundingClientRect(),
+		'parentNode:', picker.parentNode?.nodeName,
+		'shadowRoot host:', dom.shadowRoot.host?.id);
 
 	// Current selection summary
 	const exactRow = document.createElement("div");
@@ -455,25 +459,17 @@ export function showGroupPicker(
 	picker.appendChild(exactRow);
 
 	// ── "Add more" / "Stop adding" button ──
-	const addBtn = document.createElement("div");
-	addBtn.className = "el-group-row";
-	addBtn.style.cursor = "pointer";
-	addBtn.style.fontWeight = "500";
-	addBtn.style.fontSize = "11px";
+	const addBtn = document.createElement("vb-button") as HTMLElement;
+	addBtn.setAttribute('theme', 'primary');
+	addBtn.setAttribute('size', 'sm');
 
 	function styleAddBtn(active: boolean) {
 		if (active) {
 			addBtn.textContent = "Stop adding";
-			addBtn.style.color = "#fff";
-			addBtn.style.background = "var(--ov-teal)";
-			addBtn.style.borderRadius = "4px";
-			addBtn.style.textAlign = "center";
+			addBtn.setAttribute('state', 'active');
 		} else {
 			addBtn.textContent = "Add more";
-			addBtn.style.color = "var(--ov-teal)";
-			addBtn.style.background = "";
-			addBtn.style.borderRadius = "";
-			addBtn.style.textAlign = "";
+			addBtn.setAttribute('state', 'default');
 		}
 	}
 	styleAddBtn(state.addMode);
@@ -688,7 +684,17 @@ export function showGroupPicker(
 	});
 
 	// Position
-	positionWithFlip(anchorBtn, picker);
+	console.log('[showGroupPicker] anchor rect:', anchorBtn.getBoundingClientRect());
+	positionWithFlip(anchorBtn, picker).then(() => {
+		const cs = getComputedStyle(picker);
+		console.log('[showGroupPicker] picker positioned at:', picker.style.left, picker.style.top,
+			'picker rect:', picker.getBoundingClientRect(),
+			'computed:', { display: cs.display, visibility: cs.visibility, opacity: cs.opacity, position: cs.position, zIndex: cs.zIndex },
+			'offsetW:', picker.offsetWidth, 'offsetH:', picker.offsetHeight,
+			'childCount:', picker.childNodes.length,
+			'isConnected:', picker.isConnected,
+			'parentNode:', picker.parentNode?.nodeName);
+	});
 
 	// Close on outside click
 	const removePicker = () => {

@@ -1,6 +1,6 @@
 import type { LayerName, LayerColors, LayerState, SlotData, ClassState, SlotKey } from './types';
 import type { ParsedToken } from '../../../../overlay/src/tailwind/grammar';
-import { spacingKeyOrder } from '../getScaleValues';
+import { spacingKeyOrder } from '../ScaleRow/getScaleValues';
 import { SPACING_STEPS, BORDER_WIDTH_STEPS, BORDER_STYLE_STEPS } from '../../../../overlay/src/tailwind/scales';
 
 /** Color palette per layer — matches box-model-hover-grow.html prototype */

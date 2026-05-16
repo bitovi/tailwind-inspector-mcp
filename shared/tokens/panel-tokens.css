@@ -1,0 +1,85 @@
+/**
+ * Panel CSS Tokens — Single Source of Truth
+ * 
+ * These tokens are used by:
+ * - Panel React components (panel/src/components/)
+ * - Panel utility classes and CSS blocks
+ * - Panel mockups in specs/
+ * - Agent skill: make-mockup
+ *
+ * Note: Panel also defines Tailwind @theme tokens in panel/src/index.css
+ * This file exports the equivalent CSS custom properties for mockups that
+ * can't use Tailwind (e.g., HTML snapshots, standalone mockups).
+ */
+
+:root {
+  /* Primary palette */
+  --color-bit-bg: #2c2c2c;
+  --color-bit-surface: #383838;
+  --color-bit-surface-hi: #404040;
+  --color-bit-border: #3a3a3a;
+  --color-bit-text: #e5e5e5;
+  --color-bit-text-mid: #b3b3b3;
+  --color-bit-muted: #999999;
+
+  /* Brand colors */
+  --color-bit-orange: #F5532D;
+  --color-bit-orange-hover: #C73D26;
+  --color-bit-teal: #00848B;
+  --color-bit-teal-dark: #00464A;
+  --color-bit-green: #2E7229;
+
+  /* Status: Warning palette */
+  --color-bit-warn-bg: rgba(69, 26, 3, 0.4);
+  --color-bit-warn-border: rgba(146, 64, 14, 0.4);
+  --color-bit-warn-accent: rgba(146, 64, 14, 0.6);
+  --color-bit-warn-text: #fcd34d;
+  --color-bit-warn-text-sub: #fcd34d;
+  --color-bit-warn-link: #fbbf24;
+  --color-bit-warn-link-hover: #fef3c7;
+  --color-bit-warn-btn-bg: rgba(120, 53, 15, 0.4);
+  --color-bit-warn-btn-border: rgba(146, 64, 14, 0.5);
+  --color-bit-warn-btn-text: #fcd34d;
+  --color-bit-warn-btn-hover-bg: rgba(120, 53, 15, 0.6);
+  --color-bit-warn-btn-hover-border: rgba(146, 64, 14, 0.7);
+  --color-bit-warn-btn-hover-text: #fef3c7;
+  --color-bit-warn-btn-shadow: rgba(0, 0, 0, 0.2);
+  --color-bit-warn-icon-bg: rgba(146, 64, 14, 0.6);
+  --color-bit-warn-icon-color: #fcd34d;
+  --color-bit-warn-icon-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Status: Draft/Committed badges */
+  --color-bit-draft: #fbbf24;
+  --color-bit-committed: #F5532D;
+}
+
+/* Light mode overrides */
+.light {
+  --color-bit-bg: #f5f5f5;
+  --color-bit-surface: #ffffff;
+  --color-bit-surface-hi: #e8e8e8;
+  --color-bit-border: #d4d4d4;
+  --color-bit-text: #1a1a1a;
+  --color-bit-text-mid: #555555;
+  --color-bit-muted: #888888;
+  --color-bit-warn-bg: #FFF7E6;
+  --color-bit-warn-border: #F2D9A0;
+  --color-bit-warn-accent: #CF7C01;
+  --color-bit-warn-text: #3D1800;
+  --color-bit-warn-text-sub: #5E2E00;
+  --color-bit-warn-link: #834600;
+  --color-bit-warn-link-hover: #4A2000;
+  --color-bit-warn-btn-bg: #FFFFFF;
+  --color-bit-warn-btn-border: #834600;
+  --color-bit-warn-btn-text: #4A2000;
+  --color-bit-warn-btn-hover-bg: #3D1800;
+  --color-bit-warn-btn-hover-border: #3D1800;
+  --color-bit-warn-btn-hover-text: #FFFFFF;
+  --color-bit-warn-btn-shadow: rgba(165, 95, 1, 0.08);
+  --color-bit-warn-icon-bg: #CF7C01;
+  --color-bit-warn-icon-color: #FFFCF6;
+  --color-bit-warn-icon-shadow: rgba(165, 95, 1, 0.35);
+  --color-bit-draft: #b45309;
+  --color-bit-committed: #c2410c;
+  /* Brand colors stay the same in light mode */
+}

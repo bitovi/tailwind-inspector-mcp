@@ -112,3 +112,59 @@ export const Staged: Story = {
 export const MultipleProperties: Story = {
   render: () => <MultiScrubberDemo />,
 };
+
+export const WithRemove: Story = {
+  args: {
+    values: SPACING_VALUES,
+    currentValue: 'px-4',
+    lockedValue: null,
+    locked: false,
+    onHover: () => {},
+    onLeave: () => {},
+    onClick: () => {},
+    onRemove: () => {},
+    onRemoveHover: () => {},
+  },
+};
+
+export const Ghost: Story = {
+  args: {
+    values: SPACING_VALUES,
+    currentValue: 'px-4',
+    lockedValue: null,
+    locked: false,
+    ghost: true,
+    onHover: () => {},
+    onLeave: () => {},
+    onClick: () => {},
+  },
+};
+
+export const Scrubbing: Story = {
+  render: () => {
+    const [current, setCurrent] = useState('px-4');
+    const [staged, setStaged] = useState<string | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+
+    return (
+      <div className="flex flex-col gap-3 p-4 min-w-[360px]">
+        <div className="text-[11px] text-bit-text-mid mb-2">Drag left/right to scrub through values</div>
+        <ScaleScrubber
+          values={SPACING_VALUES}
+          currentValue={current}
+          lockedValue={staged}
+          locked={staged !== null}
+          onStart={() => {}}
+          onHover={(v) => setPreview(v)}
+          onLeave={() => setPreview(null)}
+          onClick={(v) => { setStaged(v); setPreview(null); }}
+        />
+        <div className="text-[10px] font-mono text-bit-text-mid space-y-1 p-2 bg-bit-surface rounded">
+          <div>Current: <span className="text-bit-teal">{current}</span></div>
+          <div>Preview: <span className="text-bit-orange">{preview || '—'}</span></div>
+          <div>Staged: <span className="text-bit-teal">{staged || '—'}</span></div>
+        </div>
+      </div>
+    );
+  },
+};

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-1/2: Explore Dropdown — Variation C (Flags locked)</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+  <div class="mockup-label">UC-1/2 Var C — Explore dropdown with Feature Flags locked (setup needed)</div>
+
+  <div class="layout">
+    <!-- App Area -->
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero selected-element" style="position: relative;">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools. Fast, reliable, and designed for developers who care about quality.</p>
+        </div>
+      </div>
+
+      <!-- Element Drawer with dropdown showing locked state -->
+      <div class="element-drawer" style="bottom: 140px; left: 60px;">
+        <textarea class="drawer-textarea" rows="2" placeholder="Describe a change...">make 3 variations of this hero section</textarea>
+        <div class="drawer-actions" style="position: relative;">
+          <button class="btn btn-icon" title="Back">←</button>
+          <button class="btn btn-icon" title="Voice">🎤</button>
+          <span class="spacer"></span>
+
+          <div style="position: relative;">
+            <div class="split-btn">
+              <button class="btn btn-explore btn-main">Explore</button>
+              <button class="btn btn-explore btn-caret">▾</button>
+            </div>
+
+            <!-- Dropdown with locked Feature Flags option — opens downward -->
+            <div class="dropdown" style="top: 34px; right: 0;">
+              <div class="dropdown-item">
+                <div class="dropdown-item-title">⚡ Quick</div>
+                <div class="dropdown-item-desc">Generate HTML mockups to compare. Fast, visual-only.</div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item disabled">
+                <div class="dropdown-item-title" style="display:flex;align-items:center;gap:6px;">
+                  🚩 With Feature Flags
+                  <span style="background:var(--bit-surface-hi);color:var(--bit-muted);font-size:8px;padding:1px 5px;border-radius:3px;font-weight:600;">SETUP REQUIRED</span>
+                </div>
+                <div class="dropdown-item-desc">Build real component variants in your app.</div>
+                <a class="setup-link" onclick="return false">Set up Feature Flags →</a>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-teal-action">Queue</button>
+          <button class="btn btn-orange">Commit</button>
+        </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">
+          <span style="display:inline-block;width:8px;height:8px;background:var(--bit-teal-light);border-radius:2px;margin-right:4px;"></span>
+          Select
+        </button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel Area — Loading state (agent generating) -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span style="color:var(--bit-text-mid);font-size:10px;">— 1 instance</span>
+        <span class="spacer"></span>
+        <button class="icon-btn">⚙</button>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Loading state while agent generates mockups -->
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <div class="loading-title">Generating options...</div>
+          <div class="loading-desc">The agent is creating 3 mockup variations of your hero section. This usually takes about 30 seconds.</div>
+          <button class="btn btn-ghost btn-sm" style="margin-top: 8px;">Cancel</button>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+        <span class="count-label"><span class="dot dot-committed"></span> 1 committed</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

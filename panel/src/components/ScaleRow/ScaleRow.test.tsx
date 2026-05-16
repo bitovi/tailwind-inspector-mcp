@@ -67,4 +67,3 @@ test('onHover is not called when locked', () => {
   fireEvent.mouseEnter(screen.getByText('px-2'));
   expect(onHover).not.toHaveBeenCalled();
 });
-

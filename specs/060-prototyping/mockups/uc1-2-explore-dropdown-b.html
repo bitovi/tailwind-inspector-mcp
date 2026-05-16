@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-1/2: Explore Dropdown + Carousel — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: Explore on the draw canvas footer, carousel with dot nav */
+    .canvas-area {
+      position: absolute;
+      inset: 0;
+      background: var(--ov-canvas-bg, #FAFBFB);
+      z-index: 50;
+    }
+    .canvas-sketch {
+      position: absolute;
+      top: 60px;
+      left: 40px;
+      width: 300px;
+      height: 180px;
+      border: 3px dashed rgba(0,132,139,0.4);
+      border-radius: 12px;
+      background: rgba(0,132,139,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--bit-teal);
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .canvas-annotations {
+      position: absolute;
+      top: 80px;
+      left: 80px;
+      color: #F5532D;
+      font-size: 18px;
+      font-weight: 700;
+      opacity: 0.6;
+      transform: rotate(-5deg);
+    }
+
+    /* Dot nav variation */
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px;
+    }
+    .carousel-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--bit-border);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .carousel-dot:hover { background: var(--bit-text-mid); }
+    .carousel-dot.active {
+      background: var(--bit-teal);
+      transform: scale(1.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-1/2 Var B — Explore on draw canvas, carousel with dot navigation</div>
+
+  <div class="layout">
+    <!-- App Area with Canvas overlay -->
+    <div class="app-area">
+      <!-- Canvas drawing surface -->
+      <div class="canvas-area">
+        <div class="canvas-sketch">
+          <span>[ user's rough sketch ]</span>
+        </div>
+        <div class="canvas-annotations">← bigger heading here</div>
+
+        <!-- Canvas footer with Explore dropdown -->
+        <div class="canvas-footer">
+          <button class="btn btn-ghost btn-sm" style="border-color:rgba(255,255,255,0.2); color: var(--bit-text-mid);">✕ Close</button>
+          <span class="spacer"></span>
+
+          <div style="position: relative;">
+            <div class="split-btn">
+              <button class="btn btn-explore btn-main">Explore</button>
+              <button class="btn btn-explore btn-caret">▾</button>
+            </div>
+
+            <!-- Dropdown (open) -->
+            <div class="dropdown" style="bottom: 42px; right: 0;">
+              <div class="dropdown-item" style="background: var(--ov-toolbar-hover);">
+                <div class="dropdown-item-title">⚡ Quick</div>
+                <div class="dropdown-item-desc">Generate HTML mockups from your sketch. Fast, visual-only.</div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item">
+                <div class="dropdown-item-title">🚩 With Feature Flags</div>
+                <div class="dropdown-item-desc">Build real component variants from your sketch. Slower, fully live.</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-teal-action btn-sm" style="border: 1px solid rgba(0,132,139,0.3);">Queue Change</button>
+        </div>
+      </div>
+
+      <!-- Bottom bar (behind canvas) -->
+      <div class="bottom-bar" style="opacity: 0.3;">
+        <button class="btn btn-toolbar active">Select</button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel Area — Carousel with dot nav variation -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span style="color:var(--bit-text-mid);font-size:10px;">— 1 instance</span>
+        <span class="spacer"></span>
+        <button class="icon-btn">⚙</button>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="carousel">
+        <!-- Dot navigation instead of arrows -->
+        <div class="carousel-dots" style="padding-top: 12px;">
+          <div class="carousel-dot"></div>
+          <div class="carousel-dot active"></div>
+          <div class="carousel-dot"></div>
+        </div>
+
+        <div class="carousel-title" style="text-align: center;">"Modern Minimal"</div>
+        <div class="carousel-desc" style="text-align: center;">Clean lines, generous whitespace, subtle gradient. Interprets your sketch with a modern aesthetic.</div>
+
+        <div class="carousel-frame">
+          <div style="padding: 48px 32px; background: linear-gradient(180deg, #0f172a, #1e293b); color: white; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px;">Welcome to Our Platform</h2>
+            <p style="font-size: 13px; opacity: 0.7; max-width: 280px; line-height: 1.6; margin-bottom: 20px;">Build something amazing with our tools.</p>
+            <button style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 6px; font-weight: 500; font-size: 12px; width: fit-content; cursor: pointer;">Learn More →</button>
+          </div>
+        </div>
+
+        <div class="carousel-actions">
+          <button class="btn btn-teal btn-sm">Implement</button>
+          <button class="btn btn-ghost-teal btn-sm">Refine...</button>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm">Discard All</button>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+        <span class="count-label"><span class="dot dot-committed"></span> 0 committed</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
