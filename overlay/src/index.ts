@@ -49,6 +49,7 @@ import { createWsMessageHandler } from './ws-handler';
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
 function onBrowseLocked(target: HTMLElement): void {
+	console.log('[insert-text-debug] onBrowseLocked:', { tag: target.tagName, prevCurrentTarget: state.currentTargetEl?.tagName ?? null });
 	state.currentTargetEl = target;
 	state.currentEquivalentNodes = [target];
 	const boundary = detectComponent(target);

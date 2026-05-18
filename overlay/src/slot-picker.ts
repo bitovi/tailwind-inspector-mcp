@@ -39,16 +39,31 @@ export function findAmbiguousSlots(
 ): SlotCandidate[] {
   const candidates: SlotCandidate[] = [];
 
+  console.log('[slot-picker] findAmbiguousSlots called', {
+    cx, cy,
+    target: target.tagName.toLowerCase(),
+    targetClasses: target.className,
+    position,
+    childCount: target.children.length,
+    firstChild: target.firstElementChild?.tagName,
+  });
+
   // ── Check 1: Same-rect ancestor stack ──
-  // When nested elements share the same rect (wrappers with no padding),
-  // each layer is a valid insertion context.
   const sameRectCandidates = findSameRectInsertSlots(cx, cy, target, position);
+  console.log('[slot-picker] Check 1 (same-rect):', sameRectCandidates.length, 'candidates');
   candidates.push(...sameRectCandidates);
 
   // ── Check 2: Sibling boundary proximity ──
-  // When cursor is near a sibling edge, "before B" and "after A" are both valid.
   const siblingCandidates = findSiblingBoundarySlots(cx, cy, target, position);
+  console.log('[slot-picker] Check 2 (sibling):', siblingCandidates.length, 'candidates');
   candidates.push(...siblingCandidates);
+
+  // ── Check 3: Edge ambiguity ──
+  const edgeCandidates = findEdgeChildSlots(cx, cy, target, position);
+  console.log('[slot-picker] Check 3 (edge-child):', edgeCandidates.length, 'candidates');
+  candidates.push(...edgeCandidates);
+
+  console.log('[slot-picker] Total before dedup:', candidates.length, candidates.map(c => `${c.position}@${c.tag}.${c.classes.split(' ')[0]}`));
 
   // Deduplicate by target+position
   const seen = new Set<string>();
@@ -74,6 +89,11 @@ export function findAmbiguousSlots(
     }
   }
   const deduped = unique.filter((_, i) => !removed.has(i));
+
+  console.log('[slot-picker] After dedup:', deduped.length, 'candidates', deduped.map(c => `${c.position}@<${c.tag}>`));
+  if (removed.size > 0) {
+    console.log('[slot-picker] Removed', removed.size, 'equivalent insertion points');
+  }
 
   // Only show picker if there are genuinely multiple options
   return deduped.length > 1 ? deduped : [];
@@ -226,6 +246,42 @@ function findSiblingBoundarySlots(
       } else {
         addCandidate(candidates, container, 'last-child', container);
       }
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * When the resolved position is first-child/last-child of a container,
+ * the cursor sits at the boundary of the edge child element. The user
+ * might want to insert *inside* that child instead of beside it.
+ *
+ * E.g. clicking left of "Left" in [Left, Middle, Right]:
+ *   resolved = first-child of container (insert before Left)
+ *   also valid = first-child of Left (insert inside Left)
+ */
+function findEdgeChildSlots(
+  _cx: number,
+  _cy: number,
+  target: HTMLElement,
+  position: DropPosition,
+): SlotCandidate[] {
+  const candidates: SlotCandidate[] = [];
+
+  if (position === 'first-child') {
+    const child = target.firstElementChild as HTMLElement | null;
+    console.log('[slot-picker] edge-child check: first-child, child =', child?.tagName, 'childClasses =', child?.className);
+    if (child) {
+      addCandidate(candidates, child, 'first-child', child, 1);
+    }
+  }
+
+  if (position === 'last-child') {
+    const child = target.lastElementChild as HTMLElement | null;
+    console.log('[slot-picker] edge-child check: last-child, child =', child?.tagName, 'childClasses =', child?.className);
+    if (child) {
+      addCandidate(candidates, child, 'last-child', child, 1);
     }
   }
 

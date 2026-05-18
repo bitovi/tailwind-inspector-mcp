@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 // Side-effect imports: register custom elements
-import '../../../../overlay/src/web-components/vb-overlay-host';
-import '../../../../overlay/src/web-components/vb-popover-container';
+import './vb-overlay-host';
+import './vb-modal-container';
 
 /**
- * vb-popover-container — Popover panel (fixed top-right, non-interactive position)
+ * vb-modal-container — Draggable & resizable modal with localStorage persistence
  */
 const meta: Meta = {
-  title: 'Overlay/VbPopoverContainer',
+  title: 'Overlay/VbModalContainer',
   parameters: {
     layout: 'fullscreen',
     viewport: { defaultViewport: 'desktop' },
@@ -26,7 +26,7 @@ export default meta;
 
 export const Closed: StoryObj = {
   render: () => (
-    <vb-popover-container
+    <vb-modal-container
       panel-url="about:blank"
     />
   ),
@@ -34,17 +34,24 @@ export const Closed: StoryObj = {
 
 export const Open: StoryObj = {
   render: () => (
-    <vb-popover-container
+    <vb-modal-container
       panel-url="about:blank"
       open
     />
   ),
+  parameters: {
+    docs: {
+      description: {
+        story: 'Modal is draggable by the handle and resizable from the bottom-right corner. Position and size are persisted in localStorage.',
+      },
+    },
+  },
 };
 
 export const WithContent: StoryObj = {
   render: () => (
-    <vb-popover-container
-      panel-url="data:text/html,<h1>Panel Content</h1><p>This is a sample panel.</p>"
+    <vb-modal-container
+      panel-url="data:text/html,<h1>Modal Panel</h1><p>This modal can be dragged and resized.</p><p>Bounds are saved to localStorage.</p>"
       open
     />
   ),

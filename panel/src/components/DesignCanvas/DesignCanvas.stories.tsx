@@ -63,3 +63,24 @@ function DesignCanvasDemo() {
 export const Default: Story = {
   render: () => <DesignCanvasDemo />,
 };
+
+export const Fullscreen: Story = {
+  render: () => (
+    <div style={{ width: '100vw', height: '100vh' }}>
+      <DesignCanvas
+        onSubmit={(dataUrl, w, h) => console.log('submit', w, h)}
+        onClose={() => console.log('close')}
+      />
+    </div>
+  ),
+};
+
+export const NoClose: Story = {
+  render: () => (
+    <div style={{ width: 600, height: 400, border: '10px solid black' }}>
+      <DesignCanvas
+        onSubmit={(dataUrl, w, h) => console.log('submit', w, h)}
+      />
+    </div>
+  ),
+};

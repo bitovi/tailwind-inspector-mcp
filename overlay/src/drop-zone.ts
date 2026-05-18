@@ -653,6 +653,16 @@ function onMouseLeave(): void {
 function onClick(e: MouseEvent): void {
   if (mode.kind === 'idle') return;
 
+  // Ignore clicks on the overlay shadow host (e.g. drawer buttons, toolbar)
+  const host = dom.overlayHost ?? overlayDom.shadowHost;
+  if (host) {
+    const path = e.composedPath();
+    if (path.includes(host)) {
+      console.log('[drop-zone-debug] onClick ignored — click is on overlay shadow host');
+      return;
+    }
+  }
+
   switch (mode.kind) {
     case 'element-select': return handleElementSelectClick(e);
     case 'browse': return handleBrowseClick(e);
@@ -695,7 +705,9 @@ function handleBrowseClick(e: MouseEvent): void {
   // Check for ambiguous insertion slots near tightly packed boundaries
   const slots = findAmbiguousSlots(e.clientX, e.clientY, dom.currentTarget, dom.currentPosition);
   if (slots.length > 1) {
+    console.log('[insert-text-debug] slot picker showing with', slots.length, 'candidates');
     showSlotPicker(slots, e.clientX, e.clientY, (picked) => {
+      console.log('[insert-text-debug] slot picker onPick callback fired:', { tag: picked.target.tagName, position: picked.position });
       lockBrowseInsert(picked.target, picked.position);
     });
     return;
@@ -706,6 +718,7 @@ function handleBrowseClick(e: MouseEvent): void {
 
 /** Finalize the browse-click lock at a resolved target + position. */
 function lockBrowseInsert(target: HTMLElement, position: DropPosition): void {
+  console.log('[insert-text-debug] lockBrowseInsert called:', { tag: target.tagName, position, modeKind: mode.kind });
   clearLockedInsert();
   locked.target = target;
   locked.position = position;
@@ -732,6 +745,7 @@ function lockBrowseInsert(target: HTMLElement, position: DropPosition): void {
 
   // Persistent browse: keep mode active, just notify via callback
   const cb = mode.kind === 'browse' ? mode.onLocked : null;
+  console.log('[insert-text-debug] lockBrowseInsert callback:', { hasCallback: !!cb, modeKind: mode.kind });
   if (cb) cb(target, position);
 }
 

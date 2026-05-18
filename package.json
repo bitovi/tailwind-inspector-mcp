@@ -42,6 +42,7 @@
   "scripts": {
     "build": "npm run build:overlay && npm run build:panel",
     "build:overlay": "esbuild overlay/src/index.ts --bundle --format=iife --outfile=overlay/dist/overlay.js --platform=browser",
+    "build:mockup": "esbuild overlay/src/web-components/index.ts --bundle --format=iife --outfile=shared/mockup-components.js --platform=browser",
     "build:panel": "cd panel && npx vite build",
     "prepack": "cd panel && npm install --include=dev && cd .. && npm run build",
     "test": "vitest run",

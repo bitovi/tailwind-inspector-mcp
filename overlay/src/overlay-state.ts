@@ -72,6 +72,7 @@ export function resolveTab(): string {
 
 /** Clear all element-selection state. Call before re-entering a mode or resetting. */
 export function clearSelectionState(): void {
+	console.log('[insert-text-debug] clearSelectionState called, stack:', new Error().stack?.split('\n').slice(1, 4).join(' ← '));
 	clearGrabCursor();
 	state.currentEquivalentNodes = [];
 	state.currentTargetEl = null;

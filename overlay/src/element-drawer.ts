@@ -124,8 +124,17 @@ function renderStateA(): void {
 	editTextBtn.setAttribute('class', 'ed-action-btn');
 	editTextBtn.textContent = isInsert ? 'Insert text' : 'Edit text';
 	editTextBtn.addEventListener("click", () => {
+		// Capture locked insert BEFORE deactivateSelectMode clears it
+		const savedInsert = getLockedInsert();
+		console.log('[insert-text-debug] "Insert text" clicked:', {
+			currentTargetEl: state.currentTargetEl?.tagName ?? null,
+			savedInsert: savedInsert ? { tag: savedInsert.target.tagName, pos: savedInsert.position } : null,
+		});
 		deactivateSelectMode();
-		enterTextEditMode();
+		console.log('[insert-text-debug] after deactivateSelectMode:', {
+			currentTargetEl: state.currentTargetEl?.tagName ?? null,
+		});
+		enterTextEditMode(savedInsert);
 	});
 	pair.appendChild(editTextBtn);
 
@@ -282,13 +291,34 @@ function submitDescribeChange(text: string, autoCommit: boolean, inputMethod?: s
 // STATE C — Edit Text
 // ═══════════════════════════════════════════════════════════
 
-function enterTextEditMode(): void {
-	if (!state.currentTargetEl) return;
+function enterTextEditMode(savedInsert?: { target: HTMLElement; position: string } | null): void {
+	// Use savedInsert.target as fallback when deactivateSelectMode cleared currentTargetEl
+	const resolvedTarget = state.currentTargetEl ?? savedInsert?.target ?? null;
+	if (!resolvedTarget) {
+		console.log('[insert-text-debug] enterTextEditMode: no currentTargetEl and no savedInsert target, aborting');
+		return;
+	}
 
-	const locked = getLockedInsert();
+	const locked = savedInsert ?? getLockedInsert();
 	const isInsert = !!locked;
-	let target = state.currentTargetEl;
+	let target = resolvedTarget;
 	let insertedTextNode: Text | null = null;
+
+	console.log('[insert-text-debug] enterTextEditMode:', {
+		isInsert,
+		lockedPosition: locked?.position,
+		lockedTarget: locked?.target?.tagName,
+		currentTargetEl: state.currentTargetEl?.tagName,
+	});
+
+	// For before/after insert positions, the placeholder text is inserted as a
+	// sibling of the target (into its parent).  The parent must be the
+	// contentEditable element so the inserted text is actually editable.
+	if (isInsert && locked && (locked.position === 'before' || locked.position === 'after')) {
+		const parent = locked.target.parentElement;
+		console.log('[insert-text-debug] before/after: using parent as target:', parent?.tagName);
+		if (parent) target = parent;
+	}
 
 	renderStateCClean();
 
@@ -305,10 +335,10 @@ function enterTextEditMode(): void {
 		repositionHighlights,
 		shadowRoot: dom.shadowRoot,
 		suppressActionBar: true,
-		onDone: () => {
+		onDone: (wasConfirmed?: boolean) => {
 			// Text edit ended — go back to State A
-			// If this was an insert and the user discarded, remove the inserted text node
-			if (isInsert && insertedTextNode && insertedTextNode.parentNode) {
+			// If this was an insert and the user DISCARDED, remove the inserted text node
+			if (isInsert && !wasConfirmed && insertedTextNode && insertedTextNode.parentNode) {
 				insertedTextNode.remove();
 			}
 			renderStateA();
@@ -320,12 +350,19 @@ function enterTextEditMode(): void {
 	if (isInsert && locked) {
 		insertedTextNode = document.createTextNode('Placeholder text');
 		const ref = locked.target;
+		console.log('[insert-text-debug] inserting placeholder:', {
+			position: locked.position,
+			refTag: ref.tagName,
+			refParent: ref.parentNode?.nodeName,
+			targetContentEditable: target.contentEditable,
+		});
 		switch (locked.position) {
 			case 'before':      ref.parentNode?.insertBefore(insertedTextNode, ref); break;
 			case 'after':       ref.parentNode?.insertBefore(insertedTextNode, ref.nextSibling); break;
 			case 'first-child': ref.insertBefore(insertedTextNode, ref.firstChild); break;
 			case 'last-child':  ref.appendChild(insertedTextNode); break;
 		}
+		console.log('[insert-text-debug] placeholder inserted, node in DOM:', !!insertedTextNode.parentNode);
 		const sel = window.getSelection();
 		if (sel) {
 			const range = document.createRange();

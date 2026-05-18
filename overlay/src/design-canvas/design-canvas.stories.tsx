@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 // Side-effect import: registers <vb-design-canvas> custom element
-import '../../../../overlay/src/design-canvas';
+import '.';
 
 const meta: Meta = {
   title: 'Overlay/VbDesignCanvas',

@@ -49,5 +49,12 @@ declare namespace JSX {
       },
       HTMLElement
     >;
+    'vb-element-drawer': React.DetailedHTMLProps<
+      React.HTMLAttributes<HTMLElement> & {
+        mode?: 'select' | 'insert';
+        state?: 'menu' | 'describe';
+      },
+      HTMLElement
+    >;
   }
 }

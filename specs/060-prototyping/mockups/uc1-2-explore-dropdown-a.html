@@ -5,8 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UC-1/2: Explore Dropdown + Carousel — Variation A</title>
   <link rel="stylesheet" href="shared.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwindcss.config = {
+      theme: { extend: { colors: {
+        'bit-bg': '#2c2c2c', 'bit-surface': '#383838', 'bit-surface-hi': '#404040',
+        'bit-border': '#3a3a3a', 'bit-text': '#e5e5e5', 'bit-text-mid': '#b3b3b3',
+        'bit-muted': '#999999', 'bit-orange': '#F5532D', 'bit-teal': '#00848B',
+        'bit-teal-dark': '#00464A', 'bit-teal-mid': '#003D40', 'bit-teal-hover': '#006b70',
+        'bit-teal-light': '#5fd4da', 'bit-green': '#2E7229',
+        'bit-draft': '#fbbf24', 'bit-committed': '#F5532D',
+      }, fontFamily: {
+        'display': ['Poppins', 'sans-serif'],
+        'ui': ['Inter', 'system-ui', 'sans-serif'],
+        'mono': ['Roboto Mono', 'Menlo', 'ui-monospace', 'monospace'],
+      }}}}
+  </script>
+  <script src="../../../shared/mockup-components.js"></script>
   <style>
-    /* Variation A: Dropdown open downward from Explore button */
+    /* Variation A: Dropdown open upward from Explore button */
+    /* Override shared.css overflow so the dropdown isn't clipped */
+    .app-area { overflow: visible !important; }
   </style>
 </head>
 <body>
@@ -38,89 +57,126 @@
       </div>
 
       <!-- Element Drawer — State B with Explore dropdown open -->
-      <div class="element-drawer" style="bottom: 140px; left: 60px;">
-        <textarea class="drawer-textarea" rows="2" placeholder="Describe a change...">make this hero section more modern, show me a few options</textarea>
-        <div class="drawer-actions" style="position: relative;">
-          <button class="btn btn-icon" title="Back">←</button>
-          <button class="btn btn-icon" title="Voice">🎤</button>
-          <span class="spacer"></span>
+      <!-- Based on: overlay/src/element-drawer.ts renderStateB() -->
+      <div class="element-drawer" style="bottom: 70px; left: 50%; transform: translateX(-50%); max-width: 380px;">
+        <div class="ed-describe-wrapper">
+          <textarea class="ed-textarea" rows="2" placeholder="describe change">make this hero section more modern, show me a few options</textarea>
+          <div class="ed-controls-row" style="position: relative;">
+            <vb-button icon="back" size="sm"></vb-button>
+            <div class="ed-controls-right">
+              <!-- Explore split button with dropdown open -->
+              <div style="position: relative;">
+                <div class="split-btn">
+                  <button class="btn btn-explore btn-main">Explore</button>
+                  <button class="btn btn-explore btn-caret">▾</button>
+                </div>
 
-          <!-- Explore split button with dropdown open -->
-          <div style="position: relative;">
-            <div class="split-btn">
-              <button class="btn btn-explore btn-main">Explore</button>
-              <button class="btn btn-explore btn-caret">▾</button>
-            </div>
+                <!-- Dropdown opens upward to stay visible -->
+                <div class="dropdown" style="bottom: 34px; right: 0;">
+                  <div class="dropdown-item" style="background: var(--ov-toolbar-hover);">
+                    <div class="dropdown-item-title">⚡ Quick</div>
+                    <div class="dropdown-item-desc">Generate HTML mockups to compare. Fast, visual-only.</div>
+                  </div>
+                  <div class="dropdown-divider"></div>
+                  <div class="dropdown-item">
+                    <div class="dropdown-item-title">🚩 With Feature Flags</div>
+                    <div class="dropdown-item-desc">Build real component variants in your app. Slower, fully live.</div>
+                  </div>
+                </div>
+              </div>
 
-            <!-- Dropdown opens downward so it doesn't cover the message -->
-            <div class="dropdown" style="top: 34px; right: 0;">
-              <div class="dropdown-item" style="background: var(--ov-toolbar-hover);">
-                <div class="dropdown-item-title">⚡ Quick</div>
-                <div class="dropdown-item-desc">Generate HTML mockups to compare. Fast, visual-only.</div>
-              </div>
-              <div class="dropdown-divider"></div>
-              <div class="dropdown-item">
-                <div class="dropdown-item-title">🚩 With Feature Flags</div>
-                <div class="dropdown-item-desc">Build real component variants in your app. Slower, fully live.</div>
-              </div>
+              <vb-button theme="danger" structure="filled" size="sm">Queue</vb-button>
+              <vb-button theme="primary" structure="filled" size="sm">Commit</vb-button>
             </div>
           </div>
-
-          <button class="btn btn-teal-action">Queue</button>
-          <button class="btn btn-orange">Commit</button>
         </div>
       </div>
 
-      <!-- Bottom bar -->
-      <div class="bottom-bar">
-        <button class="btn btn-toolbar active">
-          <span style="display:inline-block;width:8px;height:8px;background:var(--bit-teal-light);border-radius:2px;margin-right:4px;"></span>
-          Select
-          <span style="background:rgba(0,132,139,0.2);color:var(--bit-teal-light);font-size:9px;padding:1px 5px;border-radius:9999px;margin-left:3px;">1+</span>
-        </button>
-        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
-        <button class="btn btn-toolbar">
-          <span style="display:inline-block;width:8px;height:8px;border:1.5px solid var(--bit-text-mid);border-radius:2px;margin-right:4px;"></span>
-          Insert
-        </button>
-      </div>
+      <!-- Bottom toolbar — real Web Component -->
+      <vb-bottom-toolbar selected-tool="select" instance-count="1" style="position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);"></vb-bottom-toolbar>
     </div>
 
-    <!-- Panel Area -->
-    <div class="panel-area">
-      <div class="panel-header">
-        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
-        <span style="color:var(--bit-orange);font-size:10px;margin-right:4px;">⬤</span>
-        <span class="component-name">HeroSection</span>
-        <span style="color:var(--bit-text-mid);font-size:10px;">— 1 instance</span>
-        <span class="spacer"></span>
-        <button class="icon-btn">⚙</button>
-      </div>
+    <!-- Panel Area — real Tailwind classes from panel React components -->
+    <div class="w-[320px] min-w-[320px] bg-bit-bg border-l border-bit-border flex flex-col overflow-hidden">
 
-      <div class="panel-tabs">
-        <div class="panel-tab active">Design</div>
-        <div class="panel-tab">Elements</div>
-        <div class="panel-tab">Components</div>
-      </div>
-
-      <!-- Panel: Exploration details (preview is on the page) -->
-      <div class="carousel">
-        <div class="carousel-title">"Bold Gradient"</div>
-        <div class="carousel-desc">Vibrant gradient background with strong typography and high contrast call-to-action button.</div>
-
-        <div class="carousel-actions">
-          <button class="btn btn-teal btn-sm">Implement</button>
-          <button class="btn btn-ghost-teal btn-sm">Refine...</button>
-          <span class="spacer"></span>
-          <button class="btn btn-ghost btn-sm">Discard All</button>
+      <!-- Panel Header — Based on: panel/src/App.tsx -->
+      <div class="px-3 pt-3 pb-2 border-b border-bit-border">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <!-- ModeToggle — from panel/snapshots/ModeToggle/EditModeActive.html -->
+            <div class="inline-flex items-center rounded-md bg-bit-surface-hi p-0.5 gap-px">
+              <button type="button" class="w-[30px] h-7 rounded-[4px] border-none flex items-center justify-center cursor-pointer transition-all duration-[120ms] ease-out bg-bit-teal-dark text-bit-teal shadow-[0_1px_3px_rgba(0,0,0,0.3)]" aria-pressed="true" title="Edit">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 000-1.42l-2.34-2.34a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/></svg>
+              </button>
+              <button type="button" class="w-[30px] h-7 rounded-[4px] border-none flex items-center justify-center cursor-pointer transition-all duration-[120ms] ease-out bg-transparent text-bit-muted hover:text-bit-text-mid" aria-pressed="false" title="Report a bug">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 0 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a6 6 0 0 1 12 0v3c0 3.3-2.7 6-6 6z"/><path d="M6 11H2M22 11h-4M6 15H2M22 15h-4"/></svg>
+              </button>
+              <button type="button" class="w-[30px] h-7 rounded-[4px] border-none flex items-center justify-center cursor-pointer transition-all duration-[120ms] ease-out bg-transparent text-bit-muted hover:text-bit-text-mid" aria-pressed="false" title="Theme">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3 11A9 8.5 0 1 0 21 11A9 8.5 0 1 0 3 11ZM6.5 16A2 2 0 1 0 10.5 16A2 2 0 1 0 6.5 16ZM6.4 7.5A1.6 1.6 0 1 0 9.6 7.5A1.6 1.6 0 1 0 6.4 7.5ZM10.4 4.5A1.6 1.6 0 1 0 13.6 4.5A1.6 1.6 0 1 0 10.4 4.5ZM14.4 7.5A1.6 1.6 0 1 0 17.6 7.5A1.6 1.6 0 1 0 14.4 7.5ZM15.9 11.5A1.6 1.6 0 1 0 19.1 11.5A1.6 1.6 0 1 0 15.9 11.5ZM14.4 15.5A1.6 1.6 0 1 0 17.6 15.5A1.6 1.6 0 1 0 14.4 15.5Z"/></svg>
+              </button>
+            </div>
+            <!-- Component name -->
+            <div class="font-display font-bold text-[13px] text-bit-text leading-tight truncate">
+              HeroSection
+              <span class="font-ui font-normal text-bit-text-mid">— 1 instance</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button type="button" class="w-6 h-6 flex items-center justify-center rounded text-bit-muted hover:text-bit-text transition-colors" title="Switch to light mode">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="panel-footer">
-        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
-        <span class="count-label"><span class="dot dot-committed"></span> 0 committed</span>
-        <span class="count-label"><span class="dot dot-implementing"></span> 0 implementing</span>
-        <span class="count-label"><span class="dot dot-implemented"></span> 0 implemented</span>
+      <!-- TabBar — from panel/snapshots/TabBar/Default.html (tab labels changed) -->
+      <div class="relative flex border-b border-bit-border px-3">
+        <div class="relative">
+          <button type="button" class="relative px-3 py-2 text-[11px] font-medium font-[family-name:var(--font-ui)] border-none bg-transparent cursor-pointer transition-colors text-bit-text" aria-selected="true" role="tab">Design<span class="absolute bottom-0 left-0 right-0 h-[2px] bg-bit-teal"></span></button>
+        </div>
+        <div class="relative">
+          <button type="button" class="relative px-3 py-2 text-[11px] font-medium font-[family-name:var(--font-ui)] border-none bg-transparent cursor-pointer transition-colors text-bit-text-mid hover:text-bit-text" aria-selected="false" role="tab">Elements</button>
+        </div>
+        <div class="relative">
+          <button type="button" class="relative px-3 py-2 text-[11px] font-medium font-[family-name:var(--font-ui)] border-none bg-transparent cursor-pointer transition-colors text-bit-text-mid hover:text-bit-text" aria-selected="false" role="tab">Components</button>
+        </div>
+      </div>
+
+      <!-- Panel content: Exploration details (carousel is mockup-only / new feature) -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="carousel">
+          <div class="carousel-title">"Bold Gradient"</div>
+          <div class="carousel-desc">Vibrant gradient background with strong typography and high contrast call-to-action button.</div>
+
+          <div class="carousel-actions">
+            <button class="btn btn-teal btn-sm">Implement</button>
+            <button class="btn btn-ghost-teal btn-sm">Refine...</button>
+            <span class="spacer"></span>
+            <button class="btn btn-ghost btn-sm">Discard All</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel Footer — Based on: panel/src/App.tsx PatchStatusBar -->
+      <div class="shrink-0">
+        <div class="flex items-center justify-center px-3 py-1.5 border-t border-bit-border gap-3 text-[10px]">
+          <div class="flex items-center gap-1.5">
+            <span class="text-bit-draft font-medium">0</span>
+            <span class="text-bit-text-mid">draft</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-bit-committed font-medium">0</span>
+            <span class="text-bit-text-mid">committed</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-blue-400 font-medium">0</span>
+            <span class="text-bit-text-mid">implementing</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-bit-teal font-medium">0</span>
+            <span class="text-bit-text-mid">implemented</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

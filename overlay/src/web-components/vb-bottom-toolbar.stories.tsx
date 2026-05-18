@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 
 // Side-effect imports: register custom elements
-import '../../../../overlay/src/web-components/vb-overlay-host';
-import '../../../../overlay/src/web-components/vb-bottom-toolbar';
+import './vb-overlay-host';
+import './vb-bottom-toolbar';
 
 type VisualState = 'picking' | 'engaged' | 'completed' | 'dim' | null;
 

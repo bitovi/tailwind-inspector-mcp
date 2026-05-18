@@ -36,7 +36,7 @@ Create self-contained HTML mockups of VyBit components that use the real design 
    - `overlay-components.css` — overlay component CSS rules (toolbar, drawer, tooltip classes)
 3. **Check for Storybook snapshots** in `panel/snapshots/` — if a snapshot exists for the component, use it as a starting point. If not, and a snapshot script exists, run:
    ```bash
-   npx tsx scripts/generate-snapshots.ts ComponentName
+   npx tsx --tsconfig panel/tsconfig.json scripts/generate-snapshots.ts ComponentName
    ```
 4. **Read the Storybook stories** if they exist — stories show representative props and usage patterns.
 
@@ -173,6 +173,84 @@ specs/
   </div>
 </body>
 </html>
+```
+
+## Design Mode Components
+
+The DesignCanvas feature has panel-side React components that can be referenced in mockups. These are at `panel/src/components/DesignCanvas/`.
+
+### CanvasToolbar
+
+A toolbar with drawing tool buttons (select, freehand, shapes, text, eraser), fill/stroke color pickers, undo/redo/clear, close, and "Add to Drafts" submit button.
+
+- **Source:** `panel/src/components/DesignCanvas/CanvasToolbar.tsx`
+- **Storybook:** `Components/DesignCanvas/CanvasToolbar` (`http://localhost:6060/?path=/story/components-designcanvas-canvastoolbar--default`)
+- **Props:** `activeTool`, `fillColor`, `strokeColor`, `canUndo`, `canRedo`, `onSubmit`, `onClose`
+
+**Mockup pattern:**
+```html
+<div class="flex items-center gap-0.5 px-1.5 py-1 bg-bit-bg border-b border-bit-border text-[10px] shrink-0 flex-wrap">
+  <!-- Tool buttons: select, freehand, rectangle, circle, line, arrow, text, eraser -->
+  <button class="w-7 h-[26px] rounded border flex items-center justify-center text-[13px] bg-bit-teal/10 border-bit-teal text-bit-teal" title="Freehand">✎</button>
+  <button class="w-7 h-[26px] rounded border border-transparent flex items-center justify-center text-[13px] text-bit-text-mid" title="Rectangle">□</button>
+  <!-- ... more tool buttons -->
+
+  <div class="w-px h-[18px] bg-bit-border mx-1"></div>
+
+  <!-- Fill/stroke color swatches -->
+  <button class="w-7 h-[26px] rounded border border-transparent flex flex-col items-center justify-center" title="Fill color">🎨</button>
+  <button class="w-7 h-[26px] rounded border border-transparent flex flex-col items-center justify-center" title="Stroke color">✏️</button>
+
+  <div class="w-px h-[18px] bg-bit-border mx-1"></div>
+
+  <!-- Undo/Redo/Clear -->
+  <button class="w-7 h-[26px] rounded border border-transparent text-[13px] text-bit-text-mid">↶</button>
+  <button class="w-7 h-[26px] rounded border border-transparent text-[13px] opacity-35">↷</button>
+  <button class="w-7 h-[26px] rounded border border-transparent text-[13px] text-bit-text-mid">🗑</button>
+
+  <button class="ml-auto px-2.5 py-0.5 rounded border border-bit-border bg-bit-bg text-bit-muted text-[10px] font-medium">✕ Close</button>
+  <button class="px-2.5 py-0.5 rounded border border-bit-teal bg-bit-teal text-white text-[10px] font-medium">✓ Add to Drafts</button>
+</div>
+```
+
+### DesignCanvas (full)
+
+The complete design canvas includes `CanvasToolbar` above a white drawing area powered by Fabric.js. In mockups, represent the canvas area as a plain white div.
+
+- **Source:** `panel/src/components/DesignCanvas/DesignCanvas.tsx`
+- **Storybook:** `Components/DesignCanvas` (`http://localhost:6060/?path=/story/components-designcanvas--default`)
+- **Props:** `onSubmit`, `onClose`, `backgroundImage`, `armedComponent`, `onComponentPlaced`
+
+**Mockup pattern:**
+```html
+<div class="flex flex-col h-full">
+  <!-- CanvasToolbar (see above) -->
+  <div class="bg-white overflow-hidden relative" style="flex: 1; min-height: 300px;">
+    <!-- White drawing canvas area -->
+  </div>
+</div>
+```
+
+### Drawing Tools Reference
+
+| Tool | Icon | ID |
+|------|------|----|
+| Select | ↖ (cursor SVG) | `select` |
+| Freehand | ✎ | `freehand` |
+| Rectangle | □ | `rectangle` |
+| Circle | ○ | `circle` |
+| Line | ╱ | `line` |
+| Arrow | → | `arrow` |
+| Text | T | `text` |
+| Eraser | eraser SVG | `eraser` |
+
+### Color Palette
+
+The toolbar uses these 12 basic colors for fill/stroke pickers:
+
+```
+#000000  #ffffff  #9CA3AF  #EF4444  #F97316  #EAB308
+#22C55E  #3B82F6  #8B5CF6  #EC4899  #14B8A6  #6366F1
 ```
 
 ## Example: Overlay Component Mockup

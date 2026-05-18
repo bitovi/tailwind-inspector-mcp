@@ -2,8 +2,8 @@
  * Generate static HTML snapshots from panel Storybook stories.
  *
  * Usage:
- *   npx tsx scripts/generate-snapshots.ts              # all components
- *   npx tsx scripts/generate-snapshots.ts ColorGrid    # single component
+ *   npx tsx --tsconfig panel/tsconfig.json scripts/generate-snapshots.ts              # all components
+ *   npx tsx --tsconfig panel/tsconfig.json scripts/generate-snapshots.ts ColorGrid    # single component
  */
 
 import { renderToStaticMarkup } from 'react-dom/server';

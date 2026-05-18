@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 // Side-effect import: registers <adaptive-iframe> custom element
-import '../../../../overlay/src/adaptive-iframe/adaptive-iframe';
+import './adaptive-iframe';
 
 const meta: Meta = {
   title: 'Overlay/AdaptiveIframe',

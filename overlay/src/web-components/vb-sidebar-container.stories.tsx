@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 // Side-effect imports: register custom elements
-import '../../../../overlay/src/web-components/vb-overlay-host';
-import '../../../../overlay/src/web-components/vb-sidebar-container';
+import './vb-overlay-host';
+import './vb-sidebar-container';
 
 /**
  * vb-sidebar-container — Sidebar that restructures page to push content left

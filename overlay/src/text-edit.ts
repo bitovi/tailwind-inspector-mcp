@@ -16,7 +16,7 @@ interface TextEditDeps {
   positionToolbar: () => void;
   repositionHighlights: () => void;
   shadowRoot: ShadowRoot;
-  onDone?: () => void;
+  onDone?: (wasConfirmed?: boolean) => void;
   /** If true, suppress the floating action bar (caller manages commit/discard UI) */
   suppressActionBar?: boolean;
 }
@@ -197,7 +197,7 @@ export function endTextEdit(confirm: boolean): void {
   deps.send({ type: 'TEXT_EDIT_DONE' });
 
   // Restore toolbar
-  if (deps.onDone) deps.onDone();
+  if (deps.onDone) deps.onDone(confirm);
 }
 
 // ── Floating Action Bar ──────────────────────────────────

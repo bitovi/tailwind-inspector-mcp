@@ -21,10 +21,10 @@
 
       <!-- Element Drawer with dropdown showing locked state -->
       <div class="element-drawer" style="bottom: 140px; left: 60px;">
-        <textarea class="drawer-textarea" rows="2" placeholder="Describe a change...">make 3 variations of this hero section</textarea>
-        <div class="drawer-actions" style="position: relative;">
-          <button class="btn btn-icon" title="Back">←</button>
-          <button class="btn btn-icon" title="Voice">🎤</button>
+        <textarea class="ed-textarea" rows="2" placeholder="Describe a change...">make 3 variations of this hero section</textarea>
+        <div class="ed-controls-row" style="position: relative;">
+          <button class="ed-back-btn" title="Back">←</button>
+          <button class="ed-mic-btn" title="Voice">🎤</button>
           <span class="spacer"></span>
 
           <div style="position: relative;">
@@ -51,19 +51,19 @@
             </div>
           </div>
 
-          <button class="btn btn-teal-action">Queue</button>
-          <button class="btn btn-orange">Commit</button>
+          <button class="ed-queue-btn">Queue</button>
+          <button class="ed-commit-btn">Commit</button>
         </div>
       </div>
 
       <!-- Bottom bar -->
-      <div class="bottom-bar">
-        <button class="btn btn-toolbar active">
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">
           <span style="display:inline-block;width:8px;height:8px;background:var(--bit-teal-light);border-radius:2px;margin-right:4px;"></span>
           Select
         </button>
-        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
-        <button class="btn btn-toolbar">Insert</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
       </div>
     </div>
 

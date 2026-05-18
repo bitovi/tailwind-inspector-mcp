@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
 
 // Side-effect import: register custom elements
-import '../../../../overlay/src/web-components/vb-button';
-import '../../../../overlay/src/web-components/vb-button-group';
-import '../../../../overlay/src/web-components/vb-overlay-host';
+import './vb-button';
+import './vb-button-group';
+import './vb-overlay-host';
 
 type Structure = 'ghost' | 'filled';
 type Size = 'sm' | 'md';
