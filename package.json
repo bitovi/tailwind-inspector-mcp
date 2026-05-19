@@ -1,5 +1,5 @@
 {
-  "name": "@bitovi/vybit",
+  "name": "@bitovi/convey",
   "version": "0.17.2",
   "description": "Browser overlay + inspector panel + MCP server for visually editing Tailwind CSS classes on a running React app",
   "keywords": [
@@ -12,14 +12,14 @@
   ],
   "author": "Bitovi",
   "license": "MIT",
-  "homepage": "https://github.com/bitovi/vybit#readme",
+  "homepage": "https://github.com/bitovi/convey#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bitovi/vybit.git"
+    "url": "https://github.com/bitovi/convey.git"
   },
   "type": "module",
   "bin": {
-    "vybit": "./loader.mjs"
+    "convey": "./loader.mjs"
   },
   "exports": {
     ".": "./loader.mjs",

@@ -1,4 +1,4 @@
-# VyBit
+# Convey (we are renaming and under construction)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/bitovi/vybit/ci.yml?branch=main&label=CI)](https://github.com/bitovi/vybit/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@bitovi/vybit)](https://www.npmjs.com/package/@bitovi/vybit)
