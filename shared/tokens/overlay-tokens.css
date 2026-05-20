@@ -1,0 +1,84 @@
+/**
+ * Overlay CSS Tokens — mirrors :host block in overlay/src/styles.ts (OVERLAY_CSS)
+ *
+ * Used by:
+ * - Overlay mockups in specs/
+ * - Agent skill: make-mockup
+ *
+ * The canonical runtime source is the :host block in OVERLAY_CSS.
+ * Keep this file in sync when adding or changing tokens.
+ */
+
+:host,
+:root {
+  --ov-teal: #00848B;
+  --ov-teal-dark: #00464A;
+  --ov-teal-mid: #003D40;
+  --ov-teal-hover: #006b70;
+  --ov-teal-btn-hover: #009da5;
+  --ov-teal-confirm-hover: #006E74;
+  --ov-teal-ring: rgba(0,132,139,0.5);
+  --ov-teal-glow-0: rgba(0,132,139,0);
+  --ov-teal-glow-09: rgba(0,132,139,0.09);
+  --ov-teal-glow-12: rgba(0,132,139,0.12);
+  --ov-teal-glow-07: rgba(0,132,139,0.07);
+  --ov-teal-bg-05: rgba(0,132,139,0.05);
+  --ov-teal-bg-08: rgba(0,132,139,0.08);
+  --ov-teal-light: #5fd4da;
+  --ov-teal-label: #1ac2cb;
+  --ov-teal-text-light: #E0F5F6;
+  --ov-teal-action: #005357;
+  --ov-orange: #F5532D;
+  --ov-orange-glow: rgba(245,83,45,0.5);
+  --ov-orange-bg: rgba(245,83,45,0.15);
+  --ov-orange-bg-10: rgba(245,83,45,0.1);
+  --ov-orange-ring: rgba(245,83,45,0.35);
+  --ov-orange-pulse: rgba(245,83,45,0.4);
+  --ov-green: #16a34a;
+  --ov-green-bg: rgba(22,163,74,0.15);
+  --ov-green-ring: rgba(22,163,74,0.35);
+  --ov-red: #dc2626;
+  --ov-toolbar-bg: #1a1a1a;
+  --ov-toolbar-hover: #333;
+  --ov-toolbar-active: #444;
+  --ov-toolbar-shadow: 0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+  --ov-toolbar-sep: #3a3a3a;
+  --ov-input-bg: #2a2a2a;
+  --ov-text: #e5e5e5;
+  --ov-text-mid: #aaa;
+  --ov-text-dim: #999;
+  --ov-text-faint: #888;
+  --ov-text-subtle: #777;
+  --ov-text-muted: #ccc;
+  --ov-drawer-bg: var(--ov-teal-mid);
+  --ov-drawer-border: rgba(0,132,139,0.3);
+  --ov-textarea-bg: rgba(0,0,0,0.25);
+  --ov-textarea-placeholder: rgba(255,255,255,0.4);
+  --ov-back-btn-color: rgba(255,255,255,0.6);
+  --ov-back-btn-hover-bg: rgba(255,255,255,0.08);
+  --ov-mic-color: rgba(255,255,255,0.5);
+  --ov-mic-hover-bg: rgba(255,255,255,0.06);
+  --ov-kbd-bg: rgba(255,255,255,0.08);
+  --ov-kbd-border: rgba(255,255,255,0.1);
+  --ov-picker-bg: #fff;
+  --ov-picker-border: #DFE2E2;
+  --ov-picker-shadow: 0 8px 28px rgba(0,0,0,0.14);
+  --ov-picker-label: #334041;
+  --ov-picker-tag: #A3ADAD;
+  --ov-picker-heading: #687879;
+  --ov-picker-badge-bg: #F4F5F5;
+  --ov-picker-badge-border: #DFE2E2;
+  --ov-picker-count: #A0ABAB;
+  --ov-toggle-bg: #fff;
+  --ov-toggle-border: #DFE2E2;
+  --ov-toggle-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --ov-canvas-bg: #FAFBFB;
+  --ov-canvas-border: #DFE2E2;
+  --ov-depth-sep: rgba(255,255,255,0.06);
+  --ov-depth-row-hover: var(--ov-teal-bg-08);
+  --ov-toolbar-icon-sep: rgba(255,255,255,0.15);
+  --ov-toolbar-ring: rgba(255,255,255,0.12);
+  --ov-bottom-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+  --ov-toast-bg: var(--ov-teal-dark);
+  --ov-toast-text: #F4F5F5;
+}

@@ -15,6 +15,7 @@ import { clearSelectionState } from './overlay-state';
 import { clearHighlights } from './element-highlight';
 import { revertPreview } from './patcher';
 import { dispatch } from './overlay-state-machine';
+import { findAmbiguousSlots, showSlotPicker, dismissSlotPicker } from './slot-picker';
 
 export { type DropPosition, getAxis, computeDropPosition, adjustForEdgeChild } from '../../shared/drop-geometry';
 import type { DropPosition } from '../../shared/drop-geometry';
@@ -622,7 +623,14 @@ function onMouseMove(e: MouseEvent): void {
 
   dom.currentTarget = adjusted.target;
   dom.currentPosition = adjusted.position;
-  const indicatorAxis = adjusted.target.parentElement ? getAxis(adjusted.target.parentElement) : 'vertical';
+  // For before/after positions we need the parent's axis (sibling context).
+  // For first-child/last-child we're inserting *inside* adjusted.target, so use its own axis.
+  const indicatorAxis =
+    adjusted.position === 'first-child' || adjusted.position === 'last-child'
+      ? getAxis(adjusted.target)
+      : adjusted.target.parentElement
+        ? getAxis(adjusted.target.parentElement)
+        : 'vertical';
   showDropIndicator(adjusted.target, adjusted.position, indicatorAxis);
 
   // Start/update hover-to-preview timer (component-insert mode only)
@@ -644,6 +652,16 @@ function onMouseLeave(): void {
 
 function onClick(e: MouseEvent): void {
   if (mode.kind === 'idle') return;
+
+  // Ignore clicks on the overlay shadow host (e.g. drawer buttons, toolbar)
+  const host = dom.overlayHost ?? overlayDom.shadowHost;
+  if (host) {
+    const path = e.composedPath();
+    if (path.includes(host)) {
+      console.log('[drop-zone-debug] onClick ignored — click is on overlay shadow host');
+      return;
+    }
+  }
 
   switch (mode.kind) {
     case 'element-select': return handleElementSelectClick(e);
@@ -684,33 +702,51 @@ function handleBrowseClick(e: MouseEvent): void {
   e.preventDefault();
   e.stopPropagation();
 
+  // Check for ambiguous insertion slots near tightly packed boundaries
+  const slots = findAmbiguousSlots(e.clientX, e.clientY, dom.currentTarget, dom.currentPosition);
+  if (slots.length > 1) {
+    console.log('[insert-text-debug] slot picker showing with', slots.length, 'candidates');
+    showSlotPicker(slots, e.clientX, e.clientY, (picked) => {
+      console.log('[insert-text-debug] slot picker onPick callback fired:', { tag: picked.target.tagName, position: picked.position });
+      lockBrowseInsert(picked.target, picked.position);
+    });
+    return;
+  }
+
+  lockBrowseInsert(dom.currentTarget, dom.currentPosition);
+}
+
+/** Finalize the browse-click lock at a resolved target + position. */
+function lockBrowseInsert(target: HTMLElement, position: DropPosition): void {
+  console.log('[insert-text-debug] lockBrowseInsert called:', { tag: target.tagName, position, modeKind: mode.kind });
   clearLockedInsert();
-  locked.target = dom.currentTarget;
-  locked.position = dom.currentPosition;
+  locked.target = target;
+  locked.position = position;
 
   // Sync SM so ESCAPE and toolbar three-way toggle see the locked point
-  dispatch({ type: 'INSERT_POINT_LOCKED', target: dom.currentTarget, position: dom.currentPosition });
+  dispatch({ type: 'INSERT_POINT_LOCKED', target, position });
 
-  const parentAxis = dom.currentTarget.parentElement ? getAxis(dom.currentTarget.parentElement) : 'vertical';
+  const parentAxis = target.parentElement ? getAxis(target.parentElement) : 'vertical';
   locked.indicator = document.createElement('div');
   locked.indicator.style.cssText = css({ ...FIXED_OVERLAY, zIndex: Z_LOCKED });
   document.body.appendChild(locked.indicator);
-  showLockedIndicator(dom.currentTarget, dom.currentPosition, parentAxis);
+  showLockedIndicator(target, position, parentAxis);
 
-  const fiber = getFiber(dom.currentTarget);
+  const fiber = getFiber(target);
   const boundary = fiber ? findOwningComponent(fiber) : null;
-  const targetName = boundary?.componentName ?? dom.currentTarget.tagName.toLowerCase();
+  const targetName = boundary?.componentName ?? target.tagName.toLowerCase();
 
   sendTo('panel', {
     type: 'INSERT_POINT_LOCKED',
-    position: dom.currentPosition,
+    position,
     targetName,
-    targetTag: dom.currentTarget.tagName.toLowerCase(),
+    targetTag: target.tagName.toLowerCase(),
   });
 
   // Persistent browse: keep mode active, just notify via callback
   const cb = mode.kind === 'browse' ? mode.onLocked : null;
-  if (cb) cb(dom.currentTarget, dom.currentPosition);
+  console.log('[insert-text-debug] lockBrowseInsert callback:', { hasCallback: !!cb, modeKind: mode.kind });
+  if (cb) cb(target, position);
 }
 
 function handleGenericInsertClick(e: MouseEvent): void {
@@ -735,6 +771,17 @@ function handleGenericInsertClick(e: MouseEvent): void {
   }
   e.preventDefault();
   e.stopPropagation();
+
+  // Check for ambiguous insertion slots near tightly packed boundaries
+  const slots = findAmbiguousSlots(e.clientX, e.clientY, dom.currentTarget, dom.currentPosition);
+  if (slots.length > 1) {
+    const cb = mode.kind === 'generic-insert' ? mode.callback : null;
+    showSlotPicker(slots, e.clientX, e.clientY, (picked) => {
+      cleanup();
+      if (cb) cb(picked.target, picked.position);
+    });
+    return;
+  }
 
   const target = dom.currentTarget;
   const position = dom.currentPosition;
@@ -766,6 +813,24 @@ function handleComponentInsertClick(e: MouseEvent): void {
   e.preventDefault();
   e.stopPropagation();
 
+  if (mode.kind !== 'component-insert') return;
+
+  // Check for ambiguous insertion slots near tightly packed boundaries
+  const slots = findAmbiguousSlots(e.clientX, e.clientY, dom.currentTarget, dom.currentPosition);
+  if (slots.length > 1) {
+    showSlotPicker(slots, e.clientX, e.clientY, (picked) => {
+      dom.currentTarget = picked.target;
+      dom.currentPosition = picked.position;
+      finalizeComponentInsert();
+    });
+    return;
+  }
+
+  finalizeComponentInsert();
+}
+
+function finalizeComponentInsert(): void {
+  if (!dom.currentTarget || !dom.currentPosition) return;
   if (mode.kind !== 'component-insert') return;
 
   const { componentName: cName, storyId: sId, ghostHtml: gHtml, ghostCss: gCss, componentPath: cPath, componentArgs: cArgs } = mode;
@@ -883,6 +948,9 @@ function cleanup(): void {
   dom.arrowRight = null;
   dom.currentTarget = null;
   dom.currentPosition = null;
+
+  // Dismiss slot picker if open
+  dismissSlotPicker();
 
   // Clean up hover-to-preview
   if (dropPreview) {

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-8/9/10: Flag Variant Switcher — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: Horizontal pill-based variant switcher */
+    .variant-pills {
+      display: flex;
+      gap: 2px;
+      padding: 8px 12px;
+      background: var(--bit-surface);
+      border-radius: 8px;
+      margin: 10px 12px;
+    }
+    .variant-pill {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: transparent;
+      border: none;
+      font-family: var(--font-ui);
+    }
+    .variant-pill:hover { background: var(--bit-surface-hi); }
+    .variant-pill.active {
+      background: var(--bit-teal-dark);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .variant-pill .pill-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--bit-text);
+      display: block;
+    }
+    .variant-pill .pill-desc {
+      font-size: 9px;
+      color: var(--bit-text-mid);
+      display: block;
+      margin-top: 2px;
+    }
+    .variant-pill.active .pill-name { color: var(--bit-teal-light); }
+    .variant-pill.active .pill-desc { color: rgba(95,212,218,0.6); }
+
+    /* Thumbnail strip */
+    .thumb-strip {
+      display: flex;
+      gap: 6px;
+      padding: 0 12px 10px;
+      overflow-x: auto;
+    }
+    .thumb-card {
+      flex-shrink: 0;
+      width: 80px;
+      height: 52px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .thumb-card:hover { border-color: var(--bit-text-mid); }
+    .thumb-card.active { border-color: var(--bit-teal); }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-8/9/10 Var B — Horizontal pill switcher + thumbnail strip</div>
+
+  <div class="layout">
+    <!-- App Area: Shows "Modern Minimal" variant -->
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-modern selected-element" style="position: relative;">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools. Fast, reliable, and designed for developers who care about quality.</p>
+          <button style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 10px 24px; border-radius: 8px; font-weight: 500; font-size: 14px; cursor: pointer; margin-top: 20px;">Learn More →</button>
+        </div>
+      </div>
+
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel: Pill-based variant switcher -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--bit-orange);font-size:9px;font-weight:600;background:rgba(245,83,45,0.15);padding:2px 6px;border-radius:4px;">🚩 3 variants</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Pill-based switcher -->
+        <div class="variant-pills">
+          <button class="variant-pill active">
+            <span class="pill-name">Modern</span>
+            <span class="pill-desc">Minimal</span>
+          </button>
+          <button class="variant-pill">
+            <span class="pill-name">Bold</span>
+            <span class="pill-desc">Gradient</span>
+          </button>
+          <button class="variant-pill">
+            <span class="pill-name">Playful</span>
+            <span class="pill-desc">Warm</span>
+          </button>
+        </div>
+
+        <!-- Thumbnail preview strip -->
+        <div class="thumb-strip">
+          <div class="thumb-card active">
+            <div style="background: linear-gradient(180deg, #0f172a, #1e293b); width: 100%; height: 100%;"></div>
+          </div>
+          <div class="thumb-card">
+            <div style="background: linear-gradient(135deg, #f97316, #ef4444, #ec4899); width: 100%; height: 100%;"></div>
+          </div>
+          <div class="thumb-card">
+            <div style="background: #fef3c7; width: 100%; height: 100%; border: 2px dashed #f59e0b;"></div>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: var(--bit-border); margin: 0 12px;"></div>
+
+        <!-- Flag name shown -->
+        <div style="padding: 8px 16px; display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 10px; font-family: var(--font-mono); color: var(--bit-text-mid);">hero-variant</span>
+          <span style="font-size: 10px; font-family: var(--font-mono); color: var(--bit-teal);">"modern"</span>
+        </div>
+
+        <div style="height: 1px; background: var(--bit-border); margin: 0 12px;"></div>
+
+        <!-- Normal sections -->
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▸</span>
+            <span class="label">Box Model</span>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▸</span>
+            <span class="label">Typography</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 8px 12px; border-top: 1px solid var(--bit-border); display: flex; gap: 6px;">
+        <button class="btn btn-teal btn-sm" style="flex: 1;">Commit to "Modern"</button>
+        <button class="btn btn-danger btn-sm">Remove</button>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+        <span class="count-label"><span class="dot dot-committed"></span> 0 committed</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

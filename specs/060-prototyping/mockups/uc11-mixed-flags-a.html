@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-11: Mixed Flag Type Controls — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .flag-type-badge {
+      font-size: 8px;
+      font-weight: 600;
+      padding: 1px 4px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .flag-type-string { background: rgba(139,92,246,0.2); color: #a78bfa; }
+    .flag-type-number { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .flag-type-boolean { background: rgba(34,197,94,0.2); color: #4ade80; }
+
+    /* Slider for number values */
+    .flag-slider {
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--bit-surface-hi);
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+      margin: 6px 0;
+    }
+    .flag-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--bit-teal);
+      cursor: pointer;
+      border: 2px solid var(--bit-bg);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-11 Var A — Mixed flag types: string enum, number stepper + slider, boolean toggle</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <!-- A more complex component with multiple flagged aspects -->
+        <div class="selected-element" style="position: relative; background: linear-gradient(135deg, #f97316, #ef4444, #ec4899); color: white; padding: 48px 40px; border-radius: 20px;">
+          <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 8px; font-family: 'Poppins', sans-serif;">Welcome to Our Platform</h1>
+          <p style="font-size: 14px; opacity: 0.9; max-width: 500px; line-height: 1.6; margin-bottom: 24px;">Build something amazing with our tools.</p>
+
+          <!-- Grid of cards controlled by grid-columns flag -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px;">
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 20px; margin-bottom: 4px;">🚀</div>
+              <div style="font-size: 11px; font-weight: 600;">Fast</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 20px; margin-bottom: 4px;">🔒</div>
+              <div style="font-size: 11px; font-weight: 600;">Secure</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 20px; margin-bottom: 4px;">⚡</div>
+              <div style="font-size: 11px; font-weight: 600;">Reliable</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; text-align: center;">
+              <div style="font-size: 20px; margin-bottom: 4px;">💎</div>
+              <div style="font-size: 11px; font-weight: 600;">Premium</div>
+            </div>
+          </div>
+
+          <!-- Testimonials section (controlled by show-testimonials) -->
+          <div style="margin-top: 20px; padding: 16px; background: rgba(0,0,0,0.15); border-radius: 10px;">
+            <div style="font-size: 12px; font-style: italic; opacity: 0.9;">"This platform changed how we build products."</div>
+            <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">— Alex, CTO at StartupCo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel: Multiple flag types -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--bit-orange);font-size:9px;font-weight:600;background:rgba(245,83,45,0.15);padding:2px 6px;border-radius:4px;">🚩 3 flags</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <div class="flag-section">
+          <div class="flag-section-title">Feature Flags</div>
+
+          <!-- String enum flag -->
+          <div class="flag-group">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <span class="flag-group-label" style="margin: 0;">hero-variant</span>
+              <span class="flag-type-badge flag-type-string">string</span>
+            </div>
+            <div class="flag-radio-group">
+              <div class="flag-radio">
+                <div class="radio-dot"></div>
+                <div class="radio-label">Modern Minimal</div>
+              </div>
+              <div class="flag-radio selected">
+                <div class="radio-dot"></div>
+                <div class="radio-label">Bold Gradient</div>
+              </div>
+              <div class="flag-radio">
+                <div class="radio-dot"></div>
+                <div class="radio-label">Playful</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 1px; background: var(--bit-border); margin: 8px 0;"></div>
+
+          <!-- Number flag with stepper + slider -->
+          <div class="flag-group">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <span class="flag-group-label" style="margin: 0;">grid-columns</span>
+              <span class="flag-type-badge flag-type-number">number</span>
+            </div>
+            <div class="flag-inline">
+              <div class="flag-stepper">
+                <button class="step-btn">−</button>
+                <span class="step-value">4</span>
+                <button class="step-btn">+</button>
+              </div>
+            </div>
+            <div style="padding: 0 10px;">
+              <input type="range" class="flag-slider" min="1" max="6" value="4">
+              <div style="display: flex; justify-content: space-between; font-size: 8px; color: var(--bit-muted); margin-top: 2px;">
+                <span>1</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+                <span>5</span>
+                <span>6</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 1px; background: var(--bit-border); margin: 8px 0;"></div>
+
+          <!-- Boolean flag with toggle -->
+          <div class="flag-group">
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <span class="flag-group-label" style="margin: 0;">show-testimonials</span>
+              <span class="flag-type-badge flag-type-boolean">bool</span>
+            </div>
+            <div class="flag-inline">
+              <span class="flag-inline-label">Show testimonials section</span>
+              <button class="flag-toggle on"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 8px 12px; border-top: 1px solid var(--bit-border); display: flex; gap: 6px;">
+        <button class="btn btn-teal btn-sm" style="flex: 1;">Commit All Values</button>
+        <button class="btn btn-danger btn-sm">Remove</button>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+        <span class="count-label"><span class="dot dot-committed"></span> 0 committed</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

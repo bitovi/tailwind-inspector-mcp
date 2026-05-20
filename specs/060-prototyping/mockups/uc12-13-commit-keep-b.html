@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-12/13: Commit vs Keep Flags — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: Summary view with batch commit, toggle to keep */
+    .resolve-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .resolve-table th {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--bit-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--bit-border);
+    }
+    .resolve-table td {
+      font-size: 10px;
+      padding: 8px 8px;
+      border-bottom: 1px solid var(--bit-border);
+      vertical-align: middle;
+    }
+    .resolve-table .flag-name {
+      font-family: var(--font-mono);
+      color: var(--bit-text);
+      font-weight: 500;
+    }
+    .resolve-table .flag-val {
+      font-family: var(--font-mono);
+      color: var(--bit-teal);
+      font-weight: 500;
+    }
+    .keep-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .keep-toggle label {
+      font-size: 9px;
+      color: var(--bit-muted);
+    }
+    .mini-toggle {
+      width: 28px;
+      height: 16px;
+      border-radius: 8px;
+      background: var(--bit-surface-hi);
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .mini-toggle.on {
+      background: #fbbf24;
+    }
+    .mini-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 0.2s;
+    }
+    .mini-toggle.on::after {
+      transform: translateX(12px);
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--bit-surface);
+      border-radius: 6px;
+      margin: 8px 12px;
+    }
+    .summary-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .summary-text {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.4;
+    }
+    .summary-text strong {
+      color: var(--bit-text);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-12/13 Var B — Table-based flag resolution with keep toggles</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-bold selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <div style="padding: 12px 12px 8px; font-size: 10px; font-weight: 600; color: var(--bit-text); text-transform: uppercase; letter-spacing: 0.5px;">Finalize Flags</div>
+
+        <!-- Summary -->
+        <div class="summary-row">
+          <div class="summary-icon" style="background: rgba(0,132,139,0.2);">🎯</div>
+          <div class="summary-text">
+            <strong>3 flags</strong> are active on this component. Choose which to commit (hardcode) and which to keep for A/B testing.
+          </div>
+        </div>
+
+        <!-- Table view -->
+        <div style="padding: 0 12px;">
+          <table class="resolve-table">
+            <thead>
+              <tr>
+                <th>Flag</th>
+                <th>Value</th>
+                <th>Keep?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="flag-name">hero-variant</td>
+                <td class="flag-val">"bold"</td>
+                <td>
+                  <div class="keep-toggle">
+                    <button class="mini-toggle"></button>
+                    <label>A/B</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="flag-name">grid-columns</td>
+                <td class="flag-val">4</td>
+                <td>
+                  <div class="keep-toggle">
+                    <button class="mini-toggle on"></button>
+                    <label>A/B</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="flag-name">show-testimonials</td>
+                <td class="flag-val">true</td>
+                <td>
+                  <div class="keep-toggle">
+                    <button class="mini-toggle"></button>
+                    <label>A/B</label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Explanation of what will happen -->
+        <div style="padding: 10px 12px;">
+          <div style="background: var(--bit-bg); border-radius: 6px; padding: 8px 10px; font-size: 9px; color: var(--bit-text-mid); line-height: 1.5;">
+            <div style="margin-bottom: 4px;"><strong style="color:var(--bit-text);">Will be committed (hardcoded):</strong></div>
+            <div>• <code style="font-family: var(--font-mono); font-size: 9px;">hero-variant = "bold"</code> — remove other variants</div>
+            <div>• <code style="font-family: var(--font-mono); font-size: 9px;">show-testimonials = true</code> — keep section, remove flag</div>
+            <div style="margin-top: 6px; margin-bottom: 4px;"><strong style="color: #fbbf24;">Will keep as flag (A/B ready):</strong></div>
+            <div>• <code style="font-family: var(--font-mono); font-size: 9px;">grid-columns</code> — flag stays, swap provider to ship</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 8px 12px; border-top: 1px solid var(--bit-border); display: flex; gap: 6px;">
+        <button class="btn btn-teal btn-sm" style="flex: 1;">Apply (2 commit, 1 keep)</button>
+        <button class="btn btn-danger btn-sm">Remove All</button>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

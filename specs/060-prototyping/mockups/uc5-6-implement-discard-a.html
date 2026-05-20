@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-5/6: Implement or Discard — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Implement confirmation: selected option highlighted */
+    .selected-option-banner {
+      margin: 8px 12px;
+      padding: 10px 12px;
+      background: var(--bit-teal-dark);
+      border: 1px solid rgba(0,132,139,0.4);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .selected-option-banner .check {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--bit-teal);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .selected-option-banner .info {
+      flex: 1;
+    }
+    .selected-option-banner .option-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--bit-text);
+    }
+    .selected-option-banner .option-status {
+      font-size: 10px;
+      color: var(--bit-teal-light);
+    }
+
+    .implement-actions {
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .implement-note {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.4;
+      padding: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-5/6 Var A — Selected option confirmation, "Implement Now" prominent</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--explore-purple);font-size:9px;font-weight:600;background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;">✨ Exploring</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="carousel">
+        <!-- Selected option banner -->
+        <div class="selected-option-banner">
+          <div class="check">✓</div>
+          <div class="info">
+            <div class="option-name">"Bold Gradient" selected</div>
+            <div class="option-status">Ready to implement</div>
+          </div>
+        </div>
+
+        <div class="carousel-frame" style="min-height: 160px; margin-top: 4px;">
+          <div style="padding: 32px; background: linear-gradient(135deg, #f97316, #ef4444, #ec4899); color: white; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 8px;">Welcome to Our Platform</h2>
+            <p style="font-size: 12px; opacity: 0.9; max-width: 260px; line-height: 1.5;">Build something amazing with our tools.</p>
+            <button style="background: white; color: #ef4444; border: none; padding: 6px 16px; border-radius: 6px; font-weight: 700; font-size: 11px; width: fit-content; cursor: pointer; margin-top: 12px;">Get Started</button>
+          </div>
+        </div>
+
+        <div class="implement-actions">
+          <div class="implement-note">The agent will apply this design to your source code. The mockup style will be converted to Tailwind classes on the HeroSection component.</div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-teal" style="flex: 1;">Implement Now</button>
+            <button class="btn btn-ghost btn-sm">← Back</button>
+            <button class="btn btn-ghost btn-sm">Discard All</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-committed"></span> 1 exploring</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

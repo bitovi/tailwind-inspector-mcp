@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-3: Refine a Mockup — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Refinement input expanded inline below carousel */
+    .refine-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--explore-purple);
+      background: rgba(139,92,246,0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-3 Var A — Refine with inline textarea below mockup, Refine This button</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <!-- Mockup preview on page -->
+        <div class="mockup-overlay" style="top: 40px;">
+          <div class="mockup-preview">
+            <div style="padding: 48px 40px; background: linear-gradient(135deg, #f97316, #ef4444, #ec4899); color: white; display: flex; flex-direction: column; justify-content: center;">
+              <h1 style="font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 12px;">Welcome to Our Platform</h1>
+              <p style="font-size: 14px; opacity: 0.9; max-width: 420px; line-height: 1.6;">Build something amazing with our tools.</p>
+            </div>
+          </div>
+          <div class="mockup-nav">
+            <button class="nav-btn">◀</button>
+            <span class="page-indicator">Option 2 of 3</span>
+            <button class="nav-btn">▶</button>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <!-- Panel: Carousel with refinement input open -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span class="refine-badge">✨ Exploring</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="carousel">
+        <div class="carousel-nav">
+          <button class="nav-btn">◀</button>
+          <span class="page-indicator">Option 2 of 3</span>
+          <button class="nav-btn">▶</button>
+        </div>
+
+        <div class="carousel-title">"Bold Gradient"</div>
+        <div class="carousel-desc">Vibrant gradient background with strong typography.</div>
+
+        <div class="carousel-frame" style="min-height: 160px;">
+          <div style="padding: 28px; background: linear-gradient(135deg, #f97316, #ef4444, #ec4899); color: white; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 6px;">Welcome to Our Platform</h2>
+            <p style="font-size: 12px; opacity: 0.9; max-width: 260px; line-height: 1.5;">Build something amazing with our tools.</p>
+          </div>
+        </div>
+
+        <!-- Refinement textarea inline -->
+        <div class="refinement-area">
+          <textarea class="refinement-input" rows="2" placeholder="Describe how to improve this option...">Make this darker, and add more whitespace around the heading</textarea>
+        </div>
+
+        <div class="carousel-actions">
+          <button class="btn btn-explore btn-sm">Refine This</button>
+          <button class="btn btn-teal btn-sm">Implement</button>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm">Discard All</button>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-committed"></span> 1 exploring</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

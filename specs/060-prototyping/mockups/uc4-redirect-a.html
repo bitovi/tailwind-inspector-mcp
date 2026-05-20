@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-4: Redirect All Options — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .redirect-banner {
+      margin: 0 12px 8px;
+      padding: 8px 10px;
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.2);
+      border-radius: 6px;
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.4;
+    }
+    .redirect-banner strong {
+      color: var(--explore-purple);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-4 Var A — Redirect all: textarea at top of carousel, "Regenerate All" button</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--explore-purple);font-size:9px;font-weight:600;background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;">✨ Exploring</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="carousel">
+        <!-- Redirect input at top -->
+        <div class="redirect-banner">
+          <strong>Original request:</strong> "make this hero more modern"
+        </div>
+
+        <div class="refinement-area">
+          <textarea class="refinement-input" rows="2" placeholder="Give new direction for all options...">These are all too corporate. Try something more playful and fun with rounded shapes</textarea>
+        </div>
+
+        <div style="padding: 0 12px 8px; display: flex; gap: 6px;">
+          <button class="btn btn-explore btn-sm">Regenerate All</button>
+          <span style="flex:1;"></span>
+          <button class="btn btn-ghost btn-sm">Discard</button>
+        </div>
+
+        <div style="height: 1px; background: var(--bit-border); margin: 0 12px;"></div>
+
+        <!-- Current options shown dimmed -->
+        <div style="opacity: 0.4; pointer-events: none;">
+          <div class="carousel-nav">
+            <button class="nav-btn">◀</button>
+            <span class="page-indicator">Option 1 of 3</span>
+            <button class="nav-btn">▶</button>
+          </div>
+
+          <div class="carousel-frame" style="min-height: 120px; margin-bottom: 8px;">
+            <div style="padding: 24px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+              <h2 style="font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700;">Welcome to Our Platform</h2>
+              <p style="font-size: 11px; opacity: 0.8;">Build something amazing.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-committed"></span> 1 exploring</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

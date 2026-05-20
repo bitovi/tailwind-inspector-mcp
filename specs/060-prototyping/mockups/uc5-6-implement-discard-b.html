@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-5/6: Implement or Discard — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: Discard confirmation dialog */
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-5/6 Var B — Discard confirmation dialog with "keep working" option</div>
+
+  <div class="backdrop"></div>
+
+  <div class="layout" style="filter: blur(1px);">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+      </div>
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+      <div class="carousel">
+        <div class="carousel-nav">
+          <button class="nav-btn">◀</button>
+          <span class="page-indicator">Option 2 of 3</span>
+          <button class="nav-btn">▶</button>
+        </div>
+        <div class="carousel-frame" style="min-height: 140px;">
+          <div style="padding: 28px; background: linear-gradient(135deg, #f97316, #ef4444); color: white; height: 100%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discard confirmation -->
+  <div class="confirm-dialog">
+    <h3>Discard exploration?</h3>
+    <p>This will delete all 3 generated mockups and return to normal editing. You can always explore again later.</p>
+    <div style="background: var(--bit-bg); border-radius: 6px; padding: 8px 10px; margin-bottom: 16px;">
+      <div style="font-size: 10px; color: var(--bit-text-mid); margin-bottom: 4px;">Options that will be removed:</div>
+      <div style="font-size: 11px; color: var(--bit-text); display: flex; flex-direction: column; gap: 3px;">
+        <span>• Modern Minimal</span>
+        <span>• Bold Gradient</span>
+        <span>• Playful Illustration</span>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost btn-sm">Keep Exploring</button>
+      <button class="btn btn-danger btn-sm">Discard All</button>
+    </div>
+  </div>
+</body>
+</html>

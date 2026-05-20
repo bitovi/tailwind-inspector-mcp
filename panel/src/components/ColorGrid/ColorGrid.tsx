@@ -1,6 +1,6 @@
-import { HUE_ORDER, SHADE_ORDER } from '../../../overlay/src/tailwind/scales';
+import { HUE_ORDER, SHADE_ORDER } from '../../../../overlay/src/tailwind/scales';
 
-interface ColorGridProps {
+export interface ColorGridProps {
   prefix: string;
   currentValue: string;
   colors: Record<string, any>;
@@ -118,4 +118,3 @@ function ColorCell({ prefix, colorName, colorValue, isCurrent, isLocked, locked,
     />
   );
 }
-

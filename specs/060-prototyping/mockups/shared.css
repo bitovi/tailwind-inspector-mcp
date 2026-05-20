@@ -1,0 +1,241 @@
+/* ===== VyBit 060-Prototyping Mockup Shared Styles ===== */
+/*
+ * Real CSS comes from imported token + component files:
+ *   - overlay-tokens.css   -> --ov-* custom properties
+ *   - panel-tokens.css     -> --color-bit-* custom properties
+ *   - overlay-components.css -> .element-drawer, .ed-*, .bottom-toolbar,
+ *       .bt-combo, .bt-group, .bt-sep, .vb-btn, .vb-btn-group, etc.
+ *
+ * Panel components use Tailwind CDN utilities (included per-file via <script>).
+ *
+ * This file ONLY contains:
+ *   1. Imports
+ *   2. Mockup-specific layout scaffolding (.layout, .app-area, .panel-area)
+ *   3. Fake app content styling
+ *   4. Position overrides (fixed -> absolute for mockup embedding)
+ *   5. Genuinely NEW components that don't exist in production:
+ *      carousel, explore dropdown, flag controls, mockup-overlay, etc.
+ *   6. Small utility helpers (.mockup-label, .backdrop, .spacer)
+ */
+
+@import '../../../shared/tokens/panel-tokens.css';
+@import '../../../shared/tokens/overlay-tokens.css';
+@import '../../../shared/tokens/overlay-components.css';
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+:root {
+  --explore-purple: #8B5CF6;
+  --explore-purple-hover: #7C3AED;
+  --font-display: 'Poppins', sans-serif;
+  --font-ui: 'Inter', sans-serif;
+  --font-mono: 'Roboto Mono', 'Menlo', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--color-bit-bg);
+  color: var(--color-bit-text);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* -- 2. Mockup layout scaffolding ----------------------------------------- */
+
+.layout { display: flex; height: 100vh; overflow: hidden; }
+
+.app-area {
+  flex: 1; position: relative;
+  background: #f5f5f5; overflow: hidden;
+}
+
+.panel-area {
+  width: 320px; min-width: 320px;
+  background: var(--color-bit-bg);
+  border-left: 1px solid var(--color-bit-border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* -- 3. Fake app content -------------------------------------------------- */
+
+.fake-app { padding: 40px; color: #333; font-family: 'Inter', sans-serif; }
+.fake-app h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin-bottom: 12px; color: #1a1a1a; }
+.fake-app p { font-size: 14px; line-height: 1.6; color: #555; max-width: 520px; }
+
+.fake-hero { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 48px 40px; border-radius: 12px; margin-bottom: 24px; }
+.fake-hero h1 { color: white; }
+.fake-hero p { color: rgba(255,255,255,0.85); }
+
+.fake-hero-modern { background: linear-gradient(180deg, #0f172a, #1e293b); color: white; padding: 64px 48px; border-radius: 16px; margin-bottom: 24px; }
+.fake-hero-modern h1 { color: white; font-size: 36px; letter-spacing: -0.5px; }
+.fake-hero-modern p { color: rgba(255,255,255,0.7); font-size: 16px; }
+
+.fake-hero-bold { background: linear-gradient(135deg, #f97316, #ef4444 50%, #ec4899); color: white; padding: 48px 40px; border-radius: 20px; margin-bottom: 24px; }
+.fake-hero-bold h1 { color: white; font-size: 32px; font-weight: 800; }
+.fake-hero-bold p { color: rgba(255,255,255,0.9); }
+
+.fake-hero-playful { background: #fef3c7; color: #92400e; padding: 48px 40px; border-radius: 24px; border: 3px dashed #f59e0b; margin-bottom: 24px; }
+.fake-hero-playful h1 { color: #92400e; font-size: 30px; }
+.fake-hero-playful p { color: #b45309; }
+
+.selected-element { outline: 2px solid var(--ov-teal); outline-offset: 2px; position: relative; }
+
+/* -- 4. Position overrides (fixed -> absolute for mockups) ---------------- */
+
+.app-area .element-drawer { position: absolute; }
+.app-area .bottom-toolbar { position: absolute; left: 50%; transform: translateX(-50%); }
+.app-area .el-toolbar { position: absolute; }
+
+/* -- 5. Panel structure helpers (no production CSS file for panel) --------- */
+/* The panel is React + Tailwind in production — these helpers approximate
+   the panel shell for mockups. NOT duplicates of production code. */
+
+.panel-header { padding: 8px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--color-bit-border); min-height: 40px; }
+.panel-header .component-name { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--color-bit-text); }
+
+.panel-tabs { display: flex; padding: 0 12px; border-bottom: 1px solid var(--color-bit-border); }
+.panel-tab { padding: 8px 12px; font-size: 11px; font-weight: 500; color: var(--color-bit-muted); cursor: pointer; border-bottom: 2px solid transparent; }
+.panel-tab:hover { color: var(--color-bit-text-mid); }
+.panel-tab.active { color: var(--ov-teal); border-bottom-color: var(--ov-teal); }
+
+.panel-content { flex: 1; overflow-y: auto; }
+
+.panel-section { padding: 12px 16px; border-bottom: 1px solid var(--color-bit-border); }
+.panel-section-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.panel-section-header .chevron { font-size: 8px; color: var(--color-bit-muted); }
+.panel-section-header .label { font-size: 10px; font-weight: 600; color: var(--color-bit-text); text-transform: uppercase; letter-spacing: 0.5px; }
+.panel-section-header .badge { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 9999px; background: rgba(0,132,139,0.2); color: var(--ov-teal); }
+
+.panel-footer { padding: 6px 12px; border-top: 1px solid var(--color-bit-border); display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 10px; color: var(--color-bit-muted); min-height: 32px; }
+.panel-footer .count-label { display: flex; align-items: center; gap: 3px; }
+.panel-footer .dot { width: 6px; height: 6px; border-radius: 50%; }
+.panel-footer .dot-draft { background: var(--color-bit-draft); }
+.panel-footer .dot-committed { background: var(--color-bit-committed); }
+.panel-footer .dot-implementing { background: var(--ov-teal); }
+.panel-footer .dot-implemented { background: var(--color-bit-green); }
+
+.icon-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: transparent; border: none; color: var(--color-bit-muted); cursor: pointer; font-size: 12px; }
+.icon-btn:hover { background: var(--color-bit-surface-hi); color: var(--color-bit-text); }
+
+/* -- 6. NEW components (not in production yet) ---------------------------- */
+
+/* Quick mockup button helpers — for buttons that aren't overlay .vb-btn or .ed-* */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: none; border-radius: 6px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+.btn-sm { font-size: 10px; padding: 3px 8px; font-weight: 500; }
+.btn-teal { background: var(--ov-teal); color: white; }
+.btn-teal:hover { background: var(--ov-teal-btn-hover); }
+.btn-ghost { background: transparent; color: var(--ov-text-mid); border: 1px solid var(--color-bit-border); font-weight: 500; }
+.btn-ghost:hover { border-color: var(--ov-orange); color: var(--ov-orange); background: var(--ov-orange-bg-10); }
+.btn-ghost-teal { background: transparent; color: var(--ov-teal); border: 1px solid rgba(0,132,139,0.4); font-weight: 500; }
+.btn-ghost-teal:hover { border-color: var(--ov-teal); background: rgba(0,132,139,0.1); }
+.btn-danger { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-weight: 500; }
+.btn-danger:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+.btn-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.btn-teal-action { background: var(--ov-teal-action); color: var(--ov-text); font-weight: 500; }
+.btn-teal-action:hover { background: var(--ov-teal-hover); }
+.btn-toolbar { background: transparent; color: var(--ov-text-mid); border-radius: 5px; padding: 4px 8px; font-size: 11px; font-weight: 500; height: 28px; }
+.btn-toolbar:hover { background: var(--ov-toolbar-hover); color: var(--ov-text); }
+.btn-toolbar.active { background: var(--ov-teal-dark); color: var(--ov-teal-light); }
+
+/* Explore split-button */
+.split-btn { display: inline-flex; border-radius: 6px; overflow: hidden; }
+.split-btn .btn-main { border-radius: 6px 0 0 6px; border-right: 1px solid rgba(255,255,255,0.15); }
+.split-btn .btn-caret { border-radius: 0 6px 6px 0; padding: 5px; font-size: 8px; min-width: 22px; }
+.btn-explore { background: var(--explore-purple); color: white; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 6px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; padding: 5px 10px; cursor: pointer; }
+.btn-explore:hover { background: var(--explore-purple-hover); }
+
+/* Explore dropdown */
+.dropdown { position: absolute; background: var(--ov-toolbar-bg); border-radius: 8px; box-shadow: var(--ov-toolbar-shadow); padding: 4px; z-index: 200; width: 260px; }
+.dropdown-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: background 0.1s; }
+.dropdown-item:hover { background: var(--ov-toolbar-hover); }
+.dropdown-item-title { font-size: 12px; font-weight: 600; color: var(--ov-text); margin-bottom: 2px; }
+.dropdown-item-desc { font-size: 10px; color: var(--ov-text-mid); line-height: 1.4; }
+.dropdown-item.disabled { opacity: 0.45; cursor: not-allowed; }
+.dropdown-item.disabled:hover { background: transparent; }
+.dropdown-divider { height: 1px; background: var(--ov-toolbar-sep); margin: 4px 0; }
+.dropdown-item .setup-link { color: var(--ov-teal); font-size: 10px; font-weight: 600; cursor: pointer; text-decoration: underline; margin-top: 4px; display: inline-block; }
+
+/* Carousel -- prototype option viewer */
+.carousel { display: flex; flex-direction: column; flex: 1; }
+.carousel-nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 16px 6px; }
+.carousel-nav .nav-btn { width: 28px; height: 28px; border-radius: 50%; background: var(--color-bit-surface-hi); border: none; color: var(--color-bit-text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.carousel-nav .nav-btn:hover { background: var(--ov-teal-dark); color: var(--ov-teal-light); }
+.carousel-nav .page-indicator { font-size: 11px; font-weight: 500; color: var(--color-bit-text-mid); }
+.carousel-title { padding: 4px 16px 2px; font-size: 13px; font-weight: 600; color: var(--color-bit-text); }
+.carousel-desc { padding: 0 16px 8px; font-size: 10px; color: var(--color-bit-text-mid); line-height: 1.4; }
+.carousel-frame { flex: 1; margin: 0 12px; border-radius: 8px; overflow: hidden; background: white; border: 1px solid var(--color-bit-border); min-height: 200px; }
+.carousel-frame iframe { width: 100%; height: 100%; border: none; }
+.carousel-actions { padding: 10px 16px; display: flex; gap: 6px; align-items: center; }
+.carousel-actions .spacer { flex: 1; }
+
+/* In-app mockup preview */
+.mockup-overlay { position: absolute; left: 40px; right: 40px; z-index: 50; }
+.mockup-overlay .mockup-preview { border-radius: 12px; overflow: hidden; border: 2px solid var(--explore-purple); box-shadow: 0 4px 24px rgba(139,92,246,0.25); }
+.mockup-overlay .mockup-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 0; }
+.mockup-overlay .mockup-nav .nav-btn { width: 28px; height: 28px; border-radius: 50%; background: var(--ov-toolbar-bg); border: none; color: var(--ov-text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.mockup-overlay .mockup-nav .nav-btn:hover { background: var(--ov-toolbar-hover); color: var(--ov-text); }
+.mockup-overlay .mockup-nav .page-indicator { font-size: 11px; font-weight: 500; color: #555; background: rgba(0,0,0,0.06); padding: 3px 10px; border-radius: 9999px; }
+
+/* Feature flag controls */
+.flag-section { padding: 12px 16px; border-bottom: 1px solid var(--color-bit-border); }
+.flag-section-title { font-size: 10px; font-weight: 600; color: var(--color-bit-text); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.flag-group { margin-bottom: 12px; }
+.flag-group-label { font-size: 10px; font-weight: 500; color: var(--color-bit-text-mid); font-family: var(--font-mono); margin-bottom: 6px; }
+.flag-radio-group { display: flex; flex-direction: column; gap: 2px; }
+.flag-radio { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: background 0.1s; }
+.flag-radio:hover { background: var(--color-bit-surface); }
+.flag-radio.selected { background: var(--ov-teal-dark); }
+.flag-radio .radio-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--color-bit-muted); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.flag-radio.selected .radio-dot { border-color: var(--ov-teal); }
+.flag-radio.selected .radio-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ov-teal); }
+.flag-radio .radio-label { font-size: 11px; font-weight: 500; color: var(--color-bit-text); }
+.flag-radio .radio-desc { font-size: 10px; color: var(--color-bit-text-mid); }
+
+.flag-inline { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; }
+.flag-inline:hover { background: var(--color-bit-surface); }
+.flag-inline-label { font-size: 11px; font-weight: 500; color: var(--color-bit-text); }
+.flag-item-actions { display: flex; gap: 4px; padding: 4px 10px 0; }
+
+.flag-stepper { display: flex; align-items: center; gap: 4px; }
+.flag-stepper .step-btn { width: 22px; height: 22px; border-radius: 4px; background: var(--color-bit-surface-hi); border: none; color: var(--color-bit-text-mid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+.flag-stepper .step-btn:hover { background: var(--ov-teal-dark); color: var(--ov-teal-light); }
+.flag-stepper .step-value { font-size: 12px; font-weight: 600; color: var(--color-bit-text); min-width: 24px; text-align: center; font-family: var(--font-mono); }
+
+.flag-toggle { width: 36px; height: 20px; border-radius: 10px; background: var(--color-bit-surface-hi); border: none; cursor: pointer; position: relative; transition: background 0.2s; }
+.flag-toggle.on { background: var(--ov-teal); }
+.flag-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: white; transition: transform 0.2s; }
+.flag-toggle.on::after { transform: translateX(16px); }
+
+/* Canvas footer */
+.canvas-footer { position: absolute; bottom: 16px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--ov-toolbar-bg); border-radius: 8px; padding: 6px 8px; box-shadow: var(--ov-toolbar-shadow); z-index: 100; }
+
+/* Refinement input */
+.refinement-area { padding: 0 12px 8px; }
+.refinement-input { width: 100%; background: var(--color-bit-surface); border: 1px solid var(--color-bit-border); border-radius: 6px; color: var(--color-bit-text); font-family: var(--font-ui); font-size: 11px; padding: 8px 10px; resize: none; outline: none; }
+.refinement-input:focus { border-color: var(--ov-teal); box-shadow: 0 0 0 1px rgba(0,132,139,0.3); }
+.refinement-input::placeholder { color: var(--color-bit-muted); }
+
+/* Spinner */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; gap: 12px; }
+.spinner { width: 24px; height: 24px; border: 2.5px solid var(--color-bit-border); border-top-color: var(--ov-teal); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-state .loading-title { font-size: 12px; font-weight: 600; color: var(--color-bit-text); }
+.loading-state .loading-desc { font-size: 10px; color: var(--color-bit-text-mid); max-width: 200px; }
+
+/* -- 6. Utilities --------------------------------------------------------- */
+
+.spacer { flex: 1; }
+
+.mockup-label { position: fixed; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: #aaa; font-size: 10px; font-family: var(--font-mono); padding: 4px 8px; border-radius: 4px; z-index: 1000; pointer-events: none; }
+
+.backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 400; }
+
+.confirm-dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--color-bit-surface); border: 1px solid var(--color-bit-border); border-radius: 12px; padding: 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.5); z-index: 500; max-width: 340px; width: 90%; }
+.confirm-dialog h3 { font-size: 14px; font-weight: 600; color: var(--color-bit-text); margin-bottom: 8px; }
+.confirm-dialog p { font-size: 11px; color: var(--color-bit-text-mid); line-height: 1.5; margin-bottom: 16px; }
+.confirm-dialog .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+.variant-badge { position: absolute; top: -8px; right: -8px; background: var(--ov-teal); color: white; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: var(--font-ui); z-index: 50; }

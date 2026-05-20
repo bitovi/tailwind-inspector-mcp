@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { ContainerName } from "../../../overlay/src/messages";
-import { sendTo } from "../ws";
+import type { ContainerName } from "../../../../overlay/src/messages";
+import { sendTo } from "../../ws";
 
 const CONTAINERS: {
 	name: ContainerName;

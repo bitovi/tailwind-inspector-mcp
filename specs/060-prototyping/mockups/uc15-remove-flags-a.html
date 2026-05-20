@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-15: Remove Flags Confirmation — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .impact-list {
+      background: var(--bit-bg);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin: 8px 0;
+    }
+    .impact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 4px 0;
+      font-size: 10px;
+    }
+    .impact-item .icon { flex-shrink: 0; font-size: 12px; }
+    .impact-item .text { color: var(--bit-text-mid); line-height: 1.4; }
+    .impact-item .file {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--bit-text);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-15 Var A — Remove flags confirmation with impact preview</div>
+
+  <div class="backdrop"></div>
+
+  <div class="layout" style="filter: blur(1px);">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-bold">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel-area">
+      <div class="panel-header">
+        <span class="component-name">HeroSection</span>
+      </div>
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-dialog" style="max-width: 380px;">
+    <h3>Remove all feature flags?</h3>
+    <p>The agent will revert HeroSection to its original state before variants were created.</p>
+
+    <div class="impact-list">
+      <div style="font-size: 10px; font-weight: 600; color: var(--bit-text); margin-bottom: 6px;">What will be removed:</div>
+
+      <div class="impact-item">
+        <span class="icon">🗑️</span>
+        <div>
+          <div class="text">3 variant components deleted</div>
+          <div class="file">HeroModern.tsx, HeroBold.tsx, HeroPlayful.tsx</div>
+        </div>
+      </div>
+
+      <div class="impact-item">
+        <span class="icon">🗑️</span>
+        <div>
+          <div class="text">Flag evaluation code removed</div>
+          <div class="file">HeroSection.tsx (lines 12-24)</div>
+        </div>
+      </div>
+
+      <div class="impact-item">
+        <span class="icon">🗑️</span>
+        <div>
+          <div class="text">3 flags unregistered</div>
+          <div class="file">hero-variant, grid-columns, show-testimonials</div>
+        </div>
+      </div>
+
+      <div class="impact-item">
+        <span class="icon">🗑️</span>
+        <div>
+          <div class="text">2 mock data functions removed</div>
+          <div class="file">getMockRecommendations(), getMockAnalytics()</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: rgba(245,83,45,0.1); border: 1px solid rgba(245,83,45,0.2); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
+      <div style="font-size: 10px; color: var(--bit-orange); font-weight: 600; margin-bottom: 2px;">⚠️ This cannot be undone</div>
+      <div style="font-size: 9px; color: var(--bit-text-mid); line-height: 1.4;">The agent will modify source files to remove all variant code. You can always re-create variants later.</div>
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn btn-ghost btn-sm">Cancel</button>
+      <button class="btn btn-danger btn-sm">Remove All Flags</button>
+    </div>
+  </div>
+</body>
+</html>

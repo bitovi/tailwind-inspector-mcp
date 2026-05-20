@@ -1,11 +1,14 @@
 import { armInsert, armGenericInsert, armElementSelect, cancelInsert, replaceElement, placeAtLockedInsert, startBrowse, getLockedInsert, clearLockedInsert, isActive as isDropZoneActive, findGhostAncestor, repositionOnScroll as repositionDropZone, injectGhostCss, buildSelector } from "./drop-zone";
 import { isTextEditing, handleTextEditingClick, endTextEdit } from "./text-edit";
 import { debugLog } from "../../shared/vybit-env";
-import type { ContainerName } from "./containers/IContainer";
-import { ModalContainer } from "./containers/ModalContainer";
-import { PopoverContainer } from "./containers/PopoverContainer";
+import type { ContainerName, IContainer } from "./containers/IContainer";
 import { PopupContainer } from "./containers/PopupContainer";
-import { SidebarContainer } from "./containers/SidebarContainer";
+import "./web-components/vb-modal-container"; // side-effect: registers custom element
+import "./web-components/vb-popover-container";
+import "./web-components/vb-sidebar-container";
+import type { VbModalContainer } from "./web-components/vb-modal-container";
+import type { VbPopoverContainer } from "./web-components/vb-popover-container";
+import type { VbSidebarContainer } from "./web-components/vb-sidebar-container";
 import { buildContext, buildDeleteContext } from "./context";
 import { detectComponent } from "./framework-detect";
 import './design-canvas/index';
@@ -46,6 +49,7 @@ import { createWsMessageHandler } from './ws-handler';
 
 /** Callback for startBrowse — when user locks an insertion point, set it as current target and show toolbar */
 function onBrowseLocked(target: HTMLElement): void {
+	console.log('[insert-text-debug] onBrowseLocked:', { tag: target.tagName, prevCurrentTarget: state.currentTargetEl?.tagName ?? null });
 	state.currentTargetEl = target;
 	state.currentEquivalentNodes = [target];
 	const boundary = detectComponent(target);
@@ -59,7 +63,7 @@ function onBrowseLocked(target: HTMLElement): void {
 	showDrawButton(target);
 	// Persistent browse: stay orange (picking) — browse continues
 	updateToolState('insert', true, false);
-	updateInstanceCount(state.currentEquivalentNodes.length);
+	// Don't update instance count — the "1+" badge is a Select-only feature.
 }
 
 const THEME_PREVIEW_STYLE_ID = "vybit-theme-preview";
@@ -563,6 +567,7 @@ function toggleInspect(btn: HTMLButtonElement): void {
 	if (!wasActive) {
 		dispatch({ type: 'ACTIVATE' });
 		btn.classList.add("active");
+		btn.style.display = 'none';
 		sessionStorage.setItem(PANEL_OPEN_KEY, "1");
 		if (insideStorybook) {
 			// In Storybook the panel is already in the addon tab — go straight to select mode
@@ -583,6 +588,7 @@ function toggleInspect(btn: HTMLButtonElement): void {
 	} else {
 		dispatch({ type: 'DEACTIVATE' });
 		btn.classList.remove("active");
+		btn.style.display = '';
 		sessionStorage.removeItem(PANEL_OPEN_KEY);
 		if (!insideStorybook) {
 			dom.activeContainer.close();
@@ -684,13 +690,18 @@ function init(): void {
 			dispatch({ type: 'TOOLBAR_TOOL_CLICK', tool });
 		},
 		onAdjunctClick: () => {
+			console.log('[index] onAdjunctClick fired', {
+				pickerEl: !!dom.pickerEl,
+				currentTargetEl: !!state.currentTargetEl,
+			});
 			// Toggle group picker from the bottom toolbar's 1+ button
 			if (dom.pickerEl) {
 				dom.pickerEl.remove();
 				dom.pickerEl = null;
 			} else if (state.currentTargetEl) {
-				// Use a dummy anchor positioned near the bottom toolbar
-				const anchor = dom.shadowRoot.querySelector('.bt-adjunct') as HTMLElement;
+				// Use the adjunct button inside the vb-button-group web component as anchor
+				const anchor = dom.shadowRoot.querySelector('vb-button-group .vb-btn-group__adjunct') as HTMLElement;
+				console.log('[index] adjunct anchor element:', anchor);
 				if (anchor) {
 					showGroupPicker(
 						anchor,
@@ -699,7 +710,11 @@ function init(): void {
 							updateInstanceCount(totalCount);
 						},
 					);
+				} else {
+					console.log('[index] anchor NOT found — tried: vb-button-group .vb-btn-group__adjunct');
 				}
+			} else {
+				console.log('[index] no currentTargetEl — nothing to show group picker for');
 			}
 		},
 	});
@@ -777,13 +792,49 @@ function init(): void {
 			: newState.interaction.kind === 'component-drag' ? 'component-drag'
 			: newState.interaction.kind === 'text-editing' ? 'text-editing'
 			: null;
+
+		// Keep bottom toolbar badge in sync with equivalent nodes
+		updateInstanceCount(newState.equivalentNodes.length);
 	});
 
-	// Initialize containers
+	// Initialize containers using Web Components
+	const createModalContainer = (): IContainer => {
+		const el = document.createElement('vb-modal-container') as VbModalContainer;
+		dom.shadowRoot.appendChild(el);
+		return {
+			name: 'modal' as const,
+			open: (url: string) => el.open(url),
+			close: () => el.close(),
+			isOpen: () => el.isOpen,
+		};
+	};
+
+	const createPopoverContainer = (): IContainer => {
+		const el = document.createElement('vb-popover-container') as VbPopoverContainer;
+		dom.shadowRoot.appendChild(el);
+		return {
+			name: 'popover' as const,
+			open: (url: string) => el.open(url),
+			close: () => el.close(),
+			isOpen: () => el.isOpen,
+		};
+	};
+
+	const createSidebarContainer = (): IContainer => {
+		const el = document.createElement('vb-sidebar-container') as VbSidebarContainer;
+		dom.shadowRoot.appendChild(el);
+		return {
+			name: 'sidebar' as const,
+			open: (url: string) => el.open(url),
+			close: () => el.close(),
+			isOpen: () => el.isOpen,
+		};
+	};
+
 	dom.containers = {
-		popover: new PopoverContainer(dom.shadowRoot),
-		modal: new ModalContainer(dom.shadowRoot),
-		sidebar: new SidebarContainer(dom.shadowRoot),
+		popover: createPopoverContainer(),
+		modal: createModalContainer(),
+		sidebar: createSidebarContainer(),
 		popup: new PopupContainer(),
 	};
 	dom.activeContainer = dom.containers[getDefaultContainer()];
@@ -925,6 +976,7 @@ function init(): void {
 	if (sessionStorage.getItem(PANEL_OPEN_KEY) === "1") {
 		state.active = true;
 		btn.classList.add("active");
+		btn.style.display = 'none';
 		showBottomToolbar();
 		if (!insideStorybook) {
 			dom.activeContainer.open(`${SERVER_ORIGIN}/panel`);

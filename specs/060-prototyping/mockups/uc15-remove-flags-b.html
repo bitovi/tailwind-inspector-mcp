@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-15: Remove Flags Confirmation — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Variation B: Inline panel confirmation instead of dialog */
+    .inline-confirm {
+      margin: 12px;
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .inline-confirm h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #ef4444;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .inline-confirm p {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .file-list {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      color: var(--bit-text-mid);
+      background: var(--bit-bg);
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin-bottom: 10px;
+    }
+    .file-list div { padding: 1px 0; }
+    .file-list .del { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-15 Var B — Inline panel confirmation (no dialog), compact file list</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-bold selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+      <div class="bottom-toolbar">
+        <button class="bt-combo engaged">Select</button>
+        <div class="bt-sep"></div>
+        <button class="bt-combo">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+        <span style="color:var(--bit-orange);font-size:9px;font-weight:600;background:rgba(245,83,45,0.15);padding:2px 6px;border-radius:4px;">🚩 3 flags</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Inline confirmation replacing flag controls -->
+        <div class="inline-confirm">
+          <h4>⚠️ Remove all flags?</h4>
+          <p>The agent will revert HeroSection to its original state. All variant components and flag code will be removed from your source files.</p>
+
+          <div class="file-list">
+            <div class="del">- src/components/HeroModern.tsx</div>
+            <div class="del">- src/components/HeroBold.tsx</div>
+            <div class="del">- src/components/HeroPlayful.tsx</div>
+            <div class="del">- flag: hero-variant</div>
+            <div class="del">- flag: grid-columns</div>
+            <div class="del">- flag: show-testimonials</div>
+          </div>
+
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-ghost btn-sm" style="flex: 1;">Cancel</button>
+            <button class="btn btn-danger btn-sm" style="flex: 1;">Confirm Remove</button>
+          </div>
+        </div>
+
+        <!-- Rest of panel sections (dimmed) -->
+        <div style="opacity: 0.3; pointer-events: none;">
+          <div class="panel-section">
+            <div class="panel-section-header">
+              <span class="chevron">▸</span>
+              <span class="label">Box Model</span>
+            </div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-section-header">
+              <span class="chevron">▸</span>
+              <span class="label">Typography</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

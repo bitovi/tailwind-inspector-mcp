@@ -57,7 +57,7 @@
       "presentation": { "panel": "dedicated", "reveal": "always" }
     },
     {
-      "label": "Storybook (port 6006)",
+      "label": "Storybook (port 6060)",
       "type": "shell",
       "command": "npm run storybook",
       "options": { "cwd": "${workspaceFolder}/panel" },
