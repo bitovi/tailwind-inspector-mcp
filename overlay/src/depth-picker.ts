@@ -87,6 +87,11 @@ export function showDepthPicker(
 ): void {
   dismissDepthPicker();
 
+  // Notify the page so tutorial progress can detect the picker
+  window.dispatchEvent(new CustomEvent('vybit:message', {
+    detail: { type: 'DISAMBIGUATOR_SHOWN', candidateCount: candidates.length },
+  }));
+
   const picker = document.createElement("div");
   picker.className = "depth-picker";
 

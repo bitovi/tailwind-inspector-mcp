@@ -111,6 +111,9 @@ export class TutorialProgressService {
       case 'DESIGN_SUBMIT':
         this.completeStep(7);
         break;
+      case 'DISAMBIGUATOR_SHOWN':
+        this.completeStep(17);
+        break;
     }
   }
 

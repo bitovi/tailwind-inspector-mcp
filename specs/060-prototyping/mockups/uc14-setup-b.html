@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-14: Feature Flag Setup — Variation B</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .setup-card {
+      margin: 16px 12px;
+      background: var(--bit-surface);
+      border: 1px solid var(--bit-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .setup-card-hero {
+      padding: 20px 16px;
+      background: linear-gradient(135deg, var(--bit-teal-dark), var(--bit-teal-mid));
+      text-align: center;
+    }
+    .setup-card-hero .icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .setup-card-hero h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--bit-text);
+      margin-bottom: 4px;
+    }
+    .setup-card-hero p {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.5;
+      max-width: 240px;
+      margin: 0 auto;
+    }
+    .setup-card-body {
+      padding: 14px 16px;
+    }
+    .benefit-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+    }
+    .benefit-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .benefit-text {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.4;
+    }
+    .benefit-text strong { color: var(--bit-text); }
+    .setup-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--bit-border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .auto-detect {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bit-bg);
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+    .auto-detect .badge {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0,132,139,0.2);
+      color: var(--bit-teal);
+    }
+    .auto-detect .label {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-14 Var B — Setup as a promo card with benefits, one-click start</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero selected-element">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+
+      <!-- Element drawer with dropdown showing locked flag option -->
+      <div class="element-drawer" style="bottom: 100px; left: 60px;">
+        <div class="drawer-actions" style="position: relative;">
+          <button class="btn btn-icon" title="Back">←</button>
+          <span class="spacer"></span>
+          <div style="position: relative;">
+            <div class="split-btn">
+              <button class="btn btn-explore btn-main">Explore</button>
+              <button class="btn btn-explore btn-caret">▾</button>
+            </div>
+          </div>
+          <button class="btn btn-teal-action">Queue</button>
+          <button class="btn btn-orange">Commit</button>
+        </div>
+      </div>
+
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">Select</button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">✏️</span>
+        <span class="component-name">HeroSection</span>
+        <span class="spacer"></span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+        <div class="panel-tab">Components</div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Setup promo card -->
+        <div class="setup-card">
+          <div class="setup-card-hero">
+            <div class="icon">🚩</div>
+            <h3>Feature Flags</h3>
+            <p>Build real component variants, toggle between them live, and ship as A/B tests.</p>
+          </div>
+
+          <div class="setup-card-body">
+            <div class="benefit-row">
+              <span class="benefit-icon">⚡</span>
+              <div class="benefit-text"><strong>Live switching</strong> — toggle between variants instantly, no page reload</div>
+            </div>
+            <div class="benefit-row">
+              <span class="benefit-icon">🚀</span>
+              <div class="benefit-text"><strong>Production-ready</strong> — swap VyBit's provider for LaunchDarkly or Flagsmith</div>
+            </div>
+            <div class="benefit-row">
+              <span class="benefit-icon">🧹</span>
+              <div class="benefit-text"><strong>Clean removal</strong> — delete one line to remove VyBit completely</div>
+            </div>
+            <div class="benefit-row">
+              <span class="benefit-icon">🔒</span>
+              <div class="benefit-text"><strong>Zero production cost</strong> — no-op when VyBit overlay isn't present</div>
+            </div>
+          </div>
+
+          <div class="setup-footer">
+            <div class="auto-detect">
+              <span class="badge">Detected</span>
+              <span class="label">React app with no existing OpenFeature provider</span>
+            </div>
+
+            <button class="btn btn-teal w-full" style="justify-content: center; padding: 8px;">Set Up Feature Flags</button>
+            <div style="font-size: 9px; color: var(--bit-muted); text-align: center;">
+              The agent will install @openfeature/react-sdk and create a VyBit provider.
+              <br>Takes about 30 seconds. Fully reversible.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,7 +4,7 @@ import type { ParsedToken } from '../../overlay/src/tailwind/grammar';
 import { PROPERTY_RULES, type Category, buildEnumGroupsFromRules, buildAddablePropertiesFromRules, CONTROL_GROUP_PROPERTY_KEYS, CONTROL_GROUP_RULE_KEYS } from '../../overlay/src/tailwind/propertyRules';
 import { ColorGrid } from './components/ColorGrid';
 import { ScaleScrubber } from './components/ScaleScrubber';
-import { getScaleValues } from './components/getScaleValues';
+import { getScaleValues } from './components/ScaleRow/getScaleValues';
 import { BoxModel } from './components/BoxModel';
 import { boxModelLayersFromClasses } from './components/BoxModel/layerUtils';
 import type { LayerName, LayerState, SlotKey } from './components/BoxModel/types';

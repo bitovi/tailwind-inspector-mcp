@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-16/17: Mock Services Panel — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .settings-section {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--bit-border);
+    }
+    .settings-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--bit-text);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+    .setting-row .setting-label {
+      font-size: 11px;
+      color: var(--bit-text);
+      font-weight: 500;
+    }
+    .setting-row .setting-desc {
+      font-size: 9px;
+      color: var(--bit-text-mid);
+      margin-top: 2px;
+      line-height: 1.3;
+      max-width: 200px;
+    }
+    .text-input {
+      background: var(--bit-surface);
+      border: 1px solid var(--bit-border);
+      border-radius: 4px;
+      color: var(--bit-text);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 4px 8px;
+      width: 140px;
+      outline: none;
+    }
+    .text-input:focus { border-color: var(--bit-teal); }
+
+    .mock-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--bit-surface);
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+    .mock-item .mock-fn {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--bit-teal);
+      font-weight: 500;
+    }
+    .mock-item .mock-used-by {
+      font-size: 9px;
+      color: var(--bit-text-mid);
+      margin-top: 2px;
+    }
+    .mock-item .mock-icon {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      background: rgba(0,132,139,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      margin-top: 2px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+    }
+    .checkbox {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 2px solid var(--bit-muted);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+      cursor: pointer;
+    }
+    .checkbox.checked {
+      background: var(--bit-teal);
+      border-color: var(--bit-teal);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .checkbox-label {
+      font-size: 11px;
+      color: var(--bit-text);
+      font-weight: 500;
+    }
+    .checkbox-desc {
+      font-size: 9px;
+      color: var(--bit-text-mid);
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-16/17 Var A — Mock services settings section in panel with active mocks inventory</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero-bold selected-element" style="position: relative;">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+          <!-- A component using mock data -->
+          <div style="margin-top: 20px; display: flex; gap: 12px;">
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; flex: 1;">
+              <div style="font-size: 9px; opacity: 0.6; margin-bottom: 4px;">Recommended</div>
+              <div style="font-size: 12px; font-weight: 600;">Getting Started Guide</div>
+              <div style="font-size: 9px; opacity: 0.5; margin-top: 2px; font-style: italic;">⚡ mock data</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; flex: 1;">
+              <div style="font-size: 9px; opacity: 0.6; margin-bottom: 4px;">Recommended</div>
+              <div style="font-size: 12px; font-weight: 600;">Advanced Patterns</div>
+              <div style="font-size: 9px; opacity: 0.5; margin-top: 2px; font-style: italic;">⚡ mock data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">Select</button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">⚙️</span>
+        <span class="component-name" style="font-size: 12px;">Settings</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" style="font-size: 10px;">✕</button>
+      </div>
+
+      <div class="panel-content">
+        <!-- Mock Services Section -->
+        <div class="settings-section">
+          <div class="settings-section-title">Mock Services</div>
+
+          <!-- Mock flag name -->
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Mock flag name</div>
+              <div class="setting-desc">Flag name used to gate mock data.</div>
+            </div>
+            <input type="text" class="text-input" value="mock-services">
+          </div>
+
+          <!-- Toggle mocks -->
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Toggle mocks</div>
+              <div class="setting-desc">When on, mock-gated code uses fake data.</div>
+            </div>
+            <button class="flag-toggle on"></button>
+          </div>
+
+          <!-- Policy toggle -->
+          <div class="checkbox-row">
+            <div class="checkbox checked">✓</div>
+            <div>
+              <div class="checkbox-label">Tell AI to make mocks for service changes</div>
+              <div class="checkbox-desc">When checked, prototype instructions tell the agent: "If your variations need data that doesn't exist yet, create mock data and gate it behind the mock flag."</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Mocks Inventory -->
+        <div class="settings-section">
+          <div class="settings-section-title">Active Mocks</div>
+          <div style="font-size: 9px; color: var(--bit-text-mid); margin-bottom: 8px;">Mock-gated code created by the agent during exploration.</div>
+
+          <div class="mock-item">
+            <div class="mock-icon">📦</div>
+            <div>
+              <div class="mock-fn">getMockRecommendations()</div>
+              <div class="mock-used-by">Used by: HeroBold variant</div>
+            </div>
+          </div>
+
+          <div class="mock-item">
+            <div class="mock-icon">📦</div>
+            <div>
+              <div class="mock-fn">getMockAnalytics()</div>
+              <div class="mock-used-by">Used by: DashboardV2 variant</div>
+            </div>
+          </div>
+
+          <div class="mock-item">
+            <div class="mock-icon">📦</div>
+            <div>
+              <div class="mock-fn">getMockUserProfile()</div>
+              <div class="mock-used-by">Used by: ProfileRedesign variant</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px;">
+            <button class="btn btn-ghost btn-sm" style="width: 100%; justify-content: center;">Clean Up All Mocks</button>
+          </div>
+        </div>
+
+        <!-- Feature Flags Section (other settings) -->
+        <div class="settings-section" style="opacity: 0.5;">
+          <div class="settings-section-title">Feature Flags</div>
+          <div style="font-size: 10px; color: var(--bit-text-mid);">OpenFeature provider is active. 3 flags registered.</div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span class="count-label"><span class="dot dot-draft"></span> 0 draft</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

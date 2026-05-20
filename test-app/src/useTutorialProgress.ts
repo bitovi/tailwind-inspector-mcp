@@ -106,6 +106,9 @@ export function useTutorialProgress() {
         case 'DESIGN_SUBMIT':
           completeStep(7)
           break
+        case 'DISAMBIGUATOR_SHOWN':
+          completeStep(17)
+          break
       }
     }
 

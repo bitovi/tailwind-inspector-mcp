@@ -1,7 +1,7 @@
 import React from 'react';
 import { getScaleValues } from './getScaleValues';
 
-interface ScaleRowProps {
+export interface ScaleRowProps {
   prefix: string;
   scaleName: string | null;
   currentClass: string;
@@ -62,4 +62,3 @@ function ScaleChip({ value, isCurrent, isLocked, locked, onMouseEnter, onClick }
     </div>
   );
 }
-

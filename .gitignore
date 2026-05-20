@@ -41,6 +41,9 @@ test-screenshots/
 # Storybook
 panel/storybook-static/
 
+# Generated snapshots
+panel/snapshots/
+
 # Lock conflict artifacts
 *.yarn-integrity
 yarn-error.log

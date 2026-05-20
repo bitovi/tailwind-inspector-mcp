@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-7: Visual Edit Mockup (Phase 2) — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Phase 2: Overlay editing tools active on the mockup iframe */
+    .mockup-overlay-indicator {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(139,92,246,0.9);
+      color: white;
+      font-size: 9px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .mockup-selected-el {
+      outline: 2px solid var(--bit-teal);
+      outline-offset: 1px;
+      border-radius: 4px;
+    }
+    .mini-toolbar {
+      position: absolute;
+      top: 64px;
+      right: 8px;
+      background: var(--ov-toolbar-bg);
+      border-radius: 6px;
+      padding: 3px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      z-index: 10;
+    }
+    .mini-toolbar button {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--bit-text-mid);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .mini-toolbar button:hover { background: var(--ov-toolbar-hover); color: var(--bit-text); }
+    .mini-toolbar button.active { background: var(--bit-teal-dark); color: var(--bit-teal-light); }
+
+    /* Chip overlay on mockup element */
+    .mockup-chips {
+      position: absolute;
+      top: 120px;
+      left: 20px;
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+      max-width: 200px;
+    }
+    .mockup-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 500;
+      font-family: var(--font-mono);
+      background: var(--bit-surface);
+      color: var(--bit-text);
+      border: 1px solid var(--bit-border);
+    }
+    .mockup-chip.edited {
+      background: rgba(0,132,139,0.2);
+      border-color: rgba(0,132,139,0.4);
+      color: var(--bit-teal-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-7 Var A — Full overlay editing on mockup: select element, see chips, edit classes</div>
+
+  <div class="layout">
+    <div class="app-area" style="background: var(--bit-bg);">
+      <!-- No real app visible — we're in mockup editing mode -->
+      <div style="position: absolute; inset: 0; background: #f5f5f5; display: flex; flex-direction: column;">
+        <!-- Mockup being edited full-bleed -->
+        <div style="position: relative; flex: 1; overflow: hidden;">
+          <!-- Mockup overlay indicator -->
+          <div class="mockup-overlay-indicator">✨ Editing Mockup: "Bold Gradient"</div>
+
+          <!-- Mini toolbar for mockup editing -->
+          <div class="mini-toolbar">
+            <button class="active" title="Select">⊹</button>
+            <button title="Move">↕</button>
+            <button title="Resize">⤡</button>
+          </div>
+
+          <!-- The mockup content with a selected element -->
+          <div style="padding: 32px; background: linear-gradient(135deg, #f97316, #ef4444, #ec4899); color: white; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+            <h2 class="mockup-selected-el" style="font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 8px; padding: 4px;">Welcome to Our Platform</h2>
+            <p style="font-size: 13px; opacity: 0.9; max-width: 300px; line-height: 1.5; margin-bottom: 16px;">Build something amazing with our tools.</p>
+            <button style="background: white; color: #ef4444; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 700; font-size: 12px; width: fit-content;">Get Started</button>
+          </div>
+
+          <!-- Class chips on the selected h2 -->
+          <div class="mockup-chips">
+            <span class="mockup-chip">text-3xl</span>
+            <span class="mockup-chip edited">font-black</span>
+            <span class="mockup-chip edited">mb-4</span>
+            <span class="mockup-chip">text-white</span>
+          </div>
+        </div>
+
+        <!-- Mockup carousel bar at bottom -->
+        <div style="background: var(--ov-toolbar-bg); padding: 6px 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--bit-border);">
+          <button class="btn btn-toolbar btn-sm">◀</button>
+          <span style="font-size: 10px; color: var(--bit-text-mid);">Editing Option 2 of 3 — "Bold Gradient"</span>
+          <button class="btn btn-toolbar btn-sm">▶</button>
+          <span style="flex: 1;"></span>
+          <button class="btn btn-teal btn-sm">Implement</button>
+          <button class="btn btn-ghost btn-sm">Exit Edit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel shows normal editing tools for the selected mockup element -->
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--explore-purple);margin-right:4px;">✨</span>
+        <span class="component-name" style="font-size: 11px;">Mockup: h2</span>
+        <span class="spacer"></span>
+        <span style="color:var(--explore-purple);font-size:9px;font-weight:600;background:rgba(139,92,246,0.15);padding:2px 6px;border-radius:4px;">Editing Mockup</span>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active">Design</div>
+        <div class="panel-tab">Elements</div>
+      </div>
+
+      <div class="panel-content">
+        <!-- Normal property sections — editing the mockup element -->
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▾</span>
+            <span class="label">Typography</span>
+            <span class="badge">3</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: var(--bit-surface); border-radius: 4px;">
+              <span style="font-size: 10px; color: var(--bit-text-mid);">font-size</span>
+              <span style="font-size: 10px; font-family: var(--font-mono); color: var(--bit-teal-light);">text-3xl</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: rgba(0,132,139,0.1); border-radius: 4px; border: 1px solid rgba(0,132,139,0.2);">
+              <span style="font-size: 10px; color: var(--bit-text-mid);">font-weight</span>
+              <span style="font-size: 10px; font-family: var(--font-mono); color: var(--bit-teal-light);">font-black ← font-bold</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▾</span>
+            <span class="label">Spacing</span>
+            <span class="badge">1</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: rgba(0,132,139,0.1); border-radius: 4px; border: 1px solid rgba(0,132,139,0.2);">
+            <span style="font-size: 10px; color: var(--bit-text-mid);">margin-bottom</span>
+            <span style="font-size: 10px; font-family: var(--font-mono); color: var(--bit-teal-light);">mb-4 ← mb-2</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-section-header">
+            <span class="chevron">▸</span>
+            <span class="label">Colors</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-footer">
+        <span style="font-size: 10px; color: var(--explore-purple);">2 edits on mockup</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

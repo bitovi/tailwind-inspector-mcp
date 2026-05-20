@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UC-14: Feature Flag Setup — Variation A</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .setup-step {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    .step-number {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--bit-surface-hi);
+      color: var(--bit-text-mid);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-number.done { background: var(--bit-teal-dark); color: var(--bit-teal-light); }
+    .step-number.active { background: var(--bit-teal); color: white; }
+    .step-content h4 {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--bit-text);
+      margin-bottom: 2px;
+    }
+    .step-content p {
+      font-size: 10px;
+      color: var(--bit-text-mid);
+      line-height: 1.4;
+    }
+    .step-content .code-block {
+      background: var(--bit-bg);
+      border: 1px solid var(--bit-border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--bit-text-mid);
+      margin-top: 4px;
+      overflow-x: auto;
+    }
+    .progress-bar {
+      height: 3px;
+      background: var(--bit-surface-hi);
+      border-radius: 2px;
+      margin: 0 12px 8px;
+      overflow: hidden;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      background: var(--bit-teal);
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-label">UC-14 Var A — Setup wizard in panel, step-by-step with progress</div>
+
+  <div class="layout">
+    <div class="app-area">
+      <div class="fake-app">
+        <div class="fake-hero">
+          <h1>Welcome to Our Platform</h1>
+          <p>Build something amazing with our tools.</p>
+        </div>
+      </div>
+      <div class="bottom-bar">
+        <button class="btn btn-toolbar active">Select</button>
+        <div style="width:1px;height:16px;background:var(--ov-toolbar-sep);"></div>
+        <button class="btn btn-toolbar">Insert</button>
+      </div>
+    </div>
+
+    <div class="panel-area">
+      <div class="panel-header">
+        <span style="color:var(--bit-teal);margin-right:4px;">⚙️</span>
+        <span class="component-name" style="font-size: 12px;">Set Up Feature Flags</span>
+        <span class="spacer"></span>
+        <button class="icon-btn" style="font-size: 10px;">✕</button>
+      </div>
+
+      <div class="progress-bar">
+        <div class="fill" style="width: 40%;"></div>
+      </div>
+
+      <div class="panel-content" style="padding: 8px 16px;">
+        <!-- Step 1: Done -->
+        <div class="setup-step">
+          <div class="step-number done">✓</div>
+          <div class="step-content">
+            <h4>Detect framework</h4>
+            <p style="color: var(--bit-teal);">React detected (test-app/)</p>
+          </div>
+        </div>
+
+        <!-- Step 2: In progress -->
+        <div class="setup-step">
+          <div class="step-number active">2</div>
+          <div class="step-content">
+            <h4>Install OpenFeature SDK</h4>
+            <p>The agent is installing the required packages:</p>
+            <div class="code-block">
+              npm install @openfeature/web-sdk @openfeature/react-sdk
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+              <div class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+              <span style="font-size: 10px; color: var(--bit-teal);">Installing packages...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Pending -->
+        <div class="setup-step" style="opacity: 0.5;">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Create VyBit flag provider</h4>
+            <p>A provider that reads from <code style="font-family:var(--font-mono);font-size:9px;">window.vybit</code> for live flag toggling.</p>
+          </div>
+        </div>
+
+        <!-- Step 4: Pending -->
+        <div class="setup-step" style="opacity: 0.5;">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>Wire into app</h4>
+            <p>Wrap the app's existing provider with MultiProvider, or set VyBit as the sole provider.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; padding: 8px 10px; background: var(--bit-surface); border-radius: 6px; font-size: 9px; color: var(--bit-text-mid); line-height: 1.5;">
+          <strong style="color: var(--bit-text);">What this does:</strong> Installs a thin OpenFeature provider that lets VyBit toggle feature flags in your running app. In production, it's a no-op — zero overhead without VyBit.
+        </div>
+      </div>
+
+      <div style="padding: 8px 12px; border-top: 1px solid var(--bit-border); display: flex; gap: 6px; justify-content: flex-end;">
+        <button class="btn btn-ghost btn-sm">Cancel Setup</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
